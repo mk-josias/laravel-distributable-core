@@ -27,13 +27,13 @@ php artisan modules:install                      # config/modules.php, apps/, fo
 php artisan modules:make iam --database   # apps/Iam and foundation/Iam, declared in config/modules.php
 ```
 
-[laravel-skeleton](https://github.com/mk-josias/laravel-skeleton) is the example
+[The starter](https://github.com/mk-josias/laravel-distributable-modules/tree/main/starter) is the example
 implementation: an application with three modules, authentication, permissions, Docker images for
 one process or one per module, and tests of each module alone. Read it to see the package in use,
 or start from it:
 
 ```bash
-composer create-project mk-josias/laravel-skeleton my-app
+composer create-project mk-josias/laravel-distributable-modules-starter my-app
 ```
 
 Requires PHP 8.4+ and Laravel 12 or 13. Events, calls and copies between modules come from

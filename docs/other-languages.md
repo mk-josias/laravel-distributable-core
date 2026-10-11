@@ -12,6 +12,5 @@ modules, it is one more service.
 | be called by a module | its contract and `RpcService` sit in `foundation/{Name}/`, like a module's |
 | be the source of a copy | the copy's shape sits in `foundation/{Name}/Shadows/`, with the service as `owner()` |
 
-The skeleton's [`examples/node-billing`](https://github.com/mk-josias/laravel-skeleton/tree/main/examples/node-billing)
-is such a service: it handles `iam.user.registered`, asks iam the user's name over RPC, and
-announces `billing.account.opened`.
+The gateway of [laravel-microservices' example](https://github.com/mk-josias/laravel-microservices/tree/main/examples)
+is such a service, in Node: it asks iam over RPC who owns a token, then calls notifications.
