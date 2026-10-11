@@ -1,8 +1,9 @@
 # Laravel Distributable Modules
 
 Laravel Distributable Modules makes your Laravel modules independently deployable microservices: each one owns
-its data, on its own connection, and talks to the others only through events and contracts. Run
-them as one application, or split them apart whenever you want. The code doesn't change.
+its data, on its own connection, and talks to the others only through events and contracts. One
+process for all of them; a microservice for the one whose load or infrastructure demands it, without
+touching a single line of code.
 
 Laravel lets you declare several database connections, but leaves it to you to name the right one
 on every model and query, and nothing stops one part of the application from reaching into

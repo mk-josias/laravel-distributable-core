@@ -1,6 +1,6 @@
 {
     "name": "mk-josias/laravel-distributable-modules",
-    "description": "Laravel modules built as independently deployable microservices: each owns its data, and they talk through events and RPC. Run them as one app, or split them apart whenever you want.",
+    "description": "Laravel modules built as independently deployable microservices: each owns its data, and they talk through events and RPC. One process for all of them; a microservice for the one whose load or infrastructure demands it, without touching a single line of code.",
     "license": "MIT",
     "type": "library",
     "keywords": [
