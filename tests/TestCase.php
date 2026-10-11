@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Distributable\Tests;
 
 use Distributable\Providers\DistributableServiceProvider;
-use HttpRpc\HttpRpcServiceProvider;
 use Microservices\Providers\MicroservicesServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
-use QueueEventStream\QueueEventStreamServiceProvider;
-use RedisEventStream\RedisEventStreamServiceProvider;
+use RpcHttp\RpcHttpServiceProvider;
+use StreamQueue\StreamQueueServiceProvider;
+use StreamRedis\StreamRedisServiceProvider;
 
 abstract class TestCase extends Orchestra
 {
@@ -18,7 +18,7 @@ abstract class TestCase extends Orchestra
     {
         return [
             MicroservicesServiceProvider::class, DistributableServiceProvider::class,
-            HttpRpcServiceProvider::class, RedisEventStreamServiceProvider::class, QueueEventStreamServiceProvider::class,
+            RpcHttpServiceProvider::class, StreamRedisServiceProvider::class, StreamQueueServiceProvider::class,
         ];
     }
 }

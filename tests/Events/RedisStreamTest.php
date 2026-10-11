@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
 use Microservices\Data\Envelope;
 use Microservices\Services\Stream\TransportManager;
-use RedisEventStream\RedisStreamTransport;
+use StreamRedis\RedisStreamTransport;
 
 uses(ModuleAppTestCase::class);
 

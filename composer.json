@@ -25,7 +25,7 @@
     },
     "suggest": {
         "laravel/octane": "High-throughput application server; the kernel also runs under plain FPM",
-        "mk-josias/laravel-microservices-http-rpc": "Calls to a module running in another process, over signed HTTP"
+        "mk-josias/laravel-microservices-rpc-http": "Calls to a module running in another process, over signed HTTP"
     },
     "autoload": {
         "psr-4": {

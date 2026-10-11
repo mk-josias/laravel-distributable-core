@@ -8,10 +8,10 @@ use Distributable\Config\Modules;
 use Distributable\Services\Modules\ComposerAutoload;
 use Distributable\Services\Modules\ModuleRegistry;
 use Distributable\Testing\Boundaries;
-use HttpRpc\HttpRpc;
 use Illuminate\Console\Command;
 use Microservices\Services\Rpc\RpcServices;
 use Microservices\Services\Shadows\ShadowRegistry;
+use RpcHttp\RpcHttp;
 
 final class Doctor extends Command
 {
@@ -83,7 +83,7 @@ final class Doctor extends Command
             }
         }
 
-        if ($services->all() !== [] && class_exists(HttpRpc::class) && app(HttpRpc::class)->getSecret() === '') {
+        if ($services->all() !== [] && class_exists(RpcHttp::class) && app(RpcHttp::class)->getSecret() === '') {
             $problems[] = 'Modules serve RPC contracts but microservices.rpc.secret is empty: set MICROSERVICES_RPC_SECRET or APP_KEY.';
         }
 

@@ -12,7 +12,7 @@ use Microservices\Contracts\Stream\Bus;
 use Microservices\Contracts\Stream\Transport;
 use Microservices\Data\Envelope;
 use Microservices\Providers\MicroservicesServiceProvider;
-use QueueEventStream\QueueTransport;
+use StreamQueue\QueueTransport;
 
 uses(ModuleAppTestCase::class);
 
