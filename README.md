@@ -1,0 +1,399 @@
+# Laravel Distributable Modules
+
+Laravel Distributable Modules makes your Laravel modules independently deployable microservices: each one owns
+its data, on its own connection, and talks to the others only through events and contracts. Run
+them as one application, or split them apart whenever you want. The code doesn't change.
+
+Laravel lets you declare several database connections, but leaves it to you to name the right one
+on every model and query, and nothing stops one part of the application from reaching into
+another. The package sets up what is missing:
+
+- **Its own data, with nothing to name.** A module can have its own connection (a database, a
+  schema, or a server of its own); its models, transactions, migrations and jobs then use it,
+  because the package switches Laravel's default connection as the code moves from one module to
+  another.
+- **Boundaries that hold.** A module that imports another module's class, or names its tables,
+  is reported by `modules:doctor` and fails your test suite, before it is deployed.
+- **The same behaviour together or apart.** Events go through a stream and calls through a
+  contract in both setups, so moving a module to its own process is a change of `RUN_MODULES`.
+- **An image per module.** `modules:purge` removes from an image the code of the modules it
+  doesn't run, and `modules:unused-packages` the Composer packages only they required.
+
+```bash
+composer require mk-josias/laravel-distributable-modules
+composer require mk-josias/laravel-microservices-redis-stream   # the events driver: Redis Streams (or queue-stream, or yours); MICROSERVICES_STREAM_DRIVER=redis
+composer require mk-josias/laravel-microservices-http-rpc       # calls to a module running in another process
+php artisan modules:install                      # config/modules.php, apps/, foundation/FoundationServiceProvider.php
+php artisan modules:make iam --database   # apps/Iam and foundation/Iam, declared in config/modules.php
+```
+
+[laravel-skeleton](https://github.com/mk-josias/laravel-skeleton) is the example
+implementation: an application with three modules, authentication, permissions, Docker images for
+one process or one per module, and tests of each module alone. Read it to see the package in use,
+or start from it:
+
+```bash
+composer create-project mk-josias/laravel-skeleton my-app
+```
+
+Requires PHP 8.4+ and Laravel 12 or 13. Events, calls and copies between modules come from
+[laravel-microservices](https://github.com/mk-josias/laravel-microservices), which an application
+on its own can use too: each module is one of its services. There is no other runtime dependency.
+
+- [Why](#why)
+- [How it works](#how-it-works)
+- [Design](#design)
+- [Quick start](#quick-start)
+
+The rest of the documentation is in `docs/`:
+
+| | |
+|---|---|
+| [Modules](docs/modules.md) | declaring a module, generating code in it, conventions, `modules:doctor` |
+| [Each module's data](docs/databases.md) | connections, the module context, migrations, queued jobs |
+| [Events](docs/events.md) | what a module adds to laravel-microservices' events: its handlers, its outbox, its consumer |
+| [Calls between modules (RPC)](docs/rpc.md) | contracts and `RpcService` in the foundation, the direct call in one process |
+| [Read-only copies (shadows)](docs/shadows.md) | keeping another module's rows locally |
+| [Services in other languages](docs/other-languages.md) | a non-PHP service next to the modules |
+| [Configuration](docs/configuration.md) | every key of `config/modules.php`, the source layout |
+
+## Why
+
+How many services a platform runs and how many applications its code is split into are two
+different questions, usually answered as one.
+
+Running as several services is an infrastructure need: a part has to scale alone, be deployed on
+its own schedule, or keep working when another fails. Being several applications, each with its
+repository, its pipeline and its dependencies, is only the usual way to get there, and it has a
+price of its own: contracts versioned across repositories, the same plumbing rewritten in each,
+changes that span several of them.
+
+The need is rarely the same for every part. A few modules have to run apart. Most have no reason
+to, and are better off together: one process to deploy and to watch, and calls between them that
+never leave it.
+
+This package keeps the two questions apart. The modules are separated the way services are, in
+one codebase: each owns its data and talks to the others only through contracts. How many
+processes they run in is a setting, chosen module by module and changed in either direction:
+
+```dotenv
+# every module in one process
+RUN_MODULES=*
+
+# one module alone, the others grouped
+RUN_MODULES=transactions        # process A
+RUN_MODULES=iam,analytics       # process B
+```
+
+A call between two modules of the same process is a direct method call: no HTTP, no signature,
+nothing on the network. It becomes a signed HTTP call only between two processes. Events go
+through a stream in both setups. The calling code is the same in every case, so grouping modules
+or moving one out is not a rewrite.
+
+## How it works
+
+```
+                              one codebase
+┌──────────────────────────────────────────────────────────────────────┐
+│ apps/Iam              apps/Analytics            apps/Transactions    │
+│  own data              own data                  own data            │
+└──────────────────────────────────────────────────────────────────────┘
+          │ RUN_MODULES picks which modules each process boots
+          ▼
+┌─────────────── process A ───────────────┐   ┌──── process B ────┐
+│ iam · analytics                         │   │ transactions      │
+└─────────────────────────────────────────┘   └───────────────────┘
+       │            ▲         │                        ▲
+       │ events     │         └── RPC (signed HTTP) ───┘
+       ▼            │
+   ┌──────── stream (redis · queue · yours) ────────┐
+   └────────────────────────────────────────────────┘
+```
+
+Modules communicate in two ways:
+
+| Mode | Used for | Same process | Different processes |
+|---|---|---|---|
+| Event stream (asynchronous) | announcing that something happened | through the stream | through the stream |
+| RPC (synchronous) | asking another module for an answer right away: reading its data, or having it perform an action whose result the caller needs | a direct method call on the module's own class, in its context: no HTTP | a signed HTTP call |
+
+Shadows, the read-only copies described below, are built on events.
+
+When the application boots, the package:
+
+1. reads the modules declared in `config/modules.php`, and autoloads the ones this process runs
+   under `Apps\{Module}\`;
+2. registers the service provider of every module this process runs. The provider merges the
+   module's config files, loads its routes, translations and commands, and records the
+   implementation of each contract the module answers;
+3. registers the foundation's service provider, which binds every RPC contract to its
+   `RpcService`. The `RpcService` reaches the module in this process when it runs here, over the
+   network otherwise.
+
+A module that runs in another process has no config, routes or handlers here. Only its RPC
+contracts are bound.
+
+### The module context
+
+Several modules can share a process, each on its own connection, and their code is plain Laravel:
+`User::query()`, `DB::transaction()`, no connection named anywhere. What makes this work is the
+module context: before any module's code runs, the package makes that module's connection
+Laravel's default one, and puts the previous one back afterwards.
+
+```
+request on /analytics/…        database.default = analytics
+  └─ calls IamService::findUser()
+       └─ iam's code runs      database.default = iam          the query lands in iam's database
+  └─ back in analytics         database.default = analytics
+outside any module             database.default = no_module    any query throws ModuleException
+```
+
+The switch happens at every way into a module's code, so nothing has to ask for it:
+
+| A module's code is entered by | The module is |
+|---|---|
+| a request on one of its routes | the route's, or the controller's |
+| a job, a command, an event handler, a listener it declares | the one the class belongs to |
+| an RPC call, from this process or another | the one that implements the contract |
+| work deferred or sent to another worker (`defer()`, `Concurrency`, Octane tasks, queued closures) | the one that started it |
+
+The current module also travels in Laravel's `Context`, which is how it follows a job to its
+worker. `ModuleContext::within($module, $callback)` does the same switch by hand, and
+`inModule()` in tests. The full table of entry points is in
+[Models and transactions](docs/databases.md#models-and-transactions).
+
+## Design
+
+### The charter
+
+Each module is a microservice from its first line of code, and the package holds it to that, even
+while it shares a process with the others.
+
+| A microservice | How the package holds a module to it |
+|---|---|
+| owns its data | its own connection; naming another module's tables or connection is reported |
+| exposes only a contract | another module's classes can't be loaded where that module doesn't run, and importing them is reported |
+| talks through messages | events on a stream, or signed RPC calls on a contract, whether the modules share a process or not |
+| is deployed on its own | `RUN_MODULES` picks the modules a process runs; `modules:purge` removes the others' code from its image |
+
+`modules:doctor` and `Boundaries` check all of this in CI, so a module that would not survive
+being moved to its own service fails before it is deployed.
+
+### What the package includes
+
+The package only contains what is needed for modules to be deployed separately. How you write
+the application itself (response formats, DTOs, repositories, exceptions, authentication) is up to
+you.
+
+A feature is in the package when getting it wrong would break one of its guarantees. Module code
+running outside its module's context would write to the wrong database, so the module context is
+part of the package. A module without a repository breaks nothing, so repositories aren't.
+
+### Extension points
+
+These come from laravel-microservices (`Microservices\` namespace):
+
+| Contract | Default | Replace it with |
+|---|---|---|
+| `Contracts\Stream\Transport`, the event stream | `array`, `null`; `redis` and `queue` from their packages | `Services\Stream\TransportManager::extend()` |
+| `Contracts\Rpc\Transport`, calls between modules | a method call within the process; `http` from `mk-josias/laravel-microservices-http-rpc` between processes | `Services\Rpc\TransportManager::extend()` |
+| `Contracts\Stream\Handler`, a module's reaction to an event | none | a class listed under `events.listen` |
+| `Contracts\Stream\Versioned`, the versions of an event's payload | none: every event is version 1 | a payload class in the owner's foundation, mapped in `FoundationServiceProvider::$payloads` |
+| `Services\Rpc\RpcService`, a module's client in the other processes | none | a subclass in `foundation/{Module}/Services`, mapped in `FoundationServiceProvider::$rpc` |
+| `Models\ShadowModel`, a read-only copy | none | an abstract subclass in the owner's foundation, extended in each keeper |
+
+laravel-microservices defines the envelope format, which is why transports can be swapped. This
+package binds its `Contracts\Colocation` to `ModuleColocation`, which makes each module a service.
+
+### Working with other packages
+
+Third-party packages work as they do in any Laravel application. The package uses a few of
+Laravel's own extension points to give each module its database; this table says what each one
+does, so you know where a package's data ends up:
+
+| What the package does | Where | What it means for another package |
+|---|---|---|
+| While a module's code runs, `database.default` is that module's connection | `ModuleContext` | A package that uses the default connection (a media library, an activity log, permissions) stores its rows in the database of the module that calls it, so each module has its own. Its tables are there because its migrations run in every module database. A package that should keep one store for the whole application (Telescope, Pulse) belongs to one module, whose connection it is given in its own config file. |
+| `migrate`, `migrate:status`, `migrate:rollback`, `migrate:reset`, `migrate:refresh` and `migrate:fresh` run once per database | `DistributableServiceProvider::registerModuleMigrations()` | A package's migrations, loaded with `loadMigrationsFrom()` or published to `database/migrations`, run in each database with nothing to configure. With an explicit `--database` or `--path`, the commands behave exactly as Laravel's. A package that replaces these same commands would overlap with this, which is rare; the one registered last is used. |
+| Failed jobs and job batches are stored per module, with the `database` drivers | `registerQueueDatabases()` | They go to the database of the module owning the job. Other drivers (Horizon, `file`, DynamoDB) are untouched. |
+| Outside a module, the default connection is `no_module`, which throws on every query | `register()`, `ModuleContext` | Every database belongs to a module. A package that queries the default connection outside a module fails loudly; the `database` cache, queue and session drivers have nowhere to go, and `modules:doctor` reports them. |
+| `DeferredCallbackCollection`, the Concurrency `process` driver, Octane's `DispatchesTasks` | `carryTheModuleIntoDeferredWork()` | Work started in a module keeps its module. A package rebinding one of them removes that, for its own work. |
+| Module providers register on `booting`, after every package provider | `registerLocalModuleProviders()` | A module can override what a package binds. |
+| `Factory::guessFactoryNamesUsing()` and `guessModelNamesUsing()` | `Support\ModuleFactories::register()` | A module model finds its factory in the module; any other class keeps Laravel's rule. A package or an application that sets its own resolver replaces this one, and can delegate to `ModuleFactories`. |
+| Every Artisan command gets a `--module` option, unless it already has one | `Console\ModuleOption` | A package's command can be run in a module's context. During a `make:*` command with `--module`, the application path, database path, config path and namespace are the module's, then restored (`Console\ModuleGenerators`). Without `--module`, nothing changes. |
+| `db:seed` is replaced | `Console\ModuleSeedCommand` | In a module's context it runs the module's seeders; outside one it is Laravel's command, unchanged. |
+| A module's `$listen` wraps each listener in the module's context | `ServiceProvider::registerModuleListeners()` | A module can listen to a package's events (`Login`, a media event) and still write to its own database. A listener registered another way (`Event::listen()` in `boot()`, discovery, a subscriber) runs in the context of whoever dispatched the event. |
+| A class of a module this process doesn't run throws `ModuleException` from the autoloader | `autoloadModules()` | `class_exists()` on such a class throws instead of returning `false`. A package probing classes (discovery, morph maps) must only meet classes of the modules this process runs. |
+
+Publishing a package's migrations with `vendor:publish` puts them in `database/migrations`: they then run in
+every module database, like your own root migrations. Move a
+published migration to a module's `database/migrations` when only that module uses the package.
+
+A package that keeps one store for the whole application belongs to one module. Laravel Sanctum is
+the usual case: `PersonalAccessToken::findToken()` reads the default connection, so a token issued
+in `iam` is not in `analytics`' database, and its `tokenable` is iam's own model, a class the other
+processes don't load. Install it in `iam` only, and let the other modules validate tokens through
+iam's contract:
+
+```php
+// apps/Iam/app/Services/IamService.php: the User model uses HasApiTokens
+public function findUserByToken(string $token): ?array
+{
+    return $this->present(PersonalAccessToken::findToken($token)?->tokenable);
+}
+```
+
+Move Sanctum's published migration to `apps/Iam/database/migrations`, so `personal_access_tokens`
+exists in iam's database only. The same holds for a package that loads its data once per process
+under one cache key, such as spatie/laravel-permission: keep it in one module.
+
+#### Packages that serve their own routes (admin panels, Livewire)
+
+A request runs in the module of its route's controller. Filament, Nova or Livewire serve routes
+whose controllers belong to no module, so their requests run outside every module and any query
+they make fails. Give their routes a module by adding the module's middleware to them, for a
+Filament panel:
+
+```php
+->middleware([/* the panel's own middleware */, \Distributable\Http\Middleware\SetModuleContext::class.':iam'])
+```
+
+An admin panel that manages every module's data would cross every boundary. Give each module its
+own panel instead (`/admin/iam` in iam, `/admin/analytics` in analytics), each one reading its own
+database only. A screen that needs another module's data reads it from a local copy or through that
+module's contract, as any module code does.
+
+### Compared to other packages
+
+| | nwidart/laravel-modules | Spring Modulith | laravel-distributable-modules |
+|---|---|---|---|
+| Built for | organising code in modules | module boundaries and events inside one application | modules that are microservices: one codebase, deployed together or apart |
+| Data | one shared database | one datasource | each module owns its data, on its own connection |
+| Between modules | direct calls | events and outbox | event stream with an ordered outbox, and RPC |
+| Moving a module to its own service | rewrite | new application | `RUN_MODULES` |
+| The image of one module | the whole codebase | the whole application | only that module's code (`modules:purge`) |
+
+### Out of scope
+
+- Turning modules on or off at runtime. Which modules run is decided at boot.
+- A lockfile per module: one process loads one version of a library, so there is one `vendor/` and
+  one lockfile. A module can still declare its own dependencies, see
+  [The dependencies of a module](docs/modules.md#the-dependencies-of-a-module).
+- Orchestration (Kubernetes, proxies). That belongs to your infrastructure.
+- Enforcing a code style.
+
+## Quick start
+
+`app/` is still your Laravel application. Each module lives in `apps/`.
+
+```
+config/modules.php                         declares the modules: 'declared' => ['iam' => [], …]
+
+apps/Iam/
+├── app/                              Apps\Iam\, laid out like a Laravel app
+│   ├── Providers/IamServiceProvider.php   the events it listens to, in $handlers
+│   ├── Models/User.php
+│   └── Events/UserRegistered.php
+├── config/
+│   └── database.php                  its connections; if the file exists, the module has a database
+├── database/migrations/
+└── routes/api.php                    served under /iam/api/…
+
+foundation/
+├── FoundationServiceProvider.php     maps each contract to its RpcService
+└── Iam/                              Foundation\Iam\, what iam shares with the other modules
+    ├── Contracts/IamService.php
+    ├── Services/IamRpcService.php    how another process calls iam
+    ├── Shadows/UserShadow.php
+    └── database/shadows/             the migration of the copies of iam's tables
+```
+
+```php
+// config/modules.php
+'declared' => [
+    'iam'       => [],
+    'analytics' => [],
+],
+
+// apps/Iam/app/Providers/IamServiceProvider.php
+final class IamServiceProvider extends \Distributable\Providers\ServiceProvider {}
+
+// apps/Iam/app/Models/User.php: plain Eloquent, it uses iam's database because it runs in iam
+final class User extends \Illuminate\Database\Eloquent\Model {}
+```
+
+```php
+// apps/Iam/config/database.php, merged into config/database.php when iam boots
+return ['connections' => [
+    'iam' => [
+        'driver' => 'pgsql', 'database' => 'iam',
+        'username' => 'iam_app',                       // reads and writes
+        'owner' => ['username' => 'iam_owner'],        // creates and alters tables; optional
+    ],
+]];
+```
+
+```bash
+php artisan migrate   # migrates each module's database
+```
+
+Emit an event from one module and handle it in another:
+
+```php
+final class UserRegistered extends \Microservices\Events\Event
+{
+    public function __construct(private readonly int $id) {}
+
+    public function name(): string { return 'iam.user.registered'; }
+
+    public function payload(): array { return ['id' => $this->id]; }
+
+    public function version(): int { return 1; }   // raised when the shape of the payload changes
+}
+
+app(\Microservices\Contracts\Stream\Bus::class)->emit(new UserRegistered($user->id));
+```
+
+```php
+// apps/Analytics/app/Handlers/RecordSignup.php
+final class RecordSignup implements \Microservices\Contracts\Stream\Handler
+{
+    public function handle(string $name, array $payload): void { /* ... */ }
+}
+
+// apps/Analytics/app/Providers/AnalyticsServiceProvider.php
+protected array $handlers = ['iam.user.registered' => [RecordSignup::class]];
+```
+
+```bash
+php artisan stream:consume --module=analytics
+```
+
+This event is version 1. When the shape of a payload changes, the event declares a new version and
+how to read the old ones, so events already in the stream stay readable: see
+[Versioning a payload](https://github.com/mk-josias/laravel-microservices/blob/main/docs/events.md#versioning-a-payload).
+
+Then check that every module could run apart:
+
+```bash
+php artisan modules:doctor
+```
+
+```
+Boundary crossed: apps/Analytics/app/Models/Report.php: Apps\Iam\Models\User
+[iam] runs elsewhere and serves Foundation\Iam\Contracts\IamService, but modules.declared.iam.host is not set.
+```
+
+It reports a module that imports another module's class or names its tables, an undeclared module,
+a missing connection, a missing host or RPC secret, and exits with a non-zero code if it finds
+anything. The full list is in [Checking the application](docs/modules.md#checking-the-application).
+
+## Testing
+
+```bash
+composer check   # pint + phpstan (level 6) + pest
+```
+
+## License
+
+MIT. See [LICENSE](LICENSE).

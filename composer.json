@@ -1,0 +1,43 @@
+{
+    "name": "mk-josias/laravel-distributable-modules",
+    "description": "Laravel modules built as independently deployable microservices: each owns its data, and they talk through events and RPC. Run them as one app, or split them apart whenever you want.",
+    "license": "MIT",
+    "type": "library",
+    "keywords": [
+        "laravel",
+        "modular-monolith",
+        "distributable",
+        "modules",
+        "microservices",
+        "events",
+        "outbox"
+    ],
+    "authors": [
+        {
+            "name": "Josias Mekontso",
+            "email": "josiasmekontso.it@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.4",
+        "laravel/framework": "^12.0 || ^13.0",
+        "mk-josias/laravel-microservices": "^0.1"
+    },
+    "suggest": {
+        "laravel/octane": "High-throughput application server; the kernel also runs under plain FPM",
+        "mk-josias/laravel-microservices-http-rpc": "Calls to a module running in another process, over signed HTTP"
+    },
+    "autoload": {
+        "psr-4": {
+            "Distributable\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Distributable\\Providers\\DistributableServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable"
+}
