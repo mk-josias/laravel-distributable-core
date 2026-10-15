@@ -1,10 +1,10 @@
 # Laravel Distributable Modules
 
 The package lays the foundations for designing each module as a microservice: its code runs in a
-context bounded to its module, blind to the others, whether they run here or elsewhere, and it talks
-to them only through contracts and events. Whether modules run as microservices or several to a
-process, depending on load, release pace or cost, becomes an infrastructure choice rather than a
-code one, allowing greater flexibility.
+context bounded to its module, blind to the others, whether they run in the same process or in
+separate, distributed processes, and it talks to them only through contracts and events. Whether
+modules run as microservices or several to a process, depending on load, release pace or cost,
+becomes an infrastructure choice rather than a code one, allowing greater flexibility.
 
 Laravel lets you declare several database connections, but leaves it to you to name the right one
 on every model and query, and nothing stops one part of the application from reaching into
