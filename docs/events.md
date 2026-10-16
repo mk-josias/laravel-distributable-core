@@ -162,12 +162,8 @@ each handler run is guarded: an `(event_id, handler)` row is inserted in `event_
 the consuming module's database, in the same transaction as the handler's writes. A second
 delivery finds the row and the handler doesn't run.
 
-That table grows. A mark only matters while its event can still be redelivered:
-
-```bash
-# delete the marks older than 7 days, in every local module; keep it longer than the stream's retention
-php artisan stream:prune-consumptions --days=7
-```
+That table grows, and so do the stream and the outbox. What cleans each one, and when, is in
+[Operating the event stream](./operating-streams).
 
 ## Changing the shape of a payload
 

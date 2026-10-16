@@ -140,6 +140,7 @@ context: [read how it works](docs/module-context.md).
 | declare, generate and check modules | [Modules](docs/modules.md) |
 | know what runs in a module's database | [Migrations](docs/migrations.md) and [Each module's data](docs/databases.md) |
 | make modules talk | [Calls (RPC)](docs/rpc.md), [Events](docs/events.md), [Read-only copies](docs/shadows.md) |
+| clean up the stream, the outbox and the consumption marks | [Operating the event stream](docs/operating-streams.md) |
 | deploy modules together or apart | [Deploying modules](docs/deploying.md) |
 | use a package that has its own routes or its own store | [Working with other packages](docs/other-packages.md) |
 | replace a transport or another default | [Extending](docs/extending.md) |
