@@ -76,6 +76,27 @@ process runs. A module's host comes from `modules.declared`; the secret, the cac
 transports are in `config/microservices.php`. A contract with no `RpcService` stays bound to the
 module's implementation, and works only in a process that runs that module.
 
+## Where to find a module that runs elsewhere
+
+A module that runs in another process is reached at its host. Give it, for each process that calls
+it:
+
+```dotenv
+# read by modules.declared.iam.host
+IAM_HOST=http://iam.svc:8000
+```
+
+The container side of this, with the network alias that makes `iam.svc` resolve, is in
+[Deploying a module on its own](./deploying#deploying-a-module-on-its-own).
+
+## Keeping an answer
+
+`readThrough()`, used by `IamRpcService::findUser()` above, keeps the answer in the cache: the next
+call doesn't leave the process. The owner forgets the key when its data changes, and the key
+expires after its time to live. The cache store is the one `microservices.rpc.cache` names, shared
+by every process. See
+[laravel-microservices' RPC](https://mk-josias.github.io/laravel-microservices/docs/rpc#caching-answers).
+
 ## Rules of RPC between modules
 
 | Rule | What it means |
