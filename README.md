@@ -379,7 +379,7 @@ protected array $handlers = ['iam.user.registered' => [RecordSignup::class]];
 ```
 
 ```bash
-php artisan stream:consume --module=analytics
+php artisan stream:consume
 ```
 
 This event is version 1. When the shape of a payload changes, the event declares a new version and

@@ -36,8 +36,6 @@ module it runs in as the only consuming one.
 ```bash
 # every module this process runs, one cursor each
 php artisan stream:consume
-# analytics only, in its context
-php artisan stream:consume --module=analytics
 # every local module's outbox; --module=iam for one
 php artisan stream:publish
 ```
