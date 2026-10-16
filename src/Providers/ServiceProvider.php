@@ -28,7 +28,7 @@ use Microservices\Services\Rpc\LocalServices;
  * already sets is the module's own instead, applied while the module runs),
  * translations ({module}/lang, namespaced by the module name),
  * routes ({module}/routes/{name}.php, prefixed {module}/{name}), console commands and scheduled tasks.
- * Registered only for local modules (DistributableServiceProvider follows RUN_MODULES), so a
+ * Registered only for local modules (DistributableServiceProvider follows SERVICE_MODULES), so a
  * module's config lands only on the nodes that run it.
  */
 abstract class ServiceProvider extends BaseServiceProvider

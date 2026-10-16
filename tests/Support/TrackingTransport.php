@@ -30,7 +30,7 @@ final class TrackingTransport implements TracksAcknowledgements, Transport
         return (int) $entryId <= $this->acknowledgedUpTo;
     }
 
-    public function consume(string $consumer, array $channels, callable $handle): void {}
+    public function consume(array $consumers, array $channels, callable $handle): void {}
 
     public function stop(): void {}
 }

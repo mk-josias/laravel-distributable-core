@@ -64,7 +64,7 @@ it('publishes straight away on a stream without outbox', function () {
     $this->app->make(Bus::class)->emit(new UserAudited(7));
 
     $received = [];
-    $this->app->make(TransportManager::class)->stream('audit')->consume('analytics', ['iam'], function (Envelope $envelope) use (&$received): void {
+    $this->app->make(TransportManager::class)->stream('audit')->consume(['analytics'], ['iam'], function (Envelope $envelope) use (&$received): void {
         $received[] = $envelope->payload;
     });
 

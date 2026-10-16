@@ -17,7 +17,7 @@ another. The package sets up what is missing:
 - **Boundaries that hold.** A module that imports another module's class, or names its tables,
   is reported by `modules:doctor` and fails your test suite, before it is deployed.
 - **The same behaviour together or apart.** Events go through a stream and calls through a
-  contract in both setups, so moving a module to its own process is a change of `RUN_MODULES`.
+  contract in both setups, so moving a module to its own process is a change of `SERVICE_MODULES`.
 - **An image per module.** `modules:purge` removes from an image the code of the modules it
   doesn't run, and `modules:unused-packages` the Composer packages only they required.
 
@@ -80,11 +80,11 @@ processes they run in is a setting, chosen module by module and changed in eithe
 
 ```dotenv
 # every module in one process
-RUN_MODULES=*
+SERVICE_MODULES=*
 
 # one module alone, the others grouped
-RUN_MODULES=transactions        # process A
-RUN_MODULES=iam,analytics       # process B
+SERVICE_MODULES=transactions        # process A
+SERVICE_MODULES=iam,analytics       # process B
 ```
 
 A call between two modules of the same process is a direct method call: no HTTP, no signature,
@@ -100,7 +100,7 @@ or moving one out is not a rewrite.
 │ apps/Iam              apps/Analytics            apps/Transactions    │
 │  own data              own data                  own data            │
 └──────────────────────────────────────────────────────────────────────┘
-          │ RUN_MODULES picks which modules each process boots
+          │ SERVICE_MODULES picks which modules each process boots
           ▼
 ┌─────────────── process A ───────────────┐   ┌──── process B ────┐
 │ iam · analytics                         │   │ transactions      │
@@ -176,10 +176,11 @@ while it shares a process with the others.
 | owns its data | its own connection; naming another module's tables or connection is reported |
 | exposes only a contract | another module's classes can't be loaded where that module doesn't run, and importing them is reported |
 | talks through messages | events on a stream, or signed RPC calls on a contract, whether the modules share a process or not |
-| is deployed on its own | `RUN_MODULES` picks the modules a process runs; `modules:purge` removes the others' code from its image |
+| is deployed on its own | `SERVICE_MODULES` picks the modules a process runs; `modules:purge` removes the others' code from its image |
 
 `modules:doctor` and `Boundaries` check all of this in CI, so a module that would not survive
-being moved to its own service fails before it is deployed.
+being moved to its own service fails before it is deployed. The seven rules, with what each one
+guarantees, are in [the charter](docs/charter.md).
 
 ### What the package includes
 
@@ -272,7 +273,7 @@ module's contract, as any module code does.
 | Built for | organising code in modules | module boundaries and events inside one application | modules that are microservices: one codebase, deployed together or apart |
 | Data | one shared database | one datasource | each module owns its data, on its own connection |
 | Between modules | direct calls | events and outbox | event stream with an ordered outbox, and RPC |
-| Moving a module to its own service | rewrite | new application | `RUN_MODULES` |
+| Moving a module to its own service | rewrite | new application | `SERVICE_MODULES` |
 | The image of one module | the whole codebase | the whole application | only that module's code (`modules:purge`) |
 
 ### Out of scope
@@ -373,7 +374,7 @@ php artisan stream:consume --module=analytics
 
 This event is version 1. When the shape of a payload changes, the event declares a new version and
 how to read the old ones, so events already in the stream stay readable: see
-[Versioning a payload](https://github.com/mk-josias/laravel-microservices/blob/main/docs/events.md#versioning-a-payload).
+[Versioning a payload](https://mk-josias.github.io/laravel-microservices/docs/events#versioning-a-payload).
 
 Then check that every module could run apart:
 

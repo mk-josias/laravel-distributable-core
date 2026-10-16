@@ -9,7 +9,7 @@ use Distributable\Exceptions\ModuleException;
 
 /**
  * The process-level view of the modules: every module modules.declared lists, and the ones
- * this process loads (RUN_MODULES). Being loaded is a fact about the process, never about a module.
+ * this process loads (SERVICE_MODULES). Being loaded is a fact about the process, never about a module.
  */
 final class ModuleRegistry
 {

@@ -31,12 +31,12 @@ final class ModuleException extends RuntimeException
 
     public static function notLocal(string $class, string $module): self
     {
-        return new self("[{$class}] belongs to module [{$module}], which this process does not run (RUN_MODULES): go through its foundation contract or an event.");
+        return new self("[{$class}] belongs to module [{$module}], which this process does not run (SERVICE_MODULES): go through its foundation contract or an event.");
     }
 
     public static function missingFolder(string $module, string $path): self
     {
-        return new self("Module [{$module}] runs here (RUN_MODULES) but [{$path}] does not exist: was it purged from this image?");
+        return new self("Module [{$module}] runs here (SERVICE_MODULES) but [{$path}] does not exist: was it purged from this image?");
     }
 
     public static function noModuleRunning(): self

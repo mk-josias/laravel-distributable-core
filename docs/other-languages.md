@@ -1,7 +1,7 @@
 # Services in other languages
 
 A service written in another language (a Node gateway, a Go worker) takes part as described in
-[laravel-microservices](https://github.com/mk-josias/laravel-microservices/blob/main/docs/other-languages.md):
+[laravel-microservices](https://mk-josias.github.io/laravel-microservices/docs/other-languages):
 it writes and reads envelopes on the stream, and calls the modules over signed HTTP. To the
 modules, it is one more service.
 

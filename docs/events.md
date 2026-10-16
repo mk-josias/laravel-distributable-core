@@ -1,6 +1,6 @@
 # Events
 
-Events between modules are [laravel-microservices' events](https://github.com/mk-josias/laravel-microservices/blob/main/docs/events.md):
+Events between modules are [laravel-microservices' events](https://mk-josias.github.io/laravel-microservices/docs/events):
 each module is a service, named after it. The envelope, versions, streams, transports, the outbox
 and the consumption guard are described there. This page covers what a module adds.
 
@@ -27,15 +27,35 @@ protected array $payloads = ['iam.user.registered' => UserRegisteredPayload::cla
 
 ## Consuming and publishing per module
 
-`--module` on any command runs it in that module, so it names the consuming or publishing module:
+`stream:consume` reads the envelopes that every declared module publishes, and runs the handlers of
+the modules that run in the process. Each module's name is its subscription, with its own cursor on
+the stream, so adding a module disturbs none of the others. `stream:consume` has no `--module` of its
+own: the option is on every command, and runs it in that module's context. The command then reads the
+module it runs in as the only consuming one.
 
 ```bash
-php artisan stream:consume --module=analytics   # one consumer per module and stream
+php artisan stream:consume                      # every module this process runs, one cursor each
+php artisan stream:consume --module=analytics   # analytics only, in its context
 php artisan stream:publish                      # every local module's outbox; --module=iam for one
 ```
 
-Run one consumer per module: two would break the order it reads in. Run one publisher per module
-set: two would publish an outbox out of order.
+| You run | The consuming modules are |
+|---|---|
+| `stream:consume --module=analytics` | `analytics`, and the command runs in its context |
+| `stream:consume` with no option | every module the process runs (`SERVICE_MODULES`): one in a process that runs one, all of them in the container that runs several |
+
+What it implies:
+
+| Rule | Why |
+|---|---|
+| one `stream:consume` per module set is enough | it keeps a cursor per module: the starter's container with `SERVICE_MODULES=*` and `WITH_CONSUMERS=true` serves `iam`, `analytics` and `notifications` from one process |
+| a failing handler delays only its own module | with `on_failure` at `block`, the module that failed retries its entry before reading further, while the others go on |
+| never two consumers for the same module and stream | two would break the order it reads in |
+| a module's handlers only get the envelopes addressed to it | an envelope with `recipients` set is skipped by the other consumers |
+| `--stream=` picks another stream than `microservices.events.stream` | one consumer per module and stream |
+| a `SIGTERM` or `SIGINT` doesn't cut a handler | the consumer finishes the envelope it holds, then stops (it needs the `pcntl` extension) |
+
+Run one publisher per module set: two would publish an outbox out of order.
 
 In a test, `Distributable\Testing\ModuleAware::receive('analytics', 'iam.user.registered', [...])`
 hands the event to analytics' handlers, in analytics' context, without the stream or iam.

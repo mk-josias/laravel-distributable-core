@@ -12,7 +12,7 @@ final class UnusedPackages extends Command
 {
     protected $signature = 'modules:unused-packages';
 
-    protected $description = 'List the Composer packages only the modules this process does not run (RUN_MODULES) require.';
+    protected $description = 'List the Composer packages only the modules this process does not run (SERVICE_MODULES) require.';
 
     public function handle(ModuleRegistry $registry): int
     {

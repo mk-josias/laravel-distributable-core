@@ -16,7 +16,7 @@ final class ExplodingTransport implements Transport
         throw new RuntimeException('transport down');
     }
 
-    public function consume(string $consumer, array $channels, callable $handle): void {}
+    public function consume(array $consumers, array $channels, callable $handle): void {}
 
     public function stop(): void {}
 }

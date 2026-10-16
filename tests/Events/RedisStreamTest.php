@@ -42,7 +42,7 @@ function consumeAll(RedisStreamTransport $transport, string $consumer, int $expe
 {
     $seen = [];
 
-    $transport->consume($consumer, $channels, function (Envelope $envelope) use (&$seen, $transport, $expected): void {
+    $transport->consume([$consumer], $channels, function (Envelope $envelope) use (&$seen, $transport, $expected): void {
         $seen[] = (int) $envelope->payload['id'];
 
         if (count($seen) === $expected) {
@@ -89,7 +89,7 @@ function consumeFailingOnce(string $failing, int $last): array
     $seen = [];
     $failed = false;
 
-    $transport->consume('analytics', ['iam'], function (Envelope $envelope) use (&$seen, &$failed, $failing, $last, $transport): void {
+    $transport->consume(['analytics'], ['iam'], function (Envelope $envelope) use (&$seen, &$failed, $failing, $last, $transport): void {
         $id = (int) $envelope->payload['id'];
 
         if ($id === (int) $failing && ! $failed) {

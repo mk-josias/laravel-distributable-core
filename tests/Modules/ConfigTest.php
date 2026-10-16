@@ -17,7 +17,7 @@ it('merges the modules config with its defaults, and the microservices one next 
         ->and(config('microservices.rpc.transport'))->toBe('http');
 });
 
-it('reads RUN_MODULES as a list of module names, * standing for every module', function () {
+it('reads SERVICE_MODULES as a list of module names, * standing for every module', function () {
     config()->set('modules.runs', ' transactions , analytics ,');
 
     expect(app(Modules::class)->getLoadedModules())->toBe(['transactions', 'analytics']);

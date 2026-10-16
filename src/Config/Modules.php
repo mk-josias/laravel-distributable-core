@@ -39,7 +39,7 @@ final readonly class Modules
         return is_array($host) ? (is_string($host['url'] ?? null) ? $host['url'] : null) : (is_string($host) ? $host : null);
     }
 
-    /** @return list<string> ['*'] for every module, or the names RUN_MODULES lists */
+    /** @return list<string> ['*'] for every module, or the names SERVICE_MODULES lists */
     public function getLoadedModules(): array
     {
         $names = array_map(trim(...), explode(',', (string) $this->config->get('modules.runs', '*')));

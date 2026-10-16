@@ -1,6 +1,6 @@
 # Calls between modules (RPC)
 
-Calls between modules are [laravel-microservices' RPC](https://github.com/mk-josias/laravel-microservices/blob/main/docs/rpc.md):
+Calls between modules are [laravel-microservices' RPC](https://mk-josias.github.io/laravel-microservices/docs/rpc):
 each module is a service, named after it. This page covers what a module adds; the signature, the
 status codes, the answer cache and custom transports are described there.
 
@@ -56,7 +56,7 @@ modules type-hint `Foundation\Iam\Contracts\IamService` and don't need to know w
 ```
 analytics ─► IamService (the contract) ─► IamRpcService::call('findUser', ['id' => 1])
                                                     │
-                                 does iam run in this process (RUN_MODULES)?
+                                 does iam run in this process (SERVICE_MODULES)?
            ┌────────────────────────────────────────┴───────────────────────────────────────┐
            │ yes: a direct method call                                                      │ no: POST {iam's host}/iam/rpc/findUser, signed
            ▼                                                                                ▼
@@ -73,3 +73,21 @@ The module writes no route: the package serves `POST {module}/rpc/{method}` for 
 process runs. A module's host comes from `modules.declared`; the secret, the cache store and the
 transports are in `config/microservices.php`. A contract with no `RpcService` stays bound to the
 module's implementation, and works only in a process that runs that module.
+
+## Rules of RPC between modules
+
+| Rule | What it means |
+|---|---|
+| The contract is the only way in | A module names another module's contract and `RpcService`, which live in the foundation, never its classes. `Boundaries` and `modules:doctor` report the crossing. |
+| Only declared methods can be called | Over HTTP, a method that isn't on a contract a module lists in `$services` is refused with a 400. |
+| The callee runs in its own context | The implementation runs in the context of the module that implements the contract, in this process or in another, so its queries land in its own database. |
+| A module can't enter another's context | `ModuleContext::within()`, called from another module's code or from the foundation, throws `ModuleException`. |
+| An RPC action isn't in the caller's transaction | If the caller fails afterwards, the action stays done. |
+| Ask when you need the answer | When the caller doesn't need the result, announce an [event](./events) instead. |
+| `null` is an answer | A method that returns `null` answers 404 over HTTP, and the caller reads `null`. |
+| Every call is signed | The signature covers the timestamp, a nonce, the path, the body and the propagated context. A call that is unsigned, too old, modified or replayed gets a 403. |
+| One secret for every process | `microservices.rpc.secret`, which defaults to `APP_KEY`; `modules:doctor` reports it empty. |
+| The RPC path stays private | A gateway forwards client requests to a module's API routes, never to `{module}/rpc/…`. |
+
+The first four rules are the module's; the others come from
+[laravel-microservices' RPC](https://mk-josias.github.io/laravel-microservices/docs/rpc).

@@ -8,6 +8,7 @@ use Apps\Iam\Events\UserRegistered;
 use Apps\Iam\Support\Recorder;
 use Distributable\Tests\Support\ModuleAppTestCase;
 use Distributable\Tests\Support\RecordingTransport;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\DB;
@@ -40,6 +41,18 @@ it('delivers an emitted event to the listening handlers once the stream is consu
     $this->artisan('stream:consume --module=iam')->assertSuccessful();
 
     expect($this->app->make(Recorder::class)->records)
+        ->toBe([['iam.user.registered', ['id' => 5, 'name' => 'lamp']]]);
+});
+
+it('consumes as every module that runs here when no module is named', function () {
+    $this->app->make(Bus::class)->emit(new UserRegistered(5, 'lamp'));
+
+    $code = Artisan::call('stream:consume');
+    $output = Artisan::output();
+
+    expect($code)->toBe(0, $output)
+        ->and($output)->toContain('Consuming as [analytics, gateway, iam]')
+        ->and($this->app->make(Recorder::class)->records)
         ->toBe([['iam.user.registered', ['id' => 5, 'name' => 'lamp']]]);
 });
 
@@ -151,12 +164,12 @@ it('puts an event on the stream it names, declared by its module', function () {
 
     $audit = $this->app->make(TransportManager::class)->stream('audit');
     $received = [];
-    $audit->consume('analytics', ['iam'], function (Envelope $envelope) use (&$received): void {
+    $audit->consume(['analytics'], ['iam'], function (Envelope $envelope) use (&$received): void {
         $received[] = $envelope;
     });
 
     $default = [];
-    $this->app->make(TransportManager::class)->stream()->consume('analytics', ['iam'], function (Envelope $envelope) use (&$default): void {
+    $this->app->make(TransportManager::class)->stream()->consume(['analytics'], ['iam'], function (Envelope $envelope) use (&$default): void {
         $default[] = $envelope;
     });
 

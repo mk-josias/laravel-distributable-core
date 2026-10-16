@@ -232,7 +232,7 @@ final class DistributableServiceProvider extends BaseServiceProvider
         });
     }
 
-    /** Registers the service provider of every module this process boots (RUN_MODULES). */
+    /** Registers the service provider of every module this process boots (SERVICE_MODULES). */
     private function registerLocalModuleProviders(): void
     {
         $registry = $this->app->make(ModuleRegistry::class);

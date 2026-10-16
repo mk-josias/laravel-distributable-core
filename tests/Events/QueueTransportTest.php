@@ -62,7 +62,7 @@ it('hands the consumer its own copy, then deletes it', function () {
     $transport = $this->app->make(Transport::class);
     $received = [];
 
-    $transport->consume('iam', ['iam'], function (Envelope $envelope) use (&$received, $transport): void {
+    $transport->consume(['iam'], ['iam'], function (Envelope $envelope) use (&$received, $transport): void {
         $received[] = $envelope->payload;
         $transport->stop();
     });

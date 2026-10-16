@@ -16,6 +16,29 @@ folder can't tell, such as the URL of a module that runs elsewhere:
 'namespaces' => ['modules' => 'Apps', 'foundation' => 'Foundation'],
 ```
 
+| Key | What it says |
+|---|---|
+| `declared` | every module of the application, by name. A module's array holds only what its folder can't tell: it can be empty (`'analytics' => []`) |
+| `declared.iam.host` | the URL of `iam` when it runs in another process: calls to it go there, as `IAM_HOST=http://iam.internal:8000` does. It can also be `['url' => …, 'transport' => …]` to name another transport. `modules:doctor` reports a module that runs elsewhere and serves a contract without one |
+| `declared.{name}.module`, `declared.{name}.foundation` | the folder under `apps/` and under `foundation/` when it isn't the name in StudlyCase: `'iam' => ['module' => 'Identity', 'foundation' => 'Identity']` |
+| `paths` | the directories of the modules and of the foundation, and `namespaces` their root namespaces |
+
+`SERVICE_MODULES` is not a key of `declared`: it says which of these modules a process runs (see below).
+For example, in a `docker-compose.yml` where `analytics` calls `iam` in another container:
+
+```yaml
+  analytics:
+    environment:
+      SERVICE_MODULES: analytics
+      IAM_HOST: "http://iam.svc:8000"   # read by declared.iam.host
+  iam:
+    environment:
+      SERVICE_MODULES: iam
+    networks:
+      default:
+        aliases: [iam.svc]              # the name analytics calls
+```
+
 | | Module `Iam`, with the defaults |
 |---|---|
 | name | `iam`, the directory name in snake_case (`^[a-z][a-z0-9_]*$`) |
@@ -101,8 +124,9 @@ module's model then throws `ModuleException`, since no database belongs to it.
 ## Conventions
 
 A module is laid out like a Laravel application, by convention, the way Laravel itself expects
-`app/Models` or `routes/web.php`. You choose the four roots in the configuration; inside them, the
-package reads everything from the folder and the namespace, so there is nothing to register.
+`app/Models` or `routes/web.php`. You choose the four roots in the configuration, and the folder of a
+module under them when it isn't its name; inside a module, the package reads everything from the
+folder and the namespace, so there is nothing to register.
 
 | | Configurable | Fixed by convention |
 |---|---|---|
@@ -128,8 +152,8 @@ those guarantees would depend on configuration that every process must get right
 ## Which modules a process runs
 
 ```dotenv
-RUN_MODULES=*                       # every module (the default)
-RUN_MODULES=transactions,analytics  # only these
+SERVICE_MODULES=*                       # every module (the default)
+SERVICE_MODULES=transactions,analytics  # only these
 ```
 
 `Distributable\Services\Modules\ModuleRegistry` gives you both lists: `all()` returns every declared
@@ -143,12 +167,12 @@ it. The cache never decides which modules exist: `modules.declared` does.
 
 ## Modules this process doesn't run
 
-The package only autoloads the classes of the modules in `RUN_MODULES`, plus the foundation. A
+The package only autoloads the classes of the modules in `SERVICE_MODULES`, plus the foundation. A
 class of any other module is never loaded, even if its file is on disk: using it throws a
 `ModuleException`.
 
 ```
-[Apps\Iam\Services\IamService] belongs to module [iam], which this process does not run (RUN_MODULES): go through its foundation contract or an event.
+[Apps\Iam\Services\IamService] belongs to module [iam], which this process does not run (SERVICE_MODULES): go through its foundation contract or an event.
 ```
 
 This catches, at runtime, a call that `Boundaries` would have caught in your tests. A process still
@@ -158,11 +182,11 @@ their events, and calls them through the RPC services of the foundation.
 When you build an image for some modules only, you can delete the folders of the others:
 
 ```bash
-RUN_MODULES=analytics php artisan modules:purge --force
+SERVICE_MODULES=analytics php artisan modules:purge --force
 ```
 
 Run it in your Dockerfile, after copying the code and before `composer dump-autoload`. Starting an
-image with a module in `RUN_MODULES` whose folder was purged fails at boot, with the name of the
+image with a module in `SERVICE_MODULES` whose folder was purged fails at boot, with the name of the
 module.
 
 ## The dependencies of a module
@@ -186,8 +210,8 @@ files it reads, and name the packages to Composer so that it removes them and ch
 version:
 
 ```bash
-UNUSED="$(RUN_MODULES=analytics php artisan modules:unused-packages)"   # spatie/laravel-permission
-RUN_MODULES=analytics php artisan modules:purge --force
+UNUSED="$(SERVICE_MODULES=analytics php artisan modules:unused-packages)"   # spatie/laravel-permission
+SERVICE_MODULES=analytics php artisan modules:purge --force
 [ -z "$UNUSED" ] || { composer update $UNUSED --no-dev --no-scripts; rm -f bootstrap/cache/packages.php bootstrap/cache/services.php; }
 composer dump-autoload --optimize --no-dev
 ```
@@ -266,6 +290,25 @@ apps/Analytics ──► foundation/Iam ◄── apps/Iam
 
 The package checks this rule for you, see [Checking the application](#checking-the-application).
 
+### What the foundation holds
+
+It has two kinds of folders:
+
+| Folder | What it is | In the starter |
+|---|---|---|
+| `foundation/{Module}/` | what that module publishes to the others: its contracts, its `RpcService`, its events and their payloads, the shape of its copies, its permission enums | `Foundation\Iam\Contracts\IamService`, `Foundation\Iam\Services\IamRpcService`, `Foundation\Iam\Events\UserRegisteredPayload`, `Foundation\Iam\Shadows\UserShadow`, `Foundation\Analytics\Enums\AnalyticsPermission` |
+| `foundation/Common/` | not a module: it isn't in `modules.declared`. The base classes every module uses, grouped by technical concern (`Auth`, `Http`, `Database`, `Exceptions`, `Validation`…), not by domain | `Foundation\Common\Http\Controller`, `Foundation\Common\Auth\Authenticate` |
+
+`Foundation\Common\Auth\Authenticate` reads from left to right: `Foundation` is the root namespace
+of the foundation (`modules.namespaces.foundation`), `Common` is shared by every module and owned
+by none, `Auth` is the concern, `Authenticate` is the class. The package doesn't depend on
+`Common`: these classes are yours, to change or delete. The starter labels how firmly each piece
+is meant, see [`foundation/Common`](https://github.com/mk-josias/laravel-distributable-modules-starter#foundationcommon) in its README.
+
+Where the code of a concern sits follows who needs it: the code that every module uses goes in
+`Common`; what only one module's neighbours need to know about it (here, how `iam`'s tokens are
+checked: `Foundation\Iam\Auth\JwtTokens`, `RpcTokens`, `GatewayTokens`) goes in that module's folder.
+
 ## Checking the application
 
 The package has two checks. Both report the same boundary violations, but they are meant for
@@ -281,8 +324,14 @@ php artisan modules:doctor
 | It reports | Example |
 |---|---|
 | a folder of `apps/` that `modules.declared` doesn't list | `[apps/Billing] is not declared in modules.declared.` |
+| a local module without its `bootstrap/providers.php` | `[iam] …/apps/Iam/bootstrap/providers.php does not exist.` |
 | a module whose service provider class doesn't exist | `[gateway] provider Apps\Gateway\Providers\GatewayServiceProvider does not exist.` |
 | a local module with a database but no declared connection | `[iam] connection [iam] is not declared.` |
+| a module with migrations but no database | `[iam] has migrations but no database: declare its connection in its config/database.php.` |
+| `composer.json` entries that no longer match where the module lives | `composer.json maps [Apps\Iam] to […], but the module lives in […].` |
+| two copies kept in one table | `[analytics] keeps two copies in table [users]: … Give each its own $table.` |
+| an RPC contract that isn't in the foundation of a declared module | `Foundation\Iam\Contracts\IamService is not in the foundation of a declared module.` |
+| `cache.default`, `queue.default` or `session.driver` set to `database` | `[cache.default] is the database driver, but every database belongs to a module: use redis, file or array.` |
 | a module running elsewhere that serves a contract, with no host | `[iam] runs elsewhere and serves Foundation\Iam\Contracts\IamService, but modules.declared.iam.host is not set.` |
 | RPC contracts declared while the secret is empty | `Modules serve RPC contracts but microservices.rpc.secret is empty: set MICROSERVICES_RPC_SECRET or APP_KEY.` |
 | a module using another module's classes, or the foundation or the application (`app/`, `routes/`, `config/`) using a module | `Boundary crossed: apps/Analytics/app/Models/Report.php: Apps\Iam\Models\User` |
@@ -301,4 +350,16 @@ it('keeps the modules apart', function () {
     expect(app(\Distributable\Testing\Boundaries::class)->violations())->toBe([]);
 });
 ```
+
+`violations()` returns one `{file}: {name}` per reference that crosses a boundary. It applies three
+rules:
+
+| Who | May never name |
+|---|---|
+| a module | another module's namespace |
+| a module | another module's connection, its owner connection, or a table that module's migrations create. The name of a copy the module keeps is its own table, so it is allowed |
+| the foundation and the application (`app/`, `routes/`, `config/`) | a module's namespace, outside the modules' own folders |
+
+It reads qualified class names and plain string literals, so a table or connection name assembled
+at runtime isn't seen.
 
