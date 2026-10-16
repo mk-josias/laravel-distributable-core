@@ -68,7 +68,7 @@ analytics ─► IamService (the contract) ─► IamRpcService::call('findUser'
 
 When the two modules share a process, the call is a direct method call: no HTTP, no signature,
 nothing on the network. It becomes a signed HTTP call only between two processes. On both paths
-the implementation runs in iam's [context](../README.md#the-module-context), so it never has to
+the implementation runs in iam's [context](./module-context), so it never has to
 switch to its own database.
 
 The module writes no route: the package serves `POST {module}/rpc/{method}` for every module the

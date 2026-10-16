@@ -11,7 +11,7 @@ same in every setup.
 |---|---|
 | the emitter | the module the event class belongs to: `Apps\Iam\Events\UserRegistered` is emitted by `iam` |
 | the handlers | declared in `$handlers` of the module's service provider, merged only where the module runs |
-| a handler runs | in its module's [context](../README.md#the-module-context): its queries land in its module's database |
+| a handler runs | in its module's [context](./module-context): its queries land in its module's database |
 | the outbox | `event_publications` in the emitting module's database, inside the module's transaction |
 | the guard | `event_consumptions` in the consuming module's database |
 | versions | the payload class sits in the emitter's foundation, declared in `FoundationServiceProvider::$payloads` |

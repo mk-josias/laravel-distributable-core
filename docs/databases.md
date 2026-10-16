@@ -118,24 +118,8 @@ $this->receive('analytics', 'iam.user.registered', ['id' => 42]);
 
 ## Migrations
 
-The package extends Laravel's migrate commands so they run once per module database. This also
-applies to `RefreshDatabase` in your tests.
-
-```bash
-php artisan migrate | migrate:status | migrate:rollback | migrate:reset | migrate:refresh | migrate:fresh  [--module=*]
-```
-
-| Database | Migrations |
-|---|---|
-| each local module's database, on its owner connection | the package's tables (`event_publications`, `event_consumptions`), `database/migrations`, the migrations other packages load, the module's `database/migrations` and the shadow migrations of the copies it keeps |
-
-A module without a database has no migrations: `modules:doctor` reports one that does. The
-`database` drivers of the cache, the queue and the session have no database to use either, and
-the doctor reports them too: use `redis`, `file` or `array`.
-
-`--module` runs the command for those modules only. With an
-explicit `--database` or `--path`, the command behaves like the normal Laravel command. Each
-database keeps its own migration history.
+`migrate` runs once per module database, on its owner connection, with the application's, the
+packages', the module's and the copies' migrations. See [Migrations](./migrations).
 
 ## Queued jobs
 
