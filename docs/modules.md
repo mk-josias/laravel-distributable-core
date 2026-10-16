@@ -30,13 +30,15 @@ For example, in a `docker-compose.yml` where `analytics` calls `iam` in another 
   analytics:
     environment:
       SERVICE_MODULES: analytics
-      IAM_HOST: "http://iam.svc:8000"   # read by declared.iam.host
+      # read by declared.iam.host
+      IAM_HOST: "http://iam.svc:8000"
   iam:
     environment:
       SERVICE_MODULES: iam
     networks:
       default:
-        aliases: [iam.svc]              # the name analytics calls
+        # the name analytics calls
+        aliases: [iam.svc]
 ```
 
 | | Module `Iam`, with the defaults |
@@ -47,11 +49,16 @@ For example, in a `docker-compose.yml` where `analytics` calls `iam` in another 
 | database | yes, because `apps/Iam/config/database.php` exists |
 
 ```bash
-php artisan modules:make point_of_sale [--database]   # creates apps/PointOfSale and foundation/PointOfSale, and declares it
-php artisan modules:delete point_of_sale [--force]    # deletes its folders, its declaration and its composer.json entries; its database is left as it is
-php artisan modules:list                                     # lists the modules, where they run, their database and host
-php artisan modules:purge                                    # deletes the folder of the modules this process doesn't run
-php artisan modules:doctor                                   # checks that the modules can run, see "Checking the application"
+# creates apps/{Module} and foundation/{Module}, and declares it
+php artisan modules:make <module> [--database]
+# deletes its folders, its declaration and its composer.json entries; its database is left as it is
+php artisan modules:delete <module> [--force]
+# lists the modules, where they run, their database and host
+php artisan modules:list
+# deletes the folder of the modules this process doesn't run
+php artisan modules:purge
+# checks that the modules can run, see "Checking the application"
+php artisan modules:doctor
 ```
 
 `modules:make` also adds the module and the foundation to the `autoload.psr-4` of your
@@ -67,9 +74,11 @@ Laravel's own `make:*` commands take `--module`. They then write in the module, 
 exactly what they write in `app/` without the option:
 
 ```bash
-php artisan make:model Invoice -mf --module=billing        # apps/Billing/app/Models/Invoice.php, its migration and its factory
-php artisan make:controller InvoiceController --module=billing
-php artisan make:migration add_paid_at_to_invoices --module=billing
+# apps/Notifications/app/Models/Preference.php, its migration and its factory
+php artisan make:model Preference -mf --module=notifications
+php artisan make:controller PreferenceController --module=notifications
+# a new column on the notifications_inbox table of the starter
+php artisan make:migration add_archived_at_to_notifications_inbox --module=notifications
 ```
 
 | Command | Where it writes |
@@ -78,7 +87,7 @@ php artisan make:migration add_paid_at_to_invoices --module=billing
 | `make:migration`, and `-m` on `make:model` | `{module}/database/migrations` |
 | `make:factory`, `make:seeder` | `{module}/database/factories` and `database/seeders`, under `{Namespace}\Database\Factories` and `\Seeders` |
 | `make:config` | `{module}/config` |
-| `make:view`, `make:component`, and `--markdown` on `make:mail` and `make:notification` | `{module}/resources/views`; the class that renders the view names it with the module: `view('billing::components.alert')` |
+| `make:view`, `make:component`, and `--markdown` on `make:mail` and `make:notification` | `{module}/resources/views`; the class that renders the view names it with the module: `view('notifications::components.alert')` |
 | `make:test`, and `--test` on the other generators | `{module}/tests/Feature` or `tests/Unit`, under `{Namespace}\Tests` |
 | `make:provider` | no `--module`: write it in `{module}/app/Providers` and list it in `{module}/bootstrap/providers.php` |
 
@@ -93,8 +102,8 @@ A module's tests extend your `Tests\TestCase`. PHPUnit runs them once `phpunit.x
 Keep in a module the tests that only need that module, and in `tests/` the ones that cross modules:
 `Boundaries` reads a module's tests like the rest of its code.
 
-A model's factory is found without any code: `Invoice::factory()` resolves
-`Apps\Billing\Database\Factories\InvoiceFactory`, and that factory resolves its model. Laravel's
+A model's factory is found without any code: `Preference::factory()` resolves
+`Apps\Notifications\Database\Factories\PreferenceFactory`, and that factory resolves its model. Laravel's
 `#[UseFactory]` on a model still wins, and so does a resolver of your own; yours can fall back on
 `Distributable\Support\ModuleFactories::factoryName()` and `modelName()`.
 
@@ -102,17 +111,18 @@ A model's factory is found without any code: `Invoice::factory()` resolves
 
 `--module` is on every Artisan command, and always names one module:
 
-| Command | What `--module=billing` does |
+| Command | What `--module=notifications` does |
 |---|---|
 | `make:*` | generates in the module (above) |
 | `migrate`, `migrate:fresh`… | migrates that module's database only; it can be repeated |
-| `db:seed` | runs `Apps\Billing\Database\Seeders\DatabaseSeeder`; `--class=InvoiceSeeder` names a seeder of the module |
+| `db:seed` | runs `Apps\Notifications\Database\Seeders\DatabaseSeeder`; `--class=NotificationSeeder` names a seeder of the module |
 | any other command, yours or a package's | runs in the module's context, on its database |
 
 ```bash
-php artisan tinker --module=billing                                 # Invoice::count() reads billing's database
-php artisan model:show 'Apps\Billing\Models\Invoice' --module=billing
-php artisan db:seed --module=billing
+# Notification::count() reads notifications' database
+php artisan tinker --module=notifications
+php artisan model:show 'Apps\Notifications\Models\Notification' --module=notifications
+php artisan db:seed --module=notifications
 ```
 
 Without the option, a command that isn't a module's own runs in no module: `model:show` on a
@@ -152,8 +162,10 @@ those guarantees would depend on configuration that every process must get right
 ## Which modules a process runs
 
 ```dotenv
-SERVICE_MODULES=*                       # every module (the default)
-SERVICE_MODULES=transactions,analytics  # only these
+# every module (the default)
+SERVICE_MODULES=*
+# only these
+SERVICE_MODULES=iam,analytics
 ```
 
 `Distributable\Services\Modules\ModuleRegistry` gives you both lists: `all()` returns every declared
@@ -210,7 +222,8 @@ files it reads, and name the packages to Composer so that it removes them and ch
 version:
 
 ```bash
-UNUSED="$(SERVICE_MODULES=analytics php artisan modules:unused-packages)"   # spatie/laravel-permission
+# spatie/laravel-permission
+UNUSED="$(SERVICE_MODULES=analytics php artisan modules:unused-packages)"
 SERVICE_MODULES=analytics php artisan modules:purge --force
 [ -z "$UNUSED" ] || { composer update $UNUSED --no-dev --no-scripts; rm -f bootstrap/cache/packages.php bootstrap/cache/services.php; }
 composer dump-autoload --optimize --no-dev
@@ -221,7 +234,7 @@ A package the root `composer.json` or a module this process runs also requires i
 With `MODULES_STATUS_ROUTE=/`, the process returns the modules it runs:
 
 ```json
-{ "message": "Hello from laravel-distributable-modules", "modules": ["transactions", "analytics"], "status": "ok" }
+{ "message": "Hello from laravel-distributable-modules", "modules": ["iam", "analytics"], "status": "ok" }
 ```
 
 ## The module service provider
@@ -323,9 +336,9 @@ php artisan modules:doctor
 
 | It reports | Example |
 |---|---|
-| a folder of `apps/` that `modules.declared` doesn't list | `[apps/Billing] is not declared in modules.declared.` |
+| a folder of `apps/` that `modules.declared` doesn't list | `[apps/Notifications] is not declared in modules.declared.` |
 | a local module without its `bootstrap/providers.php` | `[iam] …/apps/Iam/bootstrap/providers.php does not exist.` |
-| a module whose service provider class doesn't exist | `[gateway] provider Apps\Gateway\Providers\GatewayServiceProvider does not exist.` |
+| a module whose service provider class doesn't exist | `[notifications] provider Apps\Notifications\Providers\NotificationsServiceProvider does not exist.` |
 | a local module with a database but no declared connection | `[iam] connection [iam] is not declared.` |
 | a module with migrations but no database | `[iam] has migrations but no database: declare its connection in its config/database.php.` |
 | `composer.json` entries that no longer match where the module lives | `composer.json maps [Apps\Iam] to […], but the module lives in […].` |

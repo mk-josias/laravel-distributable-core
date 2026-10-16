@@ -34,9 +34,12 @@ own: the option is on every command, and runs it in that module's context. The c
 module it runs in as the only consuming one.
 
 ```bash
-php artisan stream:consume                      # every module this process runs, one cursor each
-php artisan stream:consume --module=analytics   # analytics only, in its context
-php artisan stream:publish                      # every local module's outbox; --module=iam for one
+# every module this process runs, one cursor each
+php artisan stream:consume
+# analytics only, in its context
+php artisan stream:consume --module=analytics
+# every local module's outbox; --module=iam for one
+php artisan stream:publish
 ```
 
 | You run | The consuming modules are |
@@ -52,7 +55,7 @@ What it implies:
 | a failing handler delays only its own module | with `on_failure` at `block`, the module that failed retries its entry before reading further, while the others go on |
 | never two consumers for the same module and stream | two would break the order it reads in |
 | a module's handlers only get the envelopes addressed to it | an envelope with `recipients` set is skipped by the other consumers |
-| `--stream=` picks another stream than `microservices.events.stream` | one consumer per module and stream |
+| `--stream=` picks another stream than `microservices.events.stream` | one `stream:consume` per stream, serving every module |
 | a `SIGTERM` or `SIGINT` doesn't cut a handler | the consumer finishes the envelope it holds, then stops (it needs the `pcntl` extension) |
 
 Run one publisher per module set: two would publish an outbox out of order.

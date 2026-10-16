@@ -8,8 +8,10 @@ name is the link, so module `iam` uses the connection `iam`, and no other.
 ```php
 'iam' => [
     'driver' => 'pgsql', 'database' => 'iam',
-    'username' => env('IAM_USERNAME'), 'password' => env('IAM_PASSWORD'),   // reads and writes rows
-    'owner' => ['username' => env('IAM_OWNER'), 'password' => env('IAM_OWNER_PASSWORD')],   // optional
+    // reads and writes rows
+    'username' => env('IAM_USERNAME'), 'password' => env('IAM_PASSWORD'),
+    // optional
+    'owner' => ['username' => env('IAM_OWNER'), 'password' => env('IAM_OWNER_PASSWORD')],
 ],
 ```
 
@@ -46,7 +48,8 @@ final class RegisterUser
 {
     public function execute(string $name): User
     {
-        return DB::transaction(fn () => User::query()->create(['name' => $name]));   // iam database
+        // iam database
+        return DB::transaction(fn () => User::query()->create(['name' => $name]));
     }
 }
 ```
@@ -84,7 +87,8 @@ through the module's contract, which runs in the module's context and still work
 runs elsewhere:
 
 ```php
-app(\Foundation\Iam\Contracts\IamService::class)->findUser($id);   // never Apps\Iam\Models\User::find($id)
+// never Apps\Iam\Models\User::find($id)
+app(\Foundation\Iam\Contracts\IamService::class)->findUser($id);
 ```
 
 `Services\Modules\ModuleContext::current()` returns the current module (`Data\Module`) or null,
@@ -97,7 +101,8 @@ from the call stack, so code that never runs is not checked, and `modules:doctor
 In tests, use `Distributable\Testing\ModuleAware`:
 
 ```php
-$user = $this->inModule('iam', fn () => User::query()->create(['name' => 'ada']));   // iam database
+// iam database
+$user = $this->inModule('iam', fn () => User::query()->create(['name' => 'ada']));
 ```
 
 The trait also turns on Laravel's console events in tests, so `$this->artisan('iam:sync')` runs
@@ -107,7 +112,8 @@ To test a module without the module that emits its events, hand it the event dir
 run in its context, with no stream and no consumer:
 
 ```php
-$this->receive('analytics', 'iam.user.registered', ['id' => 42]);   // emitter: iam, read from the name
+// emitter: iam, read from the name
+$this->receive('analytics', 'iam.user.registered', ['id' => 42]);
 ```
 
 ## Migrations

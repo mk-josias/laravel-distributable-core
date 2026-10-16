@@ -41,8 +41,10 @@ iam publishes the migration of the copy's table in `foundation/Iam/database/shad
 keeps a copy.
 
 ```bash
-php artisan shadows:want [--keepers=reports] [--sources=iam_users]   # on the keeping module
-php artisan shadows:announce iam_users [--keepers=reports]          # on the owner
+# on the keeping module
+php artisan shadows:want [--keepers=analytics] [--sources=iam_users]
+# on the owner
+php artisan shadows:announce iam_users [--keepers=analytics]
 ```
 
 `modules:cache` records each module's shadow sources, so a process doesn't scan the module

@@ -58,7 +58,10 @@ the `http` role is on:
 A scheduled task runs in the module that declared it, so the container with the scheduler is the
 one that runs that module.
 
-## One compose file per module
+## Deploying a module on its own
+
+Each file runs an image built for that module only: its code and the foundation, nothing of the
+other modules (see [One image per module](#one-image-per-module)).
 
 Nothing ties modules to a single compose file. Each module's service carries its own image,
 `SERVICE_MODULES`, roles and port; what it shares with the others is only reachable infrastructure: the

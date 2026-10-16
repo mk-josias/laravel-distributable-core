@@ -40,8 +40,10 @@ final class IamRpcService extends \Microservices\Services\Rpc\RpcService impleme
     {
         return $this->readThrough(
             "iam:user:{$id}",
-            self::DEFAULT_TTL,                                        // a week: iam forgets the key when the user changes
-            fn () => $this->call('findUser', ['id' => $id]),          // the raw answer, the one kept in the cache
+            // a week: iam forgets the key when the user changes
+            self::DEFAULT_TTL,
+            // the raw answer, the one kept in the cache
+            fn () => $this->call('findUser', ['id' => $id]),
             fn (array $raw) => ['id' => $raw['id'], 'name' => $raw['name']],
         );
     }

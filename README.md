@@ -23,10 +23,14 @@ another. The package sets up what is missing:
 
 ```bash
 composer require mk-josias/laravel-distributable-modules
-composer require mk-josias/laravel-microservices-stream-redis   # the events driver: Redis Streams (or stream-queue, or yours); MICROSERVICES_STREAM_DRIVER=redis
-composer require mk-josias/laravel-microservices-rpc-http       # calls to a module running in another process
-php artisan modules:install                      # config/modules.php, apps/, foundation/FoundationServiceProvider.php
-php artisan modules:make iam --database   # apps/Iam and foundation/Iam, declared in config/modules.php
+# the events driver: Redis Streams (or stream-queue, or yours); MICROSERVICES_STREAM_DRIVER=redis
+composer require mk-josias/laravel-microservices-stream-redis
+# calls to a module running in another process
+composer require mk-josias/laravel-microservices-rpc-http
+# config/modules.php, apps/, foundation/FoundationServiceProvider.php
+php artisan modules:install
+# apps/Iam and foundation/Iam, declared in config/modules.php
+php artisan modules:make iam --database
 ```
 
 [The starter](https://github.com/mk-josias/laravel-distributable-modules/tree/main/starter) is the example
@@ -83,8 +87,10 @@ processes they run in is a setting, chosen module by module and changed in eithe
 SERVICE_MODULES=*
 
 # one module alone, the others grouped
-SERVICE_MODULES=transactions        # process A
-SERVICE_MODULES=iam,analytics       # process B
+# process A
+SERVICE_MODULES=notifications
+# process B
+SERVICE_MODULES=iam,analytics
 ```
 
 A call between two modules of the same process is a direct method call: no HTTP, no signature,
@@ -97,13 +103,13 @@ or moving one out is not a rewrite.
 ```
                               one codebase
 ┌──────────────────────────────────────────────────────────────────────┐
-│ apps/Iam              apps/Analytics            apps/Transactions    │
+│ apps/Iam              apps/Analytics            apps/Notifications   │
 │  own data              own data                  own data            │
 └──────────────────────────────────────────────────────────────────────┘
           │ SERVICE_MODULES picks which modules each process boots
           ▼
 ┌─────────────── process A ───────────────┐   ┌──── process B ────┐
-│ iam · analytics                         │   │ transactions      │
+│ iam · analytics                         │   │ notifications     │
 └─────────────────────────────────────────┘   └───────────────────┘
        │            ▲         │                        ▲
        │ events     │         └── RPC (signed HTTP) ───┘
@@ -330,14 +336,17 @@ final class User extends \Illuminate\Database\Eloquent\Model {}
 return ['connections' => [
     'iam' => [
         'driver' => 'pgsql', 'database' => 'iam',
-        'username' => 'iam_app',                       // reads and writes
-        'owner' => ['username' => 'iam_owner'],        // creates and alters tables; optional
+        // reads and writes
+        'username' => 'iam_app',
+        // creates and alters tables; optional
+        'owner' => ['username' => 'iam_owner'],
     ],
 ]];
 ```
 
 ```bash
-php artisan migrate   # migrates each module's database
+# migrates each module's database
+php artisan migrate
 ```
 
 Emit an event from one module and handle it in another:
@@ -351,7 +360,8 @@ final class UserRegistered extends \Microservices\Events\Event
 
     public function payload(): array { return ['id' => $this->id]; }
 
-    public function version(): int { return 1; }   // raised when the shape of the payload changes
+    // raised when the shape of the payload changes
+    public function version(): int { return 1; }
 }
 
 app(\Microservices\Contracts\Stream\Bus::class)->emit(new UserRegistered($user->id));
@@ -394,7 +404,8 @@ anything. The full list is in [Checking the application](docs/modules.md#checkin
 ## Testing
 
 ```bash
-composer check   # pint + phpstan (level 6) + pest
+# pint + phpstan (level 6) + pest
+composer check
 ```
 
 ## License
