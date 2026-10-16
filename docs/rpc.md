@@ -58,7 +58,7 @@ modules type-hint `Foundation\Iam\Contracts\IamService` and don't need to know w
 ```
 analytics ─► IamService (the contract) ─► IamRpcService::call('findUser', ['id' => 1])
                                                     │
-                                 does iam run in this process (SERVICE_MODULES)?
+                                 does iam run in this process (RUN_MODULES)?
            ┌────────────────────────────────────────┴───────────────────────────────────────┐
            │ yes: a direct method call                                                      │ no: POST {iam's host}/iam/rpc/findUser, signed
            ▼                                                                                ▼

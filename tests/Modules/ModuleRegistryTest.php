@@ -19,14 +19,14 @@ function registryLoading(array $loadedModules = ['*']): ModuleRegistry
     ], $loadedModules);
 }
 
-it('treats every module as local when SERVICE_MODULES is *', function () {
+it('treats every module as local when RUN_MODULES is *', function () {
     $registry = registryLoading(['*']);
 
     expect($registry->local())->toHaveCount(2)
         ->and($registry->isLocal('analytics'))->toBeTrue();
 });
 
-it('narrows the local set to the SERVICE_MODULES list', function () {
+it('narrows the local set to the RUN_MODULES list', function () {
     $registry = registryLoading(['analytics']);
 
     $local = $registry->local();

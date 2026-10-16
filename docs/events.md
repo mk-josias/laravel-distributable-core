@@ -43,13 +43,13 @@ php artisan stream:publish
 | You run | The consuming modules are |
 |---|---|
 | `stream:consume --module=analytics` | `analytics`, and the command runs in its context |
-| `stream:consume` with no option | every module the process runs (`SERVICE_MODULES`): one in a process that runs one, all of them in the container that runs several |
+| `stream:consume` with no option | every module the process runs (`RUN_MODULES`): one in a process that runs one, all of them in the container that runs several |
 
 What it implies:
 
 | Rule | Why |
 |---|---|
-| one `stream:consume` per module set is enough | it keeps a cursor per module: the starter's container with `SERVICE_MODULES=*` and `WITH_CONSUMERS=true` serves `iam`, `analytics` and `notifications` from one process |
+| one `stream:consume` per module set is enough | it keeps a cursor per module: the starter's container with `RUN_MODULES=*` and `WITH_CONSUMERS=true` serves `iam`, `analytics` and `notifications` from one process |
 | a failing handler delays only its own module | with `on_failure` at `block`, the module that failed retries its entry before reading further, while the others go on |
 | never two consumers for the same module and stream | two would break the order it reads in |
 | a module's handlers only get the envelopes addressed to it | an envelope with `recipients` set is skipped by the other consumers |

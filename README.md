@@ -17,7 +17,7 @@ another. The package sets up what is missing:
 - **Boundaries that hold.** A module that imports another module's class, or names its tables,
   is reported by `modules:doctor` and fails your test suite, before it is deployed.
 - **The same behaviour together or apart.** Events go through a stream and calls through a
-  contract in both setups, so moving a module to its own process is a change of `SERVICE_MODULES`.
+  contract in both setups, so moving a module to its own process is a change of `RUN_MODULES`.
 - **An image per module.** `modules:purge` removes from an image the code of the modules it
   doesn't run, and `modules:unused-packages` the Composer packages only they required.
 
@@ -84,13 +84,13 @@ processes they run in is a setting, chosen module by module and changed in eithe
 
 ```dotenv
 # every module in one process
-SERVICE_MODULES=*
+RUN_MODULES=*
 
 # one module alone, the others grouped
 # process A
-SERVICE_MODULES=notifications
+RUN_MODULES=notifications
 # process B
-SERVICE_MODULES=iam,analytics
+RUN_MODULES=iam,analytics
 ```
 
 A call between two modules of the same process is a direct method call: no HTTP, no signature,
@@ -106,7 +106,7 @@ or moving one out is not a rewrite.
 │ apps/Iam              apps/Analytics            apps/Notifications   │
 │  own data              own data                  own data            │
 └──────────────────────────────────────────────────────────────────────┘
-          │ SERVICE_MODULES picks which modules each process boots
+          │ RUN_MODULES picks which modules each process boots
           ▼
 ┌─────────────── process A ───────────────┐   ┌──── process B ────┐
 │ iam · analytics                         │   │ notifications     │
@@ -182,7 +182,7 @@ while it shares a process with the others.
 | owns its data | its own connection; naming another module's tables or connection is reported |
 | exposes only a contract | another module's classes can't be loaded where that module doesn't run, and importing them is reported |
 | talks through messages | events on a stream, or signed RPC calls on a contract, whether the modules share a process or not |
-| is deployed on its own | `SERVICE_MODULES` picks the modules a process runs; `modules:purge` removes the others' code from its image |
+| is deployed on its own | `RUN_MODULES` picks the modules a process runs; `modules:purge` removes the others' code from its image |
 
 `modules:doctor` and `Boundaries` check all of this in CI, so a module that would not survive
 being moved to its own service fails before it is deployed. The seven rules, with what each one
@@ -279,7 +279,7 @@ module's contract, as any module code does.
 | Built for | organising code in modules | module boundaries and events inside one application | modules that are microservices: one codebase, deployed together or apart |
 | Data | one shared database | one datasource | each module owns its data, on its own connection |
 | Between modules | direct calls | events and outbox | event stream with an ordered outbox, and RPC |
-| Moving a module to its own service | rewrite | new application | `SERVICE_MODULES` |
+| Moving a module to its own service | rewrite | new application | `RUN_MODULES` |
 | The image of one module | the whole codebase | the whole application | only that module's code (`modules:purge`) |
 
 ### Out of scope

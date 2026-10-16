@@ -10,10 +10,10 @@ To move `iam` to its own process, start two copies of the same code with differe
 
 ```dotenv
 # the iam process
-SERVICE_MODULES=iam
+RUN_MODULES=iam
 
 # the analytics process
-SERVICE_MODULES=analytics
+RUN_MODULES=analytics
 IAM_HOST=http://iam.internal:8000
 ```
 
@@ -33,14 +33,14 @@ An image for one module holds only its code. At build time, in this order (the c
 described in [Modules](./modules#modules-this-process-doesn-t-run)):
 
 ```bash
-UNUSED="$(SERVICE_MODULES=analytics php artisan modules:unused-packages)"
-SERVICE_MODULES=analytics php artisan modules:purge --force
+UNUSED="$(RUN_MODULES=analytics php artisan modules:unused-packages)"
+RUN_MODULES=analytics php artisan modules:purge --force
 [ -z "$UNUSED" ] || composer update $UNUSED --no-dev --no-scripts
 composer dump-autoload --optimize --no-dev
 ```
 
 At start, `php artisan optimize` runs `modules:cache`, and an image started with a purged module in
-`SERVICE_MODULES` fails at boot with that module's name.
+`RUN_MODULES` fails at boot with that module's name.
 
 ## What a container does
 
@@ -53,7 +53,7 @@ the `http` role is on:
 | `worker` (`queue:work`) | `WITH_WORKER` | `false` | as many as you need |
 | `publisher` (`stream:publish`) | `WITH_PUBLISHER` | `false` | one per set of modules: two would publish the outbox out of order |
 | `scheduler` (`schedule:run` every minute) | `WITH_SCHEDULER` | `false` | one per set of modules: two would run each task twice |
-| `consumers` (`stream:consume`) | `WITH_CONSUMERS` | `false` | one per set of modules: it serves every module of `SERVICE_MODULES`, each with its own cursor, and two would break the order a module reads in |
+| `consumers` (`stream:consume`) | `WITH_CONSUMERS` | `false` | one per set of modules: it serves every module of `RUN_MODULES`, each with its own cursor, and two would break the order a module reads in |
 
 A scheduled task runs in the module that declared it, so the container with the scheduler is the
 one that runs that module.
@@ -64,7 +64,7 @@ Each file runs an image built for that module only: its code and the foundation,
 other modules (see [One image per module](#one-image-per-module)).
 
 Nothing ties modules to a single compose file. Each module's service carries its own image,
-`SERVICE_MODULES`, roles and port; what it shares with the others is only reachable infrastructure: the
+`RUN_MODULES`, roles and port; what it shares with the others is only reachable infrastructure: the
 database server, the stream, the secret, and the address of the modules it calls.
 
 | Shared by every file | How |
@@ -152,7 +152,7 @@ services:
     image: distributable-skeleton:analytics
     environment:
       <<: *env
-      SERVICE_MODULES: analytics
+      RUN_MODULES: analytics
       WITH_CONSUMERS: "true"
       WITH_SCHEDULER: "true"
     ports:
@@ -171,7 +171,7 @@ networks:
     name: dm
 ```
 
-`iam.yml` is the same file with `iam` for the name, the image, `SERVICE_MODULES` and the port, no `WITH_SCHEDULER`, `SYNC_PERMISSIONS: "true"`, and the alias `iam.svc` on its network
+`iam.yml` is the same file with `iam` for the name, the image, `RUN_MODULES` and the port, no `WITH_SCHEDULER`, `SYNC_PERMISSIONS: "true"`, and the alias `iam.svc` on its network
 entry:
 
 ```yaml
@@ -181,7 +181,7 @@ entry:
 ```
 
 The images are the ones the starter's `docker-compose.yml` builds, one per module, with
-`--build-arg SERVICE_MODULES=<module>`. The values above are for development: in production, set real
+`--build-arg RUN_MODULES=<module>`. The values above are for development: in production, set real
 secrets.
 
 ## Checking a deployment

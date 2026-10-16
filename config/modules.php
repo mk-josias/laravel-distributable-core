@@ -22,7 +22,7 @@ return [
     ],
 
     // Modules booted by THIS process: '*' = all, or a comma-separated list.
-    'runs' => env('SERVICE_MODULES', '*'),
+    'runs' => env('RUN_MODULES', '*'),
 
     // {paths.modules}/{Module}/app is autoloaded as {namespaces.modules}\{Module}\, and
     // {paths.foundation}/{Module} as {namespaces.foundation}\{Module}\: no entry to add to composer.json.

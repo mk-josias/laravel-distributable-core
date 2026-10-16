@@ -13,7 +13,7 @@ final class PurgeModules extends Command
 {
     protected $signature = 'modules:purge {--force : Skip the confirmation}';
 
-    protected $description = 'Delete the folder of every module this process does not run (SERVICE_MODULES).';
+    protected $description = 'Delete the folder of every module this process does not run (RUN_MODULES).';
 
     public function handle(ModuleRegistry $registry, Filesystem $files): int
     {

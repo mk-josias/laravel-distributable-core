@@ -23,18 +23,18 @@ folder can't tell, such as the URL of a module that runs elsewhere:
 | `declared.{name}.module`, `declared.{name}.foundation` | the folder under `apps/` and under `foundation/` when it isn't the name in StudlyCase: `'iam' => ['module' => 'Identity', 'foundation' => 'Identity']` |
 | `paths` | the directories of the modules and of the foundation, and `namespaces` their root namespaces |
 
-`SERVICE_MODULES` is not a key of `declared`: it says which of these modules a process runs (see below).
+`RUN_MODULES` is not a key of `declared`: it says which of these modules a process runs (see below).
 For example, in a `docker-compose.yml` where `analytics` calls `iam` in another container:
 
 ```yaml
   analytics:
     environment:
-      SERVICE_MODULES: analytics
+      RUN_MODULES: analytics
       # read by declared.iam.host
       IAM_HOST: "http://iam.svc:8000"
   iam:
     environment:
-      SERVICE_MODULES: iam
+      RUN_MODULES: iam
     networks:
       default:
         # the name analytics calls
@@ -163,9 +163,9 @@ those guarantees would depend on configuration that every process must get right
 
 ```dotenv
 # every module (the default)
-SERVICE_MODULES=*
+RUN_MODULES=*
 # only these
-SERVICE_MODULES=iam,analytics
+RUN_MODULES=iam,analytics
 ```
 
 `Distributable\Services\Modules\ModuleRegistry` gives you both lists: `all()` returns every declared
@@ -179,12 +179,12 @@ it. The cache never decides which modules exist: `modules.declared` does.
 
 ## Modules this process doesn't run
 
-The package only autoloads the classes of the modules in `SERVICE_MODULES`, plus the foundation. A
+The package only autoloads the classes of the modules in `RUN_MODULES`, plus the foundation. A
 class of any other module is never loaded, even if its file is on disk: using it throws a
 `ModuleException`.
 
 ```
-[Apps\Iam\Services\IamService] belongs to module [iam], which this process does not run (SERVICE_MODULES): go through its foundation contract or an event.
+[Apps\Iam\Services\IamService] belongs to module [iam], which this process does not run (RUN_MODULES): go through its foundation contract or an event.
 ```
 
 This catches, at runtime, a call that `Boundaries` would have caught in your tests. A process still
@@ -194,11 +194,11 @@ their events, and calls them through the RPC services of the foundation.
 When you build an image for some modules only, you can delete the folders of the others:
 
 ```bash
-SERVICE_MODULES=analytics php artisan modules:purge --force
+RUN_MODULES=analytics php artisan modules:purge --force
 ```
 
 Run it in your Dockerfile, after copying the code and before `composer dump-autoload`. Starting an
-image with a module in `SERVICE_MODULES` whose folder was purged fails at boot, with the name of the
+image with a module in `RUN_MODULES` whose folder was purged fails at boot, with the name of the
 module.
 
 ## The dependencies of a module
@@ -223,8 +223,8 @@ version:
 
 ```bash
 # spatie/laravel-permission
-UNUSED="$(SERVICE_MODULES=analytics php artisan modules:unused-packages)"
-SERVICE_MODULES=analytics php artisan modules:purge --force
+UNUSED="$(RUN_MODULES=analytics php artisan modules:unused-packages)"
+RUN_MODULES=analytics php artisan modules:purge --force
 [ -z "$UNUSED" ] || { composer update $UNUSED --no-dev --no-scripts; rm -f bootstrap/cache/packages.php bootstrap/cache/services.php; }
 composer dump-autoload --optimize --no-dev
 ```
