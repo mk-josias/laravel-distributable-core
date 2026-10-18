@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Distributable\Console\Commands;
 
-use Distributable\Services\Modules\DiscoveryCache;
+use Distributable\Services\Discovery\DiscoveryCache;
 use Illuminate\Console\Command;
 
 final class ClearModules extends Command

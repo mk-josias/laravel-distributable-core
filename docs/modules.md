@@ -184,7 +184,7 @@ RUN_MODULES=*
 RUN_MODULES=iam,analytics
 ```
 
-`Distributable\Services\Modules\ModuleRegistry` gives you both lists: `all()` returns every declared
+`Distributable\Services\ModuleRegistry` gives you both lists: `all()` returns every declared
 module and `local()` the ones this process runs. `get($name)` throws on an unknown name, and
 `forClass($class)` returns the module a class belongs to, based on its namespace.
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Distributable\Http\Controllers;
 
 use Distributable\Data\Module;
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\ModuleRegistry;
 use Illuminate\Http\JsonResponse;
 
 /** Answers which modules this process runs — the first thing to check on a split deployment. */

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Distributable\Console\Commands;
 
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\ModuleRegistry;
 use Illuminate\Console\Command;
 
 /** Run before modules:purge, which deletes the files this reads: the output goes to `composer update`, which removes those packages only. */

@@ -7,8 +7,8 @@ namespace Distributable\Console\Commands;
 use Distributable\Config\Modules;
 use Distributable\Data\Module;
 use Distributable\Exceptions\ModuleException;
-use Distributable\Services\Modules\ComposerAutoload;
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\Composer\ComposerAutoload;
+use Distributable\Services\ModuleRegistry;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 

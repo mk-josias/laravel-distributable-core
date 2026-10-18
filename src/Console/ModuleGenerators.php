@@ -6,7 +6,7 @@ namespace Distributable\Console;
 
 use Closure;
 use Distributable\Data\Module;
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\ModuleRegistry;
 use Illuminate\Console\Events\CommandFinished;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Foundation\Application;

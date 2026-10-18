@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Distributable\Services;
+namespace Distributable\Services\Discovery;
 
 use ReflectionClass;
 use Symfony\Component\Finder\Finder;

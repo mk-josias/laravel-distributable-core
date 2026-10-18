@@ -2,11 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Distributable\Services\Modules;
+namespace Distributable\Services\Rpc;
 
 use Distributable\Contracts\Rpc\Transport;
-use Distributable\Services\Rpc\LocalServices;
-use Distributable\Services\Rpc\TransportManager;
+use Distributable\Services\ModuleRegistry;
 use Illuminate\Container\Container;
 
 /** A call to a module this process runs is a direct method call; any other goes out on the module's transport. */

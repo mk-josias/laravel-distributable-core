@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Distributable\Context;
 
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\ModuleRegistry;
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Factories\Factory;

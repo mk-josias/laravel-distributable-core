@@ -9,7 +9,7 @@ use Distributable\Context\ModuleContext;
 use Distributable\Data\Envelope;
 use Distributable\Data\Module;
 use Distributable\Exceptions\ModuleException;
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\ModuleRegistry;
 use Distributable\Services\Stream\Dispatcher;
 use Illuminate\Foundation\Testing\WithConsoleEvents;
 use Illuminate\Support\Arr;

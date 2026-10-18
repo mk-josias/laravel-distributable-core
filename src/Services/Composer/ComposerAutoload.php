@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Distributable\Services\Modules;
+namespace Distributable\Services\Composer;
 
 use Distributable\Config\Modules;
 use Distributable\Data\Module;

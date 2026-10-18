@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use Apps\Analytics\Models\UserShadow;
 use Distributable\Data\Module;
-use Distributable\Services\Modules\ComposerAutoload;
-use Distributable\Services\Modules\ModuleMigrations;
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\Composer\ComposerAutoload;
+use Distributable\Services\Migrations\ModuleMigrations;
+use Distributable\Services\ModuleRegistry;
 use Distributable\Tests\ModuleAppTestCase;
 use Foundation\Iam\Shadows\MisplacedShadow;
 use Foundation\Iam\Shadows\UnpublishedShadow;

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Distributable\Context\Queue;
 
 use DateTimeInterface;
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\ModuleRegistry;
 use Illuminate\Bus\Batch;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\DatabaseBatchRepository;

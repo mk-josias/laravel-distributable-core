@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Distributable\Console\Commands;
 
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\ModuleRegistry;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 

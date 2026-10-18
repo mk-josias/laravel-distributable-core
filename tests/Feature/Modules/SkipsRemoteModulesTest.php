@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Distributable\Exceptions\ModuleException;
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\ModuleRegistry;
 use Distributable\Tests\WithoutIamTestCase;
 use Foundation\Iam\Contracts\IamService;
 use Foundation\Iam\Services\IamRpcService;

@@ -6,8 +6,8 @@ namespace Distributable\Console\Migrations;
 
 use Distributable\Context\ModuleContext;
 use Distributable\Migrations\ShadowMigration;
-use Distributable\Services\Modules\ModuleMigrations;
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\Migrations\ModuleMigrations;
+use Distributable\Services\ModuleRegistry;
 use Symfony\Component\Console\Input\InputOption;
 
 /**

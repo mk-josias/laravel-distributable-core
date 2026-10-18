@@ -6,7 +6,7 @@ namespace Apps\Analytics\Reports;
 
 use Distributable\Context\ModuleContext;
 use Distributable\Contracts\Colocation;
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\ModuleRegistry;
 
 /** Analytics code that switches to a module by itself, as boundaries forbid for any module but its own. */
 final readonly class EntersIam

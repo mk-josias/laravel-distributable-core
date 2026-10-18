@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Distributable\Contracts\Rpc\Transport as RpcTransport;
 use Distributable\Exceptions\ConfigurationException;
 use Distributable\Exceptions\ServiceException;
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\ModuleRegistry;
 use Distributable\Services\Rpc\TransportManager as RpcTransportManager;
 use Distributable\Tests\ModuleAppTestCase;
 use Foundation\Iam\Contracts\IamService;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\ModuleRegistry;
 use Distributable\Tests\ModuleAppTestCase;
 
 uses(ModuleAppTestCase::class);

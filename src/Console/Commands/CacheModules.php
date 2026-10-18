@@ -6,8 +6,8 @@ namespace Distributable\Console\Commands;
 
 use Composer\Autoload\ClassLoader;
 use Distributable\Data\Module;
-use Distributable\Services\Modules\DiscoveryCache;
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\Discovery\DiscoveryCache;
+use Distributable\Services\ModuleRegistry;
 use Distributable\Services\Shadows\ShadowRegistry;
 use Illuminate\Console\Command;
 

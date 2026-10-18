@@ -6,7 +6,7 @@ namespace Distributable\Testing;
 
 use Distributable\Config\Modules;
 use Distributable\Data\Module;
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\ModuleRegistry;
 use Distributable\Services\Shadows\ShadowRegistry;
 use Illuminate\Support\Str;
 use PhpToken;

@@ -6,7 +6,7 @@ namespace Distributable\Console\Commands;
 
 use Distributable\Config\Modules;
 use Distributable\Data\Module;
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\ModuleRegistry;
 use Illuminate\Console\Command;
 
 final class ListModules extends Command

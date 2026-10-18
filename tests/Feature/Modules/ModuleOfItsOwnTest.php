@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Distributable\Exceptions\ModuleException;
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\ModuleRegistry;
 use Distributable\Tests\TestCase;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Foundation\Application;

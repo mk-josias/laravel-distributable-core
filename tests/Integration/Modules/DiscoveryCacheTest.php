@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Apps\Iam\Models\User;
-use Distributable\Services\Modules\DiscoveryCache;
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\Discovery\DiscoveryCache;
+use Distributable\Services\ModuleRegistry;
 use Distributable\Tests\ModuleAppTestCase;
 
 uses(ModuleAppTestCase::class);

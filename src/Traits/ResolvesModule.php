@@ -6,7 +6,7 @@ namespace Distributable\Traits;
 
 use Distributable\Data\Module;
 use Distributable\Exceptions\ModuleException;
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\ModuleRegistry;
 
 trait ResolvesModule
 {

@@ -34,13 +34,17 @@ src/
 ├── Console/            ModuleOption · ModuleGenerators · ModuleSeedCommand
 ├── Config/             Modules
 ├── Data/               Module
-├── Jobs/               FailedJobProvider · BatchRepository · Databases
+├── Context/            ModuleContext · ModuleDeferredCallbacks · ModuleConcurrencyDriver · ModuleTaskDispatcher · ModuleFactories · ScheduledTasks
+├── Context/Queue/      FailedJobProvider · BatchRepository · Databases
 ├── Traits/             ResolvesModule
-├── Support/            ModuleDeferredCallbacks · ModuleConcurrencyDriver · ModuleTaskDispatcher · ModuleFactories
 ├── Exceptions/         ModuleException
 ├── Testing/            Boundaries · ModuleAware
-└── Services/Modules/   ModuleRegistry · ModuleContext · ModuleColocation · ModuleRpcTransport
-                        CachedShadowRegistry · DiscoveryCache · ModuleMigrations · ComposerAutoload
+├── Services/           ModuleRegistry · ModuleColocation · SingleService
+├── Services/Discovery/ ClassDiscovery · DiscoveryCache
+├── Services/Migrations/ ModuleMigrations
+├── Services/Composer/  ComposerAutoload
+├── Services/Rpc/       ModuleRpcTransport · …
+└── Services/Shadows/   CachedShadowRegistry · ShadowRegistry
 ```
 
 `ModuleColocation` is what makes each module a service of laravel-microservices: it tells which

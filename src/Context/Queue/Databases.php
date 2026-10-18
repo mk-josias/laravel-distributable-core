@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Distributable\Context\Queue;
 
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\ModuleRegistry;
 
 final class Databases
 {

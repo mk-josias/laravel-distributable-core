@@ -8,7 +8,7 @@ uses(TestCase::class);
 
 use Distributable\Data\Module;
 use Distributable\Exceptions\ModuleException;
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\ModuleRegistry;
 
 /** @param list<string> $loadedModules */
 function registryLoading(array $loadedModules = ['*']): ModuleRegistry

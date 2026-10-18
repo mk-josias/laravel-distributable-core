@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Distributable\Services\Modules;
+namespace Distributable\Services\Migrations;
 
 use Distributable\Contracts\Shadows\PublishesMigrations;
 use Distributable\Data\Module;

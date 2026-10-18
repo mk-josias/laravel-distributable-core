@@ -7,7 +7,7 @@ namespace Distributable\Services\Shadows;
 use Distributable\Contracts\Colocation;
 use Distributable\Contracts\Shadows\Shadowed;
 use Distributable\Models\ShadowModel;
-use Distributable\Services\ClassDiscovery;
+use Distributable\Services\Discovery\ClassDiscovery;
 use Illuminate\Database\Eloquent\Model;
 
 /** Finds, among the services this process runs, the copies each one declares and the source models it owns. */

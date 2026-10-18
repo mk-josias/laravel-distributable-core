@@ -6,8 +6,8 @@ namespace Distributable\Console\Commands;
 
 use Distributable\Config\Modules;
 use Distributable\Contracts\Shadows\PublishesMigrations;
-use Distributable\Services\Modules\ComposerAutoload;
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\Composer\ComposerAutoload;
+use Distributable\Services\ModuleRegistry;
 use Distributable\Services\Rpc\RpcServices;
 use Distributable\Services\Shadows\ShadowRegistry;
 use Distributable\Testing\Boundaries;

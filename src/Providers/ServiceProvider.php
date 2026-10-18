@@ -9,7 +9,7 @@ use Distributable\Context\ModuleContext;
 use Distributable\Context\ScheduledTasks;
 use Distributable\Http\Middleware\SetModuleContext;
 use Distributable\Models\ShadowModel;
-use Distributable\Services\ClassDiscovery;
+use Distributable\Services\Discovery\ClassDiscovery;
 use Distributable\Services\Rpc\LocalServices;
 use Distributable\Traits\ResolvesModule;
 use Illuminate\Console\Command;

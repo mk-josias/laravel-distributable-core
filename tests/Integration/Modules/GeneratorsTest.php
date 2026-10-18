@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Distributable\Exceptions\ModuleException;
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\ModuleRegistry;
 use Distributable\Tests\ModuleAppTestCase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Distributable\Console\Commands;
 
 use Distributable\Config\Modules;
-use Distributable\Services\Modules\ComposerAutoload;
+use Distributable\Services\Composer\ComposerAutoload;
 use Illuminate\Console\Command;
 
 final class Install extends Command

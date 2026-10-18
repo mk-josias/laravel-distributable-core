@@ -6,7 +6,7 @@ namespace Distributable\Console\Commands;
 
 use Distributable\Config\Modules;
 use Distributable\Data\Module;
-use Distributable\Services\Modules\ComposerAutoload;
+use Distributable\Services\Composer\ComposerAutoload;
 use Illuminate\Console\Command;
 
 final class MakeModule extends Command

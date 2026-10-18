@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Apps\Analytics\Reports\UsesConnection;
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\ModuleRegistry;
 use Distributable\Tests\ModuleAppTestCase;
 use Illuminate\Support\Facades\DB;
 

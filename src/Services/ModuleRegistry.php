@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Distributable\Services\Modules;
+namespace Distributable\Services;
 
 use Distributable\Data\Module;
 use Distributable\Exceptions\ModuleException;

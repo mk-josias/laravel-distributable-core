@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Apps\Iam\Models\User;
 use Apps\Iam\Providers\IamServiceProvider;
 use Distributable\Config\Modules;
-use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\ModuleRegistry;
 use Distributable\Tests\ModuleAppTestCase;
 use Illuminate\Database\Migrations\Migrator;
 use Illuminate\Http\Request;
