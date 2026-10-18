@@ -22,11 +22,11 @@ another. The package sets up what is missing:
   doesn't run, and `modules:unused-packages` the Composer packages only they required.
 
 ```bash
-composer require mk-josias/laravel-distributable-modules
+composer require mk-josias/laravel-distributable
 # the events driver: Redis Streams (or stream-queue, or yours); DISTRIBUTABLE_STREAM_DRIVER=redis
-composer require mk-josias/laravel-microservices-stream-redis
+composer require mk-josias/laravel-distributable-stream-redis
 # calls to a module running in another process
-composer require mk-josias/laravel-microservices-rpc-http
+composer require mk-josias/laravel-distributable-rpc-http
 # config/distributable.php, apps/, foundation/FoundationServiceProvider.php
 php artisan modules:install
 # apps/Iam and foundation/Iam, declared in config/distributable.php
@@ -39,7 +39,7 @@ one process or one per module, and tests of each module alone. Read it to see th
 or start from it:
 
 ```bash
-composer create-project mk-josias/laravel-distributable-modules-starter my-app
+composer create-project mk-josias/laravel-distributable-starter my-app
 ```
 
 Requires PHP 8.4+ and Laravel 12 or 13. Events, calls and copies between modules come from

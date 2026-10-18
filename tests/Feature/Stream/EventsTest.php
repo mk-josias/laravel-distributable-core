@@ -136,7 +136,7 @@ it('handles a redelivered event once', function () {
 it('names the package of a shipped driver that is not installed', function () {
     config()->set('distributable.events.streams.default.driver', 'redis');
 
-    expect(fn () => app(Transport::class))->toThrow(ConfigurationException::class, 'composer require mk-josias/laravel-microservices-stream-redis');
+    expect(fn () => app(Transport::class))->toThrow(ConfigurationException::class, 'composer require mk-josias/laravel-distributable-stream-redis');
 });
 
 it('consumes the stream as this service', function () {

@@ -5,10 +5,10 @@ declare(strict_types=1);
 use Apps\Iam\Events\UserRegistered;
 use Distributable\Data\Envelope;
 use Distributable\Services\Stream\TransportManager;
+use Distributable\Stream\Redis\RedisStreamTransport;
 use Distributable\Tests\ModuleAppTestCase;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
-use StreamRedis\RedisStreamTransport;
 
 uses(ModuleAppTestCase::class);
 

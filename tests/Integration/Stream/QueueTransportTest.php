@@ -7,12 +7,12 @@ use Distributable\Contracts\Stream\Bus;
 use Distributable\Contracts\Stream\Transport;
 use Distributable\Data\Envelope;
 use Distributable\Providers\DistributableServiceProvider;
+use Distributable\Stream\Queue\QueueTransport;
 use Distributable\Tests\ModuleAppTestCase;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use StreamQueue\QueueTransport;
 
 uses(ModuleAppTestCase::class);
 

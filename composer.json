@@ -1,5 +1,5 @@
 {
-    "name": "mk-josias/laravel-distributable-modules",
+    "name": "mk-josias/laravel-distributable",
     "description": "The foundations for designing each Laravel module as a microservice: its code runs in a context bounded to its module, blind to the others, whether they run in the same process or in separate, distributed processes, and it talks to them only through contracts and events. Whether modules run as microservices or several to a process, depending on load, release pace or cost, becomes an infrastructure choice rather than a code one, allowing greater flexibility.",
     "homepage": "https://mk-josias.github.io/laravel-distributable-modules/",
     "license": "MIT",
@@ -25,9 +25,9 @@
     },
     "suggest": {
         "laravel/octane": "High-throughput application server; the kernel also runs under plain FPM",
-        "mk-josias/laravel-microservices-rpc-http": "Calls to a module running in another process, over signed HTTP",
-        "mk-josias/laravel-microservices-stream-redis": "The redis events driver, on Redis Streams",
-        "mk-josias/laravel-microservices-stream-queue": "The queue events driver, for a stack without Redis"
+        "mk-josias/laravel-distributable-rpc-http": "Calls to a module running in another process, over signed HTTP",
+        "mk-josias/laravel-distributable-stream-redis": "The redis events driver, on Redis Streams",
+        "mk-josias/laravel-distributable-stream-queue": "The queue events driver, for a stack without Redis"
     },
     "autoload": {
         "psr-4": {

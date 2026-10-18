@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Distributable\Tests;
 
 use Distributable\Providers\DistributableServiceProvider;
+use Distributable\RpcHttp\RpcHttpServiceProvider;
+use Distributable\Stream\Queue\StreamQueueServiceProvider;
+use Distributable\Stream\Redis\StreamRedisServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
-use RpcHttp\RpcHttpServiceProvider;
-use StreamQueue\StreamQueueServiceProvider;
-use StreamRedis\StreamRedisServiceProvider;
 
 abstract class TestCase extends Orchestra
 {

@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Distributable\Console\Commands;
 
 use Distributable\Config\Modules;
+use Distributable\RpcHttp\RpcHttp;
 use Distributable\Services\ModuleRegistry;
 use Distributable\Services\Rpc\RpcServices;
 use Distributable\Services\Shadows\ShadowRegistry;
 use Distributable\Testing\Boundaries;
 use Illuminate\Console\Command;
-use RpcHttp\RpcHttp;
 
 final class Doctor extends Command
 {

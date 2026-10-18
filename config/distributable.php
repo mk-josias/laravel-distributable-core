@@ -56,7 +56,7 @@ return [
     | Calls between modules
     |--------------------------------------------------------------------------
     | Named transports, like queue connections; every driver comes from
-    | Services\Rpc\TransportManager::extend(), `http` from mk-josias/laravel-microservices-rpc-http,
+    | Services\Rpc\TransportManager::extend(), `http` from mk-josias/laravel-distributable-rpc-http,
     | which has its own config/rpc-http.php and reads the secret below. A module's
     | host may name the one its calls travel on.
     */
@@ -84,7 +84,7 @@ return [
     | driver's options. An event travels on the stream its stream() method
     | names, or on the default one. Drivers: `array` (in memory, for tests),
     | `null` (drops everything), and from their own packages `redis`
-    | (mk-josias/laravel-microservices-stream-redis) and `queue` (mk-josias/laravel-microservices-stream-queue).
+    | (mk-josias/laravel-distributable-stream-redis) and `queue` (mk-josias/laravel-distributable-stream-queue).
     | Any other driver resolves through a creator registered with extend().
     */
 
@@ -105,7 +105,7 @@ return [
             ],
 
             // 'jobs' => [
-            //     'driver' => 'queue', // mk-josias/laravel-microservices-stream-queue
+            //     'driver' => 'queue', // mk-josias/laravel-distributable-stream-queue
             //     'connection' => env('DISTRIBUTABLE_QUEUE_CONNECTION'),
             //     'key' => 'distributable-jobs', // each module reads {key}-{module}
             //     'sleep' => 1,                  // seconds to wait when the queue is empty

@@ -5,6 +5,8 @@ declare(strict_types=1);
 use Distributable\Contracts\Rpc\Transport as RpcTransport;
 use Distributable\Exceptions\ConfigurationException;
 use Distributable\Exceptions\ServiceException;
+use Distributable\RpcHttp\HttpTransport;
+use Distributable\RpcHttp\RpcSignature;
 use Distributable\Services\ModuleRegistry;
 use Distributable\Services\Rpc\TransportManager as RpcTransportManager;
 use Distributable\Tests\ModuleAppTestCase;
@@ -18,8 +20,6 @@ use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
-use RpcHttp\HttpTransport;
-use RpcHttp\RpcSignature;
 
 uses(ModuleAppTestCase::class);
 
