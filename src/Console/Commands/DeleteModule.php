@@ -7,7 +7,6 @@ namespace Distributable\Console\Commands;
 use Distributable\Config\Modules;
 use Distributable\Data\Module;
 use Distributable\Exceptions\ModuleException;
-use Distributable\Services\Composer\ComposerAutoload;
 use Distributable\Services\ModuleRegistry;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
@@ -18,9 +17,9 @@ final class DeleteModule extends Command
         {name : The module to delete}
         {--force : Do not ask for confirmation}';
 
-    protected $description = 'Delete a module: its folder, its foundation folder, its declaration and its composer.json entries. Its database is left as it is.';
+    protected $description = 'Delete a module: its folder, its foundation folder, and its declaration. Its database is left as it is.';
 
-    public function handle(ModuleRegistry $registry, Modules $config, ComposerAutoload $autoload, Filesystem $files): int
+    public function handle(ModuleRegistry $registry, Modules $config, Filesystem $files): int
     {
         $module = $registry->get((string) $this->argument('name'));
 
@@ -34,11 +33,8 @@ final class DeleteModule extends Command
             return self::FAILURE;
         }
 
-        $entries = array_keys([...$autoload->entriesOf($module), ...$autoload->devEntriesOf($module)]);
-
         $files->deleteDirectory($module->path());
         $files->deleteDirectory($foundation);
-        $autoload->remove($entries);
         $this->undeclare($module);
 
         $this->components->info("Module [{$module->name}] deleted. Run modules:doctor: other modules may still use what it shared.");

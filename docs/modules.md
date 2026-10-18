@@ -52,7 +52,7 @@ For example, in a `docker-compose.yml` where `analytics` calls `iam` in another 
 ```bash
 # creates apps/{Module} and foundation/{Module}, and declares it
 php artisan modules:make <module> [--database]
-# deletes its folders, its declaration and its composer.json entries; its database is left as it is
+# deletes its folders and its declaration; its database is left as it is
 php artisan modules:delete <module> [--force]
 # lists the modules, where they run, their database and host
 php artisan modules:list
@@ -62,12 +62,32 @@ php artisan modules:purge
 php artisan modules:doctor
 ```
 
-`modules:make` also adds the module and the foundation to the `autoload.psr-4` of your
-`composer.json`, and the module's tests to `autoload-dev`. The application doesn't read those entries: they are for the tools that read
-`composer.json` without booting Laravel, such as your IDE. They follow `modules.path` and
-`modules.namespace`; if you change these later, `modules:doctor` reports the entries gone stale.
-A module outside the project gets none. `modules:purge` can delete a module the entries name:
-Composer accepts an entry whose folder is gone.
+The package autoloads the foundation and the modules itself: the application needs no
+`composer.json` entry, and the package writes none. Your IDE reads `composer.json` without booting
+Laravel; to let it resolve the classes, map the foundation in the root file, and each module in its
+own, merged by `wikimedia/composer-merge-plugin` (see
+[The dependencies of a module](#the-dependencies-of-a-module)):
+
+```json
+// composer.json
+"autoload": { "psr-4": { "Foundation\\": "foundation/" } },
+"extra": { "merge-plugin": { "include": ["apps/*/composer.json"] } }
+```
+
+```json
+// apps/Billing/composer.json
+{
+    "autoload": { "psr-4": {
+        "Apps\\Billing\\": "app/",
+        "Apps\\Billing\\Database\\Factories\\": "database/factories/",
+        "Apps\\Billing\\Database\\Seeders\\": "database/seeders/"
+    } },
+    "autoload-dev": { "psr-4": { "Apps\\Billing\\Tests\\": "tests/" } }
+}
+```
+
+The paths are relative to the module's folder: they follow it when it moves, and leave with it when
+it is deleted.
 
 ## Generating code in a module
 
@@ -355,7 +375,6 @@ php artisan modules:doctor
 | a folder of `apps/` that `distributable.declared` doesn't list | `[apps/Notifications] is not declared in distributable.declared.` |
 | a local module without its `bootstrap/providers.php` | `[iam] …/apps/Iam/bootstrap/providers.php does not exist.` |
 | a module whose service provider class doesn't exist | `[notifications] provider Apps\Notifications\Providers\NotificationsServiceProvider does not exist.` |
-| `composer.json` entries that no longer match where the module lives | `composer.json maps [Apps\Iam] to […], but the module lives in […].` |
 | two copies kept in one table | `[analytics] keeps two copies in table [users]: … Give each its own $table.` |
 | an RPC contract that isn't in the foundation of a declared module | `Foundation\Iam\Contracts\IamService is not in the foundation of a declared module.` |
 | `cache.default`, `queue.default` or `session.driver` set to `database` | `[cache.default] is the database driver, but every database belongs to a module: use redis, file or array.` |

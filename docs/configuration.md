@@ -42,7 +42,6 @@ src/
 ├── Services/           ModuleRegistry · ModuleColocation · SingleService
 ├── Services/Discovery/ ClassDiscovery · DiscoveryCache
 ├── Services/Migrations/ ModuleMigrations
-├── Services/Composer/  ComposerAutoload
 ├── Services/Rpc/       ModuleRpcTransport · …
 └── Services/Shadows/   CachedShadowRegistry · ShadowRegistry
 ```

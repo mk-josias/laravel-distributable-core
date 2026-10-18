@@ -6,7 +6,6 @@ namespace Distributable\Console\Commands;
 
 use Distributable\Config\Modules;
 use Distributable\Data\Module;
-use Distributable\Services\Composer\ComposerAutoload;
 use Illuminate\Console\Command;
 
 final class MakeModule extends Command
@@ -17,7 +16,7 @@ final class MakeModule extends Command
 
     protected $description = 'Create a module and its foundation directory.';
 
-    public function handle(Modules $config, ComposerAutoload $autoload): int
+    public function handle(Modules $config): int
     {
         $name = (string) $this->argument('name');
         $module = $config->module($name);
@@ -82,10 +81,6 @@ final class MakeModule extends Command
 
         $this->components->info("Module [{$module->name}] created at {$module->path()}.");
         $this->declare($module);
-
-        if ($autoload->add([...$autoload->foundationEntries(), ...$autoload->entriesOf($module)], $autoload->devEntriesOf($module))) {
-            $this->components->info('Added to composer.json, for your IDE: run composer dump-autoload.');
-        }
 
         return self::SUCCESS;
     }

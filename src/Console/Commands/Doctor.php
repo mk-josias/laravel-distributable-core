@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Distributable\Console\Commands;
 
 use Distributable\Config\Modules;
-use Distributable\Services\Composer\ComposerAutoload;
 use Distributable\Services\ModuleRegistry;
 use Distributable\Services\Rpc\RpcServices;
 use Distributable\Services\Shadows\ShadowRegistry;
@@ -19,7 +18,7 @@ final class Doctor extends Command
 
     protected $description = 'Check that every module can run: declaration, provider, connections, remote hosts, boundaries.';
 
-    public function handle(ModuleRegistry $registry, Modules $config, RpcServices $services, Boundaries $boundaries, ComposerAutoload $autoload, ShadowRegistry $shadows): int
+    public function handle(ModuleRegistry $registry, Modules $config, RpcServices $services, Boundaries $boundaries, ShadowRegistry $shadows): int
     {
         $problems = [];
         $modulesPath = $config->getModulesPath();
@@ -42,10 +41,6 @@ final class Doctor extends Command
                 if (! class_exists($provider)) {
                     $problems[] = "[{$module->name}] provider {$provider} does not exist.";
                 }
-            }
-
-            foreach ($autoload->stale($module) as $namespace => $paths) {
-                $problems[] = "composer.json maps [{$namespace}] to [{$paths['declared']}], but the module lives in [{$paths['expected']}].";
             }
 
             $tables = [];

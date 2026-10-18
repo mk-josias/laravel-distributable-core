@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Distributable\Console\Commands;
 
 use Distributable\Config\Modules;
-use Distributable\Services\Composer\ComposerAutoload;
 use Illuminate\Console\Command;
 
 final class Install extends Command
@@ -14,7 +13,7 @@ final class Install extends Command
 
     protected $description = 'Publish config/distributable.php and create the modules and foundation directories.';
 
-    public function handle(Modules $config, ComposerAutoload $autoload): int
+    public function handle(Modules $config): int
     {
         if (! is_file(config_path('distributable.php'))) {
             copy(dirname(__DIR__, 3).'/config/distributable.php', config_path('distributable.php'));
@@ -44,8 +43,6 @@ final class Install extends Command
 
                 PHP);
         }
-
-        $autoload->add($autoload->foundationEntries());
 
         $this->components->info('Laravel Distributable is installed. Next: php artisan modules:make <name> [--database]');
 

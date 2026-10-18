@@ -3,8 +3,6 @@
 declare(strict_types=1);
 
 use Apps\Analytics\Models\UserShadow;
-use Distributable\Data\Module;
-use Distributable\Services\Composer\ComposerAutoload;
 use Distributable\Services\Migrations\ModuleMigrations;
 use Distributable\Services\ModuleRegistry;
 use Distributable\Tests\ModuleAppTestCase;
@@ -64,7 +62,7 @@ it('creates a module, its provider and its foundation directory, and declares it
     }
 });
 
-it('adds the module and the foundation to composer.json for the tools that read it, and tells an entry gone stale', function () {
+it('leaves composer.json to the application: a new module writes none', function () {
     $root = sys_get_temp_dir().'/distributable-composer-'.uniqid();
     File::ensureDirectoryExists($root.'/config');
     File::copy(dirname(__DIR__, 3).'/config/distributable.php', $root.'/config/distributable.php');
@@ -75,30 +73,16 @@ it('adds the module and the foundation to composer.json for the tools that read 
     config()->set('distributable.foundation.path', 'foundation');
 
     try {
-        $this->artisan('modules:make billing')->expectsOutputToContain('Added to composer.json')->assertSuccessful();
+        $this->artisan('modules:make billing')->assertSuccessful();
 
-        $composer = json_decode((string) file_get_contents($root.'/composer.json'), true);
-
-        expect($composer['autoload']['psr-4'])->toBe([
-            'App\\' => 'app/',
-            'Foundation\\' => 'foundation/',
-            'Apps\\Billing\\' => 'apps/Billing/app/',
-            'Apps\\Billing\\Database\\Factories\\' => 'apps/Billing/database/factories/',
-            'Apps\\Billing\\Database\\Seeders\\' => 'apps/Billing/database/seeders/',
-        ])->and($composer['autoload-dev']['psr-4'])->toBe(['Apps\\Billing\\Tests\\' => 'apps/Billing/tests/'])
-            ->and(file_get_contents($root.'/composer.json'))->toContain('"extra": {}');
-
-        $autoload = $this->app->make(ComposerAutoload::class);
-
-        expect($autoload->stale(Module::fromName('billing', 'Apps', 'apps')))->toBe([])
-            ->and($autoload->stale(Module::fromName('billing', 'Apps', 'modules'))['Apps\\Billing\\'])
-            ->toBe(['declared' => 'apps/Billing/app/', 'expected' => 'modules/Billing/app/']);
+        expect(file_get_contents($root.'/composer.json'))->toBe('{"autoload": {"psr-4": {"App\\\\": "app/"}}, "extra": {}}')
+            ->and(is_file($root.'/apps/Billing/composer.json'))->toBeFalse();
     } finally {
         File::deleteDirectory($root);
     }
 });
 
-it('deletes a module: its folder, its foundation folder, its declaration and its composer.json entries', function () {
+it('deletes a module: its folder, its foundation folder and its declaration', function () {
     $root = sys_get_temp_dir().'/distributable-delete-'.uniqid();
     File::ensureDirectoryExists($root.'/config');
     File::copy(dirname(__DIR__, 3).'/config/distributable.php', $root.'/config/distributable.php');
@@ -116,16 +100,10 @@ it('deletes a module: its folder, its foundation folder, its declaration and its
 
         $this->artisan('modules:delete billing --force')->assertSuccessful();
 
-        $composer = json_decode((string) file_get_contents($root.'/composer.json'), true);
-
         expect(is_dir($root.'/apps/Billing'))->toBeFalse()
             ->and(is_dir($root.'/foundation/Billing'))->toBeFalse()
             ->and(is_dir($root.'/apps/Shipping'))->toBeTrue()
-            ->and((require $root.'/config/distributable.php')['declared'])->toBe(['shipping' => []])
-            ->and(array_keys($composer['autoload']['psr-4']))->toBe([
-                'App\\', 'Foundation\\', 'Apps\\Shipping\\', 'Apps\\Shipping\\Database\\Factories\\', 'Apps\\Shipping\\Database\\Seeders\\',
-            ])
-            ->and(array_keys($composer['autoload-dev']['psr-4']))->toBe(['Apps\\Shipping\\Tests\\']);
+            ->and((require $root.'/config/distributable.php')['declared'])->toBe(['shipping' => []]);
     } finally {
         File::deleteDirectory($root);
     }
