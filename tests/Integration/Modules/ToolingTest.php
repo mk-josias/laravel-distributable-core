@@ -178,14 +178,6 @@ it('fails on two modules setting one new config key to different values, and lea
     }
 });
 
-it('fails on a cache, queue or session kept in a database no module owns', function () {
-    config()->set('queue.default', 'database');
-
-    $this->artisan('modules:doctor')
-        ->expectsOutputToContain('[queue.default] is the database driver')
-        ->assertFailed();
-});
-
 it('fails on a module keeping two copies in one table', function () {
     config()->set('microservices.shadows.analytics', [UserShadow::class, IamUserShadow::class]);
 

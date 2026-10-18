@@ -70,12 +70,6 @@ final class Doctor extends Command
             }
         }
 
-        foreach (['cache.default', 'queue.default', 'session.driver'] as $key) {
-            if (config($key) === 'database') {
-                $problems[] = "[{$key}] is the database driver, but every database belongs to a module: use redis, file or array.";
-            }
-        }
-
         if ($services->all() !== [] && class_exists(RpcHttp::class) && app(RpcHttp::class)->getSecret() === '') {
             $problems[] = 'Modules serve RPC contracts but microservices.rpc.secret is empty: set MICROSERVICES_RPC_SECRET or APP_KEY.';
         }
