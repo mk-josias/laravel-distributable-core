@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Distributable\Handlers;
 
-use Distributable\Contracts\Colocation;
+use Distributable\Context\ModuleContext;
 use Distributable\Contracts\Stream\Handler;
 use Distributable\Contracts\Stream\Idempotent;
 use Distributable\Services\Shadows\ShadowRegistry;
@@ -14,12 +14,12 @@ final readonly class AnnounceShadowSource implements Handler, Idempotent
 {
     public function __construct(
         private ShadowRegistry $catalog,
-        private Colocation $colocation,
+        private ModuleContext $context,
     ) {}
 
     public function handle(string $name, array $payload): void
     {
-        $this->catalog->sourceOf((string) $payload['source'], $this->colocation->current())
+        $this->catalog->sourceOf((string) $payload['source'], $this->context->current()?->name)
             ?->announceAll(keepers: [(string) $payload['keeper']]);
     }
 }

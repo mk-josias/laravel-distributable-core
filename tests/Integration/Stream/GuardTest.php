@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Apps\Iam\Events\UserRegistered;
 use Apps\Iam\Handlers\OnUserRegistered;
 use Distributable\Data\Envelope;
-use Distributable\Providers\MicroservicesServiceProvider;
+use Distributable\Providers\DistributableServiceProvider;
 use Distributable\Services\Stream\Dispatcher;
 use Distributable\Tests\Doubles\Recorder;
 use Distributable\Tests\ModuleAppTestCase;
@@ -16,10 +16,10 @@ uses(ModuleAppTestCase::class);
 
 beforeEach(function () {
     $this->app->singleton(Recorder::class);
-    Config::set('microservices.events.guard', true);
+    Config::set('distributable.events.guard', true);
 
     Config::set('database.default', 'iam');
-    foreach (glob(dirname((string) (new ReflectionClass(MicroservicesServiceProvider::class))->getFileName(), 3).'/database/migrations/*.php') as $file) {
+    foreach (glob(dirname((string) (new ReflectionClass(DistributableServiceProvider::class))->getFileName(), 3).'/database/migrations/*.php') as $file) {
         (require $file)->up();
     }
 });
@@ -36,7 +36,7 @@ it('runs a handler once and turns the redelivery into a no-op', function () {
 });
 
 it('marks per handler, not per event', function () {
-    Config::set('microservices.events.listen', [
+    Config::set('distributable.events.listen', [
         'iam.user.registered' => [OnUserRegistered::class, OnUserRegistered::class],
     ]);
 
@@ -58,16 +58,16 @@ it('leaves no mark when the handler fails, so the event is replayed', function (
 });
 
 it('stays off when delivery is exactly-once', function () {
-    Config::set('microservices.events.guard', null);
-    Config::set('microservices.events.reliable_publish', false);
-    Config::set('microservices.events.streams.default.driver', 'array');
+    Config::set('distributable.events.guard', null);
+    Config::set('distributable.events.reliable_publish', false);
+    Config::set('distributable.events.streams.default.driver', 'array');
 
     expect($this->app->make(Dispatcher::class)->guarded())->toBeFalse();
 });
 
 it('turns itself on when events are published reliably', function () {
-    Config::set('microservices.events.guard', null);
-    Config::set('microservices.events.reliable_publish', true);
+    Config::set('distributable.events.guard', null);
+    Config::set('distributable.events.reliable_publish', true);
 
     expect($this->app->make(Dispatcher::class)->guarded())->toBeTrue();
 });

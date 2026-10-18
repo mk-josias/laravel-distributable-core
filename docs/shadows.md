@@ -24,7 +24,7 @@ signups with their users from the copy (`SignupResource`).
 
 ```
 iam: User saved or deleted
-  └─ the row, with the $shadowed fields only, leaves in an event: microservices.shadow.changed
+  └─ the row, with the $shadowed fields only, leaves in an event: distributable.shadow.changed
        └─ stream
             ├─ analytics' consumer ─► UserShadow::sync() ─► the copy, in analytics' database
             └─ notifications' consumer ─► UserShadow::sync() ─► the copy, in notifications' database
@@ -121,7 +121,7 @@ Both commands address the event to the keepers, so only those modules update the
 ## On its own stream
 
 By default a row travels on the default stream, with the other events. A source model can name
-another stream in `microservices.events.streams`, and the keeper then reads it with
+another stream in `distributable.events.streams`, and the keeper then reads it with
 `stream:consume --stream=shadows`. The keeper must read that stream, or its copy stays empty. See
 [laravel-microservices' copies](https://mk-josias.github.io/laravel-microservices/docs/shadows#on-its-own-stream).
 

@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Distributable\Console\Commands;
 
 use Distributable\Config\Streamer;
-use Distributable\Contracts\Colocation;
+use Distributable\Context\ModuleContext;
+use Distributable\Services\ModuleRegistry;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +20,7 @@ final class PruneConsumptions extends Command
 
     protected $description = 'Delete the consumption marks older than the given number of days, in every local service.';
 
-    public function handle(Colocation $colocation, Streamer $config): int
+    public function handle(ModuleRegistry $registry, ModuleContext $context, Streamer $config): int
     {
         $table = $config->getConsumptionsTable();
         $days = (int) $this->option('days');
@@ -32,11 +33,11 @@ final class PruneConsumptions extends Command
 
         $before = Date::now()->subDays($days);
 
-        $current = $colocation->current();
+        $current = $context->current()?->name;
 
-        foreach ($current !== null ? [$current] : $colocation->local() as $service) {
+        foreach ($current !== null ? [$current] : $registry->localNames() as $service) {
             try {
-                $deleted = $colocation->within($service, static fn (): int => DB::table($table)->where('consumed_at', '<', $before)->delete());
+                $deleted = $context->within($registry->get($service), static fn (): int => DB::table($table)->where('consumed_at', '<', $before)->delete());
                 $this->line("→ {$service}: {$deleted} deleted");
             } catch (Throwable $e) {
                 $this->warn("→ {$service}: skipped ({$e->getMessage()})");

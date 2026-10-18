@@ -11,7 +11,7 @@ use Distributable\Exceptions\ConfigurationException;
 use Illuminate\Contracts\Container\Container;
 
 /**
- * Routes each call to the named transport of microservices.rpc.transports its service's host
+ * Routes each call to the named transport of distributable.rpc.transports its service's host
  * names. extend('grpc', fn ($app, array $config, string $name) => …) registers any driver.
  */
 final class TransportManager implements Transport

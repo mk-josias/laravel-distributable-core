@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Distributable\Services\Rpc;
 
-use Distributable\Contracts\Colocation;
+use Distributable\Context\ModuleContext;
 use Distributable\Exceptions\ServiceException;
+use Distributable\Services\ModuleRegistry;
 use Illuminate\Container\Container;
 
 /**
@@ -47,8 +48,9 @@ final class LocalServices
 
         $implementation = $this->services[$contract]['implementation'];
 
-        $answer = Container::getInstance()->make(Colocation::class)->within(
-            $service,
+        $container = Container::getInstance();
+        $answer = $container->make(ModuleContext::class)->within(
+            $container->make(ModuleRegistry::class)->get($service),
             static fn (): mixed => Container::getInstance()->make($implementation)->{$method}(...$arguments),
         );
 

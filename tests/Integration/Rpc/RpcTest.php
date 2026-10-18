@@ -149,7 +149,7 @@ it('rejects a context changed after signing', function () {
 });
 
 it('sends a signed POST naming the contract and the method, and decodes the answer', function () {
-    config()->set('microservices.events.propagate', ['trace_id']);
+    config()->set('distributable.events.propagate', ['trace_id']);
     Context::add('trace_id', 'abc');
     Http::fake(['iam.test/*' => Http::response(['id' => 1, 'name' => 'ada'])]);
 
@@ -209,9 +209,9 @@ it('keeps the raw answer and maps it on every read, dropping one that no longer 
         ->and(Cache::get('iam:shaped'))->toBe('{"id":7}');
 });
 
-it('keeps the answers in the store microservices.rpc.cache names, shared by the caller and the owner', function () {
+it('keeps the answers in the store distributable.rpc.cache names, shared by the caller and the owner', function () {
     config()->set('cache.stores.rpc', ['driver' => 'array']);
-    config()->set('microservices.rpc.cache', 'rpc');
+    config()->set('distributable.rpc.cache', 'rpc');
 
     app(IamRpcService::class)->findUser(1);
 
@@ -221,8 +221,8 @@ it('keeps the answers in the store microservices.rpc.cache names, shared by the 
 
 it('routes a call to the transport its module host names, registered with extend()', function () {
     iamRunsElsewhere();
-    config()->set('microservices.rpc.transports.grpc', ['driver' => 'grpc', 'port' => 50051]);
-    config()->set('microservices.services.iam.host', ['url' => 'grpc://iam', 'transport' => 'grpc']);
+    config()->set('distributable.rpc.transports.grpc', ['driver' => 'grpc', 'port' => 50051]);
+    config()->set('distributable.declared.iam.host', ['url' => 'grpc://iam', 'transport' => 'grpc']);
 
     app(RpcTransportManager::class)->extend('grpc', fn ($app, array $config): RpcTransport => new class($config) implements RpcTransport
     {
@@ -241,7 +241,7 @@ it('routes a call to the transport its module host names, registered with extend
 
 it('fails loudly on an RPC transport nobody declared', function () {
     iamRunsElsewhere();
-    config()->set('microservices.services.iam.host', ['url' => 'x', 'transport' => 'amqp']);
+    config()->set('distributable.declared.iam.host', ['url' => 'x', 'transport' => 'amqp']);
 
     app(RpcTransport::class)->invoke('iam', IamService::class, 'findUser');
 })->throws(ConfigurationException::class, 'RPC transport [amqp] is not declared');

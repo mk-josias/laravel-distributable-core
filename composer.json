@@ -37,7 +37,6 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Distributable\\Providers\\MicroservicesServiceProvider",
                 "Distributable\\Providers\\DistributableServiceProvider"
             ]
         }

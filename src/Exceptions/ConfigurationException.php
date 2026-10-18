@@ -21,7 +21,7 @@ final class ConfigurationException extends RuntimeException
 
     public static function unknownStream(string $name): self
     {
-        return new self("Stream [{$name}] is not declared: add it to microservices.events.streams.");
+        return new self("Stream [{$name}] is not declared: add it to distributable.events.streams.");
     }
 
     public static function unknownDriver(string $driver, string $stream): self
@@ -35,7 +35,7 @@ final class ConfigurationException extends RuntimeException
 
     public static function unknownRpcTransport(string $name): self
     {
-        return new self("RPC transport [{$name}] is not declared: add it to microservices.rpc.transports.");
+        return new self("RPC transport [{$name}] is not declared: add it to distributable.rpc.transports.");
     }
 
     public static function unknownRpcDriver(string $driver, string $transport): self
@@ -62,6 +62,6 @@ final class ConfigurationException extends RuntimeException
 
     public static function missingRpcHost(string $service): self
     {
-        return new self("No RPC host configured for service [{$service}]: set microservices.services.{$service}.host.");
+        return new self("No RPC host configured for service [{$service}]: set distributable.declared.{$service}.host.");
     }
 }

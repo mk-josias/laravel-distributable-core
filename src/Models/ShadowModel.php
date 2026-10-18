@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * A local, read-only copy of another service's rows: same key as the source row, soft-deleted
- * when the source is, written only through sync(). A service keeping it lists it in microservices.shadows;
+ * when the source is, written only through sync(). A service keeping it lists it in distributable.shadows;
  * like any model it reads the running service's database, under its source's name unless $table says otherwise.
  *
  * @phpstan-consistent-constructor

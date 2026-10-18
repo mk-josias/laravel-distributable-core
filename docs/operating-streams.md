@@ -7,10 +7,10 @@ you ask. This page says what grows, what cleans it, and when.
 
 | What grows | Where | Cleaned by | Safe when |
 |---|---|---|---|
-| the stream | Redis, one stream per configured stream (`microservices:events` by default) | `stream:trim` | every module that reads it has acknowledged the entries |
+| the stream | Redis, one stream per configured stream (`distributable:events` by default) | `stream:trim` | every module that reads it has acknowledged the entries |
 | the consumption marks | `event_consumptions`, in the consuming module's database | `stream:prune-consumptions`, or `guard_cleanup => acknowledge` | the marked event can no longer be redelivered |
 
-`event_publications` does not grow: with `MICROSERVICES_EVENTS_RELIABLE_PUBLISH` on, a row is
+`event_publications` does not grow: with `DISTRIBUTABLE_EVENTS_RELIABLE_PUBLISH` on, a row is
 deleted once its event is sent, so the table only holds the events that could not go out.
 
 Nothing is trimmed when an event is written, so a stopped consumer, or a module added later,
@@ -49,14 +49,14 @@ php artisan stream:skip --module=analytics
 
 `export` and `import` read and write the stream itself, so they need no setting; the transport has
 to be able to give its entries back (`redis` does). `republish` works on the rows of
-`event_publications`, so it has something to send only with `MICROSERVICES_EVENTS_RELIABLE_PUBLISH`
+`event_publications`, so it has something to send only with `DISTRIBUTABLE_EVENTS_RELIABLE_PUBLISH`
 on (see [Events](./events#reliable-publishing)). The archive formats and the filters are in
 [laravel-microservices' events](https://mk-josias.github.io/laravel-microservices/docs/events#archiving-the-stream).
 
 ## The consumption marks
 
 By default a mark stays until `stream:prune-consumptions` deletes it. With
-`'guard_cleanup' => 'acknowledge'` in `config/microservices.php` (the `redis` transport), a mark is
+`'guard_cleanup' => 'acknowledge'` in `config/distributable.php` (the `redis` transport), a mark is
 deleted as soon as its entry is acknowledged, since it can no longer be redelivered, and the table
 stays almost empty. The price: an entry imported or sent again is no longer recognised, and its
 handlers run again.
@@ -73,15 +73,15 @@ than that group has read. Look at the groups:
 
 ```bash
 # the groups of the stream, with the last entry delivered to each
-redis-cli XINFO GROUPS microservices:events
+redis-cli XINFO GROUPS distributable:events
 # the entries a group has received and not acknowledged
-redis-cli XPENDING microservices:events analytics
+redis-cli XPENDING distributable:events analytics
 ```
 
 A group that no module reads any more is removed with Redis, not with a command of the package:
 
 ```bash
-redis-cli XGROUP DESTROY microservices:events analytics
+redis-cli XGROUP DESTROY distributable:events analytics
 ```
 
 ## Scheduling

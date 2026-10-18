@@ -6,7 +6,7 @@ use Distributable\Contracts\Stream\Bus;
 use Distributable\Contracts\Stream\Transport;
 use Distributable\Data\Envelope;
 use Distributable\Exceptions\ConfigurationException;
-use Distributable\Providers\MicroservicesServiceProvider;
+use Distributable\Providers\DistributableServiceProvider;
 use Distributable\Services\Stream\Dispatcher;
 use Distributable\Services\Stream\TransportManager;
 use Distributable\Tests\Doubles\FlakyTransport;
@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\DB;
 uses(OrdersAppTestCase::class);
 
 it('stamps an event with this service as its emitter, and the propagated context', function () {
-    config()->set('microservices.events.propagate', ['trace_id']);
+    config()->set('distributable.events.propagate', ['trace_id']);
     Context::add('trace_id', 'abc');
 
     app(Bus::class)->emit(new OrderPlaced(7));
@@ -34,7 +34,7 @@ it('stamps an event with this service as its emitter, and the propagated context
 });
 
 it('runs the handlers listening to an event another service emitted', function () {
-    config()->set('microservices.events.listen', ['billing.invoice.paid' => [OnInvoicePaid::class]]);
+    config()->set('distributable.events.listen', ['billing.invoice.paid' => [OnInvoicePaid::class]]);
 
     $this->receive('billing.invoice.paid', ['order_id' => 7]);
 
@@ -66,7 +66,7 @@ it('publishes nothing when the transaction rolls back and events are not written
 });
 
 it('writes the event in the publications table with the business transaction, and deletes the row once it is sent after the commit', function () {
-    config()->set('microservices.events.reliable_publish', true);
+    config()->set('distributable.events.reliable_publish', true);
 
     DB::transaction(function (): void {
         app(Bus::class)->emit(new OrderPlaced(7));
@@ -82,8 +82,8 @@ it('writes the event in the publications table with the business transaction, an
 it('keeps the row when the sending after the commit fails, and sends it on demand', function () {
     $flaky = new FlakyTransport;
     app(TransportManager::class)->extend('flaky', fn (): Transport => $flaky);
-    config()->set('microservices.events.reliable_publish', true);
-    config()->set('microservices.events.streams.default.driver', 'flaky');
+    config()->set('distributable.events.reliable_publish', true);
+    config()->set('distributable.events.streams.default.driver', 'flaky');
 
     DB::transaction(fn () => app(Bus::class)->emit(new OrderPlaced(7)));
 
@@ -99,18 +99,18 @@ it('keeps the row when the sending after the commit fails, and sends it on deman
         ->and($flaky->published)->toHaveCount(1);
 });
 
-it('keeps the publications and the consumption marks in the tables microservices.events.tables names', function () {
+it('keeps the publications and the consumption marks in the tables distributable.events.tables names', function () {
     $flaky = new FlakyTransport;
     app(TransportManager::class)->extend('flaky', fn (): Transport => $flaky);
-    config()->set('microservices.events.streams.default.driver', 'flaky');
-    config()->set('microservices.events.tables', ['publications' => 'outbox', 'consumptions' => 'inbox']);
-    $migrations = dirname((string) (new ReflectionClass(MicroservicesServiceProvider::class))->getFileName(), 3).'/database/migrations';
+    config()->set('distributable.events.streams.default.driver', 'flaky');
+    config()->set('distributable.events.tables', ['publications' => 'outbox', 'consumptions' => 'inbox']);
+    $migrations = dirname((string) (new ReflectionClass(DistributableServiceProvider::class))->getFileName(), 3).'/database/migrations';
     foreach (['0001_01_01_000000_create_event_publications_table', '0001_01_01_000001_create_event_consumptions_table', '0001_01_01_000002_add_version_to_event_publications_table'] as $file) {
         (require "{$migrations}/{$file}.php")->up();
     }
-    config()->set('microservices.events.reliable_publish', true);
-    config()->set('microservices.events.guard', true);
-    config()->set('microservices.events.listen', ['billing.invoice.paid' => [OnInvoicePaid::class]]);
+    config()->set('distributable.events.reliable_publish', true);
+    config()->set('distributable.events.guard', true);
+    config()->set('distributable.events.listen', ['billing.invoice.paid' => [OnInvoicePaid::class]]);
 
     app(Bus::class)->emit(new OrderPlaced(7));
     app(Dispatcher::class)->dispatch(new Envelope('0191f3c2-8a41-7c2e-9b55-3f1c7d0a4e90', 'billing', 'billing.invoice.paid', ['order_id' => 7], [], now()->toImmutable()), 'orders');
@@ -121,8 +121,8 @@ it('keeps the publications and the consumption marks in the tables microservices
 });
 
 it('handles a redelivered event once', function () {
-    config()->set('microservices.events.guard', true);
-    config()->set('microservices.events.listen', ['billing.invoice.paid' => [OnInvoicePaid::class]]);
+    config()->set('distributable.events.guard', true);
+    config()->set('distributable.events.listen', ['billing.invoice.paid' => [OnInvoicePaid::class]]);
 
     $envelope = new Envelope('0191f3c2-8a41-7c2e-9b55-3f1c7d0a4e88', 'billing', 'billing.invoice.paid', ['order_id' => 7], [], now()->toImmutable());
 
@@ -134,13 +134,13 @@ it('handles a redelivered event once', function () {
 });
 
 it('names the package of a shipped driver that is not installed', function () {
-    config()->set('microservices.events.streams.default.driver', 'redis');
+    config()->set('distributable.events.streams.default.driver', 'redis');
 
     expect(fn () => app(Transport::class))->toThrow(ConfigurationException::class, 'composer require mk-josias/laravel-microservices-stream-redis');
 });
 
 it('consumes the stream as this service', function () {
-    config()->set('microservices.events.listen', ['billing.invoice.paid' => [OnInvoicePaid::class]]);
+    config()->set('distributable.events.listen', ['billing.invoice.paid' => [OnInvoicePaid::class]]);
     app(Transport::class)->publish(new Envelope('0191f3c2-8a41-7c2e-9b55-3f1c7d0a4e89', 'billing', 'billing.invoice.paid', ['order_id' => 9], [], now()->toImmutable()));
 
     $this->artisan('stream:consume')->expectsOutputToContain('Consuming as [orders] from: orders, billing')->assertSuccessful();

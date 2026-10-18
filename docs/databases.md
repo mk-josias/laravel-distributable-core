@@ -124,8 +124,8 @@ app(\Foundation\Iam\Contracts\IamService::class)->findUser($id);
 
 `Context\ModuleContext::current()` returns the current module (`Data\Module`) or null,
 and `within($module, $callback)` runs a callback in a module's context. Only the package, tests and
-the module's own code may enter a module: when the code calling `within()` (directly, or through
-`Colocation::within()`) is another module's or the foundation's, it throws `ModuleException`,
+the module's own code may enter a module: when the code calling `within()` is another module's or
+the foundation's, it throws `ModuleException`,
 whatever names the module, a string, a variable or an enum. The check reads the caller's file
 from the call stack, so code that never runs is not checked, and `modules:doctor` cannot see it.
 

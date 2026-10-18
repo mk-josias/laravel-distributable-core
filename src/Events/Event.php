@@ -30,7 +30,7 @@ abstract class Event implements EventContract
         return [];
     }
 
-    /** The stream of microservices.events.streams it travels on; null for the default one. */
+    /** The stream of distributable.events.streams it travels on; null for the default one. */
     public function stream(): ?string
     {
         return null;

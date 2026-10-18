@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Distributable\Services\Stream\Outbox;
 
 use Distributable\Config\Streamer;
-use Distributable\Contracts\Colocation;
 use Distributable\Data\Envelope;
+use Distributable\Services\ModuleRegistry;
 use Illuminate\Database\DatabaseManager;
 
 /**
@@ -17,14 +17,14 @@ use Illuminate\Database\DatabaseManager;
 final class Writer
 {
     public function __construct(
-        private readonly Colocation $colocation,
+        private readonly ModuleRegistry $registry,
         private readonly DatabaseManager $db,
         private readonly Streamer $config,
     ) {}
 
     public function write(Envelope $envelope): void
     {
-        $this->db->connection($this->colocation->connection($envelope->emitter))->table($this->config->getPublicationsTable())->insert([
+        $this->db->connection($this->registry->connectionOf($envelope->emitter))->table($this->config->getPublicationsTable())->insert([
             'id' => $envelope->id,
             'emitter' => $envelope->emitter,
             'name' => $envelope->name,

@@ -18,7 +18,7 @@ final readonly class Envelope
 {
     /**
      * @param  array<string, mixed>  $payload
-     * @param  array<string, mixed>  $headers  context carried across services (microservices.events.propagate)
+     * @param  array<string, mixed>  $headers  context carried across services (distributable.events.propagate)
      * @param  list<string>  $recipients  the only services that handle it; empty for every service
      */
     public function __construct(

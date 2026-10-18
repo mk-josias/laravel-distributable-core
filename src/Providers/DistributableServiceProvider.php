@@ -6,15 +6,24 @@ namespace Distributable\Providers;
 
 use Composer\Autoload\ClassLoader;
 use Distributable\Config\Modules;
+use Distributable\Console\Commands\AnnounceShadows;
 use Distributable\Console\Commands\CacheModules;
 use Distributable\Console\Commands\ClearModules;
+use Distributable\Console\Commands\ConsumeEvents;
 use Distributable\Console\Commands\DeleteModule;
 use Distributable\Console\Commands\Doctor;
+use Distributable\Console\Commands\ExportEvents;
+use Distributable\Console\Commands\ImportEvents;
 use Distributable\Console\Commands\Install;
 use Distributable\Console\Commands\ListModules;
 use Distributable\Console\Commands\MakeModule;
+use Distributable\Console\Commands\PruneConsumptions;
 use Distributable\Console\Commands\PurgeModules;
+use Distributable\Console\Commands\RepublishEvents;
+use Distributable\Console\Commands\SkipEntries;
+use Distributable\Console\Commands\TrimEvents;
 use Distributable\Console\Commands\UnusedPackages;
+use Distributable\Console\Commands\WantShadows;
 use Distributable\Console\Migrations;
 use Distributable\Console\ModuleGenerators;
 use Distributable\Console\ModuleOption;
@@ -27,17 +36,24 @@ use Distributable\Context\ModuleTaskDispatcher;
 use Distributable\Context\Queue\BatchRepository;
 use Distributable\Context\Queue\FailedJobProvider;
 use Distributable\Context\ScheduledTasks;
-use Distributable\Contracts\Colocation;
 use Distributable\Contracts\Rpc\Transport as RpcTransport;
+use Distributable\Contracts\Stream\Bus;
+use Distributable\Contracts\Stream\Transport;
 use Distributable\Data\Module;
 use Distributable\Exceptions\ModuleException;
 use Distributable\Http\Controllers\StatusController;
 use Distributable\Services\Discovery\DiscoveryCache;
-use Distributable\Services\ModuleColocation;
 use Distributable\Services\ModuleRegistry;
+use Distributable\Services\Rpc\LocalServices;
 use Distributable\Services\Rpc\ModuleRpcTransport;
+use Distributable\Services\Rpc\RpcServices;
+use Distributable\Services\Rpc\TransportManager as RpcTransportManager;
 use Distributable\Services\Shadows\CachedShadowRegistry;
 use Distributable\Services\Shadows\ShadowRegistry;
+use Distributable\Services\Stream\ArchiveStores;
+use Distributable\Services\Stream\Emitter;
+use Distributable\Services\Stream\PayloadVersions;
+use Distributable\Services\Stream\TransportManager;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository as BatchRepositoryContract;
 use Illuminate\Bus\DatabaseBatchRepository;
@@ -74,6 +90,7 @@ final class DistributableServiceProvider extends BaseServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/../../config/distributable.php', 'distributable');
+        $this->mergeSections(['rpc', 'events']);
 
         // Every database belongs to a module: until one runs, the default connection refuses every query.
         $this->app['config']->set('database.connections.'.ModuleContext::NO_MODULE, ['driver' => ModuleContext::NO_MODULE]);
@@ -85,9 +102,19 @@ final class DistributableServiceProvider extends BaseServiceProvider
 
         $this->carryTheModuleIntoDeferredWork();
 
-        // Every module is a service of laravel-microservices: its events, its RPC calls, its copies.
-        $this->app->bind(Colocation::class, ModuleColocation::class);
+        // A call to a module this process runs is a method call; any other goes out on the module's transport.
         $this->app->bind(RpcTransport::class, ModuleRpcTransport::class);
+        $this->app->singleton(RpcTransportManager::class);
+        $this->app->singleton(RpcServices::class);
+        $this->app->singleton(LocalServices::class);
+
+        $this->app->singleton(TransportManager::class);
+        $this->app->singleton(ArchiveStores::class);
+        $this->app->singleton(PayloadVersions::class);
+        $this->app->singleton(Bus::class, Emitter::class);
+        // Injecting the contract yields the default stream; the manager stays the seam where a driver is added with extend().
+        $this->app->bind(Transport::class, static fn (Application $app): Transport => $app->make(TransportManager::class)->stream());
+
         $this->app->singleton(ShadowRegistry::class, CachedShadowRegistry::class);
 
         $this->app->singleton(DiscoveryCache::class);
@@ -103,7 +130,7 @@ final class DistributableServiceProvider extends BaseServiceProvider
                     ? Module::fromArray($cached[$name])
                     : $config->module($name),
                 $config->getDeclaredModules(),
-            ), $config->getLoadedModules());
+            ), $config->getLoadedModules(), $config->getFoundationNamespace());
         });
 
         $this->app->singleton(ModuleContext::class);
@@ -119,17 +146,8 @@ final class DistributableServiceProvider extends BaseServiceProvider
         // On the booting callback: after every provider (and the app's own configuration)
         // has registered, before any provider boots — module providers slot in between.
         $this->app->booting(function (): void {
-            $this->declareModulesAsServices();
             $this->registerLocalModuleProviders();
         });
-    }
-
-    /** microservices.services gets every declared module with its host, so a call to a module running elsewhere finds it. */
-    private function declareModulesAsServices(): void
-    {
-        $config = $this->app['config'];
-
-        $config->set('microservices.services', [...(array) $config->get('distributable.declared', []), ...(array) $config->get('microservices.services', [])]);
     }
 
     /** Work started in a module but run later or elsewhere (defer, Concurrency, Octane tasks) keeps that module. */
@@ -299,11 +317,32 @@ final class DistributableServiceProvider extends BaseServiceProvider
         }
     }
 
+    /**
+     * An application's `'events' => ['listen' => …]` keeps the shipped streams and tables.
+     *
+     * @param  list<string>  $sections
+     */
+    private function mergeSections(array $sections): void
+    {
+        if ($this->app instanceof \Illuminate\Foundation\Application && $this->app->configurationIsCached()) {
+            return;
+        }
+
+        $defaults = require __DIR__.'/../../config/distributable.php';
+        $config = $this->app->make('config');
+
+        foreach ($sections as $section) {
+            $config->set("distributable.{$section}", array_replace($defaults[$section], (array) $config->get("distributable.{$section}", [])));
+        }
+    }
+
     public function boot(): void
     {
         $this->publishes([
             __DIR__.'/../../config/distributable.php' => config_path('distributable.php'),
         ], 'distributable-config');
+
+        $this->loadMigrationsFrom(__DIR__.'/../../database/migrations');
 
         $this->switchContextOnJobsAndCommands();
 
@@ -322,6 +361,8 @@ final class DistributableServiceProvider extends BaseServiceProvider
             $this->commands([
                 Install::class, MakeModule::class, DeleteModule::class, ListModules::class, Doctor::class, PurgeModules::class, UnusedPackages::class,
                 CacheModules::class, ClearModules::class,
+                RepublishEvents::class, ConsumeEvents::class, SkipEntries::class, TrimEvents::class, PruneConsumptions::class,
+                ExportEvents::class, ImportEvents::class, AnnounceShadows::class, WantShadows::class,
             ]);
         }
     }

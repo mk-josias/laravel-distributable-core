@@ -12,8 +12,7 @@ What you can replace, and with what. These contracts come from laravel-microserv
 | `Services\Rpc\RpcService`, a module's client in the other processes | none | a subclass in `foundation/{Module}/Services`, mapped in `FoundationServiceProvider::$rpc` |
 | `Models\ShadowModel`, a read-only copy | none | an abstract subclass in the owner's foundation, extended in each keeper |
 
-laravel-microservices defines the envelope format, which is why transports can be swapped. This
-package binds its `Contracts\Colocation` to `ModuleColocation`, which makes each module a service.
+The package defines the envelope format, which is why transports can be swapped.
 
 How to write a transport, and what it has to guarantee, is in
 [Writing a transport](https://mk-josias.github.io/laravel-microservices/docs/transports).

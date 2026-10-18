@@ -7,7 +7,7 @@ use Apps\Iam\Events\UserRegistered;
 use Distributable\Contracts\Stream\Bus;
 use Distributable\Contracts\Stream\Transport;
 use Distributable\Data\Envelope;
-use Distributable\Providers\MicroservicesServiceProvider;
+use Distributable\Providers\DistributableServiceProvider;
 use Distributable\Services\Stream\Outbox\Relay;
 use Distributable\Services\Stream\TransportManager;
 use Distributable\Tests\Doubles\ExplodingTransport;
@@ -21,8 +21,8 @@ use Illuminate\Support\Facades\DB;
 uses(ModuleAppTestCase::class);
 
 beforeEach(function () {
-    Config::set('microservices.events.reliable_publish', true);
-    Config::set('microservices.events.streams.default.driver', 'recording');
+    Config::set('distributable.events.reliable_publish', true);
+    Config::set('distributable.events.streams.default.driver', 'recording');
 
     $this->app->instance(RecordingTransport::class, new RecordingTransport);
     $this->app->make(TransportManager::class)->extend(
@@ -38,7 +38,7 @@ beforeEach(function () {
 
     // laravel-microservices' publication migrations, on the iam module's database.
     Config::set('database.default', 'iam');
-    foreach (glob(dirname((string) (new ReflectionClass(MicroservicesServiceProvider::class))->getFileName(), 3).'/database/migrations/*.php') as $file) {
+    foreach (glob(dirname((string) (new ReflectionClass(DistributableServiceProvider::class))->getFileName(), 3).'/database/migrations/*.php') as $file) {
         (require $file)->up();
     }
 });
@@ -65,7 +65,7 @@ it('stores the event in the module database with the transaction, and deletes th
 });
 
 it('publishes without a row when events are not published reliably', function () {
-    Config::set('microservices.events.reliable_publish', false);
+    Config::set('distributable.events.reliable_publish', false);
 
     $this->app->make(Bus::class)->emit(new UserAudited(7));
 
@@ -95,14 +95,14 @@ it('publishes nothing when the business transaction rolls back', function () {
 });
 
 it('keeps a row when its sending fails, and sends it on demand', function () {
-    Config::set('microservices.events.streams.default.driver', 'exploding');
+    Config::set('distributable.events.streams.default.driver', 'exploding');
 
     $this->app->make(Bus::class)->emit(new UserRegistered(1, 'first'));
     $this->app->make(Bus::class)->emit(new UserRegistered(2, 'second'));
 
     expect(publications()->count())->toBe(2);
 
-    Config::set('microservices.events.streams.default.driver', 'recording');
+    Config::set('distributable.events.streams.default.driver', 'recording');
 
     $sent = $this->app->make(Relay::class)->drain('iam');
 
@@ -131,7 +131,7 @@ it('sends the stored rows of every local module database from the command', func
 });
 
 it('records the failure of every row it could not send, and goes on', function () {
-    Config::set('microservices.events.streams.default.driver', 'exploding');
+    Config::set('distributable.events.streams.default.driver', 'exploding');
 
     $this->app->make(Bus::class)->emit(new UserRegistered(1, 'first'));
     $this->app->make(Bus::class)->emit(new UserRegistered(2, 'second'));

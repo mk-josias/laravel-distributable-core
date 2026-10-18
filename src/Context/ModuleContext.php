@@ -169,7 +169,7 @@ final class ModuleContext
      */
     private function refuseAnotherModuleCaller(Module $module): void
     {
-        $relays = [dirname(__DIR__).'/Services/ModuleColocation.php', dirname(__DIR__).'/Testing/ModuleAware.php'];
+        $relays = [dirname(__DIR__).'/Testing/ModuleAware.php'];
 
         foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS) as $frame) {
             $file = $frame['file'] ?? null;

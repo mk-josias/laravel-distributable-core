@@ -76,7 +76,7 @@ it('announces a source row with only its shadowed fields, as this service', func
 });
 
 it('announces a source row on the stream its model names, not on the default one', function () {
-    config()->set('microservices.events.streams.shadows.driver', 'array');
+    config()->set('distributable.events.streams.shadows.driver', 'array');
 
     $refund = Refund::query()->create(['amount' => 30]);
 
@@ -89,8 +89,8 @@ it('announces a source row on the stream its model names, not on the default one
 });
 
 it('publishes the outbox row of a source row on the stream it was announced on', function () {
-    config()->set('microservices.events.streams.shadows', ['driver' => 'array']);
-    config()->set('microservices.events.reliable_publish', true);
+    config()->set('distributable.events.streams.shadows', ['driver' => 'array']);
+    config()->set('distributable.events.reliable_publish', true);
 
     DB::transaction(fn () => Refund::query()->create(['amount' => 30]));
 

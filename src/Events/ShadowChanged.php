@@ -7,7 +7,7 @@ namespace Distributable\Events;
 /** A source row as it now stands, announced to the services keeping a copy of it. */
 final class ShadowChanged extends Event
 {
-    public const string NAME = 'microservices.shadow.changed';
+    public const string NAME = 'distributable.shadow.changed';
 
     /**
      * @param  array<string, mixed>  $attributes

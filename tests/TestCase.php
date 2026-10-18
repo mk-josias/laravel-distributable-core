@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Distributable\Tests;
 
 use Distributable\Providers\DistributableServiceProvider;
-use Distributable\Providers\MicroservicesServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 use RpcHttp\RpcHttpServiceProvider;
 use StreamQueue\StreamQueueServiceProvider;
@@ -17,7 +16,7 @@ abstract class TestCase extends Orchestra
     protected function getPackageProviders($app): array
     {
         return [
-            MicroservicesServiceProvider::class, DistributableServiceProvider::class,
+            DistributableServiceProvider::class,
             RpcHttpServiceProvider::class, StreamRedisServiceProvider::class, StreamQueueServiceProvider::class,
         ];
     }

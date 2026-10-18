@@ -15,9 +15,9 @@ final class ExportEvents extends Command
 
     protected $signature = 'stream:export
         {target : Where the store appends the entries, e.g. a JSON-lines file for `file`}
-        {--store= : The archive store (default: microservices.events.archive)}
+        {--store= : The archive store (default: distributable.events.archive)}
         {--service=* : Only entries these services emitted}
-        {--stream= : The stream to read (default: microservices.events.stream)}
+        {--stream= : The stream to read (default: distributable.events.stream)}
         {--since= : Only entries on or after this date}
         {--until= : Only entries before this date}
         {--where=* : Only entries matching name=value, emitter=value, or payload.field=value}

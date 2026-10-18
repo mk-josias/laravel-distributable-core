@@ -6,10 +6,11 @@ namespace Distributable\Traits;
 
 use BackedEnum;
 use DateTimeInterface;
-use Distributable\Contracts\Colocation;
+use Distributable\Context\ModuleContext;
 use Distributable\Contracts\Stream\Bus;
 use Distributable\Events\ShadowChanged;
 use Distributable\Exceptions\ServiceException;
+use Distributable\Services\ModuleRegistry;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -37,14 +38,14 @@ trait ShadowSource
         static::deleted(static fn (self $model) => $model->announceShadow(deleted: true));
     }
 
-    /** The service owning the rows: the one the model's class belongs to. */
+    /** The module owning the rows: the one the model's class belongs to. */
     public static function sourceService(): string
     {
-        return app(Colocation::class)->serviceOf(static::class)
+        return app(ModuleRegistry::class)->ownerOf(static::class)->name
             ?? throw ServiceException::outsideService(static::class);
     }
 
-    /** The stream of microservices.events.streams this model's rows are announced on; override it, null is the default one. */
+    /** The stream of distributable.events.streams this model's rows are announced on; override it, null is the default one. */
     public function shadowStream(): ?string
     {
         return null;
@@ -82,7 +83,7 @@ trait ShadowSource
     {
         $announced = 0;
 
-        app(Colocation::class)->within(static::sourceService(), static function () use ($chunk, $keepers, &$announced): void {
+        app(ModuleContext::class)->within(app(ModuleRegistry::class)->get(static::sourceService()), static function () use ($chunk, $keepers, &$announced): void {
             static::query()->withoutGlobalScopes()->chunkById($chunk, function ($rows) use (&$announced, $keepers): void {
                 foreach ($rows as $row) {
                     $row->announceShadow(keepers: $keepers);

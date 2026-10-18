@@ -19,13 +19,13 @@ beforeEach(function () {
         $this->markTestSkipped('No Redis server reachable.');
     }
 
-    config()->set('microservices.events.streams.default.driver', 'redis');
-    config()->set('microservices.events.streams.default.key', 'distributable-test:'.Str::random(8));
-    config()->set('microservices.events.streams.default.block', 100);
+    config()->set('distributable.events.streams.default.driver', 'redis');
+    config()->set('distributable.events.streams.default.key', 'distributable-test:'.Str::random(8));
+    config()->set('distributable.events.streams.default.block', 100);
 });
 
 afterEach(function () {
-    Redis::connection()->command('del', [(string) config('microservices.events.streams.default.key')]);
+    Redis::connection()->command('del', [(string) config('distributable.events.streams.default.key')]);
 });
 
 function redisTransport(): RedisStreamTransport
@@ -60,7 +60,7 @@ it('delivers the published envelopes in order to each consumer group', function 
 
     expect(consumeAll($transport, 'analytics', 2))->toBe([1, 2])
         ->and(consumeAll(redisTransport(), 'iam', 2))->toBe([1, 2])
-        ->and(Redis::connection()->command('xpending', [config('microservices.events.streams.default.key'), 'analytics'])[0])->toBe(0);
+        ->and(Redis::connection()->command('xpending', [config('distributable.events.streams.default.key'), 'analytics'])[0])->toBe(0);
 });
 
 it('keeps one order across every emitting module, in the single key of the stream', function () {
@@ -70,7 +70,7 @@ it('keeps one order across every emitting module, in the single key of the strea
     $transport->publish(Envelope::for(new UserRegistered(3, 'c'), 'iam'));
 
     expect(consumeAll($transport, 'gateway', 3))->toBe([1, 2, 3])
-        ->and((int) Redis::connection()->command('xlen', [config('microservices.events.streams.default.key')]))->toBe(3);
+        ->and((int) Redis::connection()->command('xlen', [config('distributable.events.streams.default.key')]))->toBe(3);
 });
 
 it('acknowledges unread the entries of an emitter the consumer does not listen to', function () {
@@ -79,7 +79,7 @@ it('acknowledges unread the entries of an emitter the consumer does not listen t
     $transport->publish(Envelope::for(new UserRegistered(2, 'b'), 'iam'));
 
     expect(consumeAll($transport, 'gateway', 1, ['iam']))->toBe([2])
-        ->and(Redis::connection()->command('xpending', [config('microservices.events.streams.default.key'), 'gateway'])[0])->toBe(0);
+        ->and(Redis::connection()->command('xpending', [config('distributable.events.streams.default.key'), 'gateway'])[0])->toBe(0);
 });
 
 /** @return list<int> the ids handled, in order, until $last is; the first attempt at $failing throws */
@@ -117,19 +117,19 @@ it('retries a failed entry before any later one when the stream blocks on failur
 });
 
 it('goes on past a failed entry and drops it when the stream skips on failure', function () {
-    config()->set('microservices.events.streams.default.on_failure', 'skip');
+    config()->set('distributable.events.streams.default.on_failure', 'skip');
     $transport = redisTransport();
     $transport->publish(Envelope::for(new UserRegistered(1, 'a'), 'iam'));
     $transport->publish(Envelope::for(new UserRegistered(2, 'b'), 'iam'));
 
     expect(consumeFailingOnce('1', 2))->toBe([2])
-        ->and(Redis::connection()->command('xpending', [config('microservices.events.streams.default.key'), 'analytics'])[0])->toBe(0);
+        ->and(Redis::connection()->command('xpending', [config('distributable.events.streams.default.key'), 'analytics'])[0])->toBe(0);
 });
 
 it('replays an entry a dead consumer left unacknowledged', function () {
-    config()->set('microservices.events.streams.default.claim_after', 0);
+    config()->set('distributable.events.streams.default.claim_after', 0);
     $transport = redisTransport();
-    $key = config('microservices.events.streams.default.key');
+    $key = config('distributable.events.streams.default.key');
     $transport->publish(Envelope::for(new UserRegistered(1, 'a'), 'iam'));
 
     Redis::connection()->command('xgroup', ['CREATE', $key, 'analytics', '0', true]);
@@ -149,7 +149,7 @@ it('trims only the entries every consumer group has acknowledged', function () {
     consumeAll($transport, 'analytics', 2);
 
     expect($transport->trim())->toBe(1)
-        ->and((int) Redis::connection()->command('xlen', [config('microservices.events.streams.default.key')]))->toBe(1);
+        ->and((int) Redis::connection()->command('xlen', [config('distributable.events.streams.default.key')]))->toBe(1);
 });
 
 it('gives back only the entries below what every consumer group has read', function () {
@@ -161,7 +161,7 @@ it('gives back only the entries below what every consumer group has read', funct
     }
 
     consumeAll($transport, 'analytics', 3);
-    Redis::connection()->command('xgroup', ['CREATE', config('microservices.events.streams.default.key'), 'iam', '0', true]);
+    Redis::connection()->command('xgroup', ['CREATE', config('distributable.events.streams.default.key'), 'iam', '0', true]);
 
     expect($ids())->toBe([]);
 

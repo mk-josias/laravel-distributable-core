@@ -7,14 +7,14 @@ namespace Distributable\Config;
 use Distributable\Exceptions\ConfigurationException;
 use Illuminate\Contracts\Config\Repository;
 
-/** The microservices.rpc.* settings, and each service's host; read live, never snapshotted. */
+/** The distributable.rpc.* settings, and the host of each module; read live, never snapshotted. */
 final readonly class Rpc
 {
     public function __construct(private Repository $config) {}
 
     public function hasHost(string $service): bool
     {
-        return $this->config->get("microservices.services.{$service}.host") !== null;
+        return $this->config->get("distributable.declared.{$service}.host") !== null;
     }
 
     public function getHost(string $service): string
@@ -24,7 +24,7 @@ final readonly class Rpc
         return (string) (is_array($host) ? ($host['url'] ?? '') : $host);
     }
 
-    /** The transport a service's calls travel on: its host's `transport`, or microservices.rpc.transport. */
+    /** The transport a service's calls travel on: its host's `transport`, or distributable.rpc.transport. */
     public function getTransportOf(string $service): string
     {
         $host = $this->host($service);
@@ -34,14 +34,14 @@ final readonly class Rpc
 
     public function getDefaultTransport(): string
     {
-        return (string) $this->config->get('microservices.rpc.transport', 'http');
+        return (string) $this->config->get('distributable.rpc.transport', 'http');
     }
 
     /** @return array<string, mixed> */
     public function getTransport(string $name): array
     {
         /** @var array<string, array<string, mixed>> $transports */
-        $transports = (array) $this->config->get('microservices.rpc.transports', []);
+        $transports = (array) $this->config->get('distributable.rpc.transports', []);
 
         return $transports[$name] ?? throw ConfigurationException::unknownRpcTransport($name);
     }
@@ -50,7 +50,7 @@ final readonly class Rpc
     private function host(string $service): string|array
     {
         /** @var string|array<string, mixed>|null $host */
-        $host = $this->config->get("microservices.services.{$service}.host");
+        $host = $this->config->get("distributable.declared.{$service}.host");
 
         return $host ?? throw ConfigurationException::missingRpcHost($service);
     }
@@ -58,7 +58,7 @@ final readonly class Rpc
     /** Null is the application's default cache store. */
     public function getCacheStore(): ?string
     {
-        $store = $this->config->get('microservices.rpc.cache');
+        $store = $this->config->get('distributable.rpc.cache');
 
         return is_string($store) && $store !== '' ? $store : null;
     }

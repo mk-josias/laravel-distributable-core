@@ -21,11 +21,10 @@ use Laravel\SerializableClosure\SerializableClosure;
 
 uses(ModuleAppTestCase::class);
 
-it('refuses a module code that enters another module, directly or through Colocation', function () {
+it('refuses a module code that enters another module', function () {
     $analytics = app(EntersIam::class);
 
     expect(fn () => $analytics->directly('iam'))->toThrow(ModuleException::class, 'makes analytics code run in module [iam]')
-        ->and(fn () => $analytics->throughColocation('iam'))->toThrow(ModuleException::class, 'makes analytics code run in module [iam]')
         ->and($analytics->directly('analytics'))->toBe('entered')
         ->and($this->inModule('iam', static fn (): string => 'entered'))->toBe('entered');
 });

@@ -73,7 +73,7 @@ switch to its own database.
 
 The module writes no route: the package serves `POST {module}/rpc/{method}` for every module the
 process runs. A module's host comes from `distributable.declared`; the secret, the cache store and the
-transports are in `config/microservices.php`. A contract with no `RpcService` stays bound to the
+transports are under `rpc` in `config/distributable.php`. A contract with no `RpcService` stays bound to the
 module's implementation, and works only in a process that runs that module.
 
 ## Where to find a module that runs elsewhere
@@ -93,7 +93,7 @@ The container side of this, with the network alias that makes `iam.svc` resolve,
 
 `readThrough()`, used by `IamRpcService::findUser()` above, keeps the answer in the cache: the next
 call doesn't leave the process. The owner forgets the key when its data changes, and the key
-expires after its time to live. The cache store is the one `microservices.rpc.cache` names, shared
+expires after its time to live. The cache store is the one `distributable.rpc.cache` names, shared
 by every process. See
 [laravel-microservices' RPC](https://mk-josias.github.io/laravel-microservices/docs/rpc#caching-answers).
 
@@ -109,7 +109,7 @@ by every process. See
 | Ask when you need the answer | When the caller doesn't need the result, announce an [event](./events) instead. |
 | `null` is an answer | A method that returns `null` answers 404 over HTTP, and the caller reads `null`. |
 | Every call is signed | The signature covers the timestamp, a nonce, the path, the body and the propagated context. A call that is unsigned, too old, modified or replayed gets a 403. |
-| One secret for every process | `microservices.rpc.secret`, which defaults to `APP_KEY`; `modules:doctor` reports it empty. |
+| One secret for every process | `distributable.rpc.secret`, which defaults to `APP_KEY`; `modules:doctor` reports it empty. |
 | The RPC path stays private | A gateway forwards client requests to a module's API routes, never to `{module}/rpc/…`. |
 
 The first four rules are the module's; the others come from

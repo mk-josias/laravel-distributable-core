@@ -11,7 +11,7 @@ use Illuminate\Console\Command;
 final class TrimEvents extends Command
 {
     protected $signature = 'stream:trim
-        {--stream= : The stream to trim (default: microservices.events.stream)}';
+        {--stream= : The stream to trim (default: distributable.events.stream)}';
 
     protected $description = 'Drop the stream entries every consumer has acknowledged.';
 

@@ -5,24 +5,24 @@ declare(strict_types=1);
 namespace Distributable\Services\Stream;
 
 use Distributable\Config\Streamer;
-use Distributable\Contracts\Colocation;
 use Distributable\Contracts\Stream\Event;
 use Distributable\Data\Envelope;
 use Distributable\Exceptions\ServiceException;
+use Distributable\Services\ModuleRegistry;
 use Illuminate\Support\Facades\Context;
 
 /** Stamps an event with its emitting service and the propagated context — the only place that does. */
 final class EnvelopeFactory
 {
     public function __construct(
-        private readonly Colocation $colocation,
+        private readonly ModuleRegistry $registry,
         private readonly Streamer $config,
     ) {}
 
     public function for(Event $event): Envelope
     {
         $emitter = $event->emitter()
-            ?? $this->colocation->serviceOf($event::class)
+            ?? $this->registry->ownerOf($event::class)->name
             ?? throw ServiceException::outsideService($event::class);
 
         return Envelope::for(

@@ -15,8 +15,8 @@ it('merges the distributable config with its defaults, and the microservices one
         ->and(config('distributable.modules.namespace'))->toBe('Apps')
         ->and(config('distributable.foundation.path'))->toBe('foundation')
         ->and(config('distributable.foundation.namespace'))->toBe('Foundation')
-        ->and(config('microservices.events.streams.default.key'))->toBe('microservices:events')
-        ->and(config('microservices.rpc.transport'))->toBe('http');
+        ->and(config('distributable.events.streams.default.key'))->toBe('distributable:events')
+        ->and(config('distributable.rpc.transport'))->toBe('http');
 });
 
 it('reads RUN_MODULES as a list of module names, * standing for every module', function () {

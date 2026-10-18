@@ -24,14 +24,14 @@ it('creates the publications table in a module database only when events are pub
 
     expect(Schema::connection('iam')->hasTable('event_publications'))->toBeFalse();
 
-    config()->set('microservices.events.reliable_publish', true);
+    config()->set('distributable.events.reliable_publish', true);
     $this->artisan('migrate')->assertSuccessful();
 
     expect(Schema::connection('iam')->hasTable('event_publications'))->toBeTrue();
 });
 
 it('creates no consumption table once the guard is switched off', function () {
-    config()->set('microservices.events.guard', false);
+    config()->set('distributable.events.guard', false);
     $this->artisan('migrate')->assertSuccessful();
 
     expect(Schema::connection('iam')->hasTable('event_consumptions'))->toBeFalse();

@@ -6,7 +6,7 @@ namespace Apps\Iam\Events;
 
 use Distributable\Events\Event;
 
-/** Travels on the `audit` stream the module declares in its config/microservices.php. */
+/** Travels on the `audit` stream the module declares in its config/distributable.php. */
 final class UserAudited extends Event
 {
     public function __construct(private readonly int $id) {}

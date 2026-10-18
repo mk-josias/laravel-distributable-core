@@ -101,20 +101,20 @@ database.
 | the emitter | the module the event class belongs to |
 | the handlers | `$handlers` of the module's service provider |
 | the publications | `event_publications` in the emitting module's database, inside the module's transaction |
-| the guard | `event_consumptions` in the consuming module's database; the starter turns it off with `MICROSERVICES_STREAM_GUARD=false` |
+| the guard | `event_consumptions` in the consuming module's database; the starter turns it off with `DISTRIBUTABLE_STREAM_GUARD=false` |
 | versions | the payload class sits in the emitter's foundation, declared in `FoundationServiceProvider::$payloads` |
-| streams | a module can add its own in its `config/microservices.php` |
+| streams | a module can add its own in its `config/distributable.php` |
 
 ## Reliable publishing
 
 An event is sent once the transaction it was emitted in has committed, and never if that transaction
-rolls back. With `MICROSERVICES_EVENTS_RELIABLE_PUBLISH=true`, it is also written in that transaction, in the
+rolls back. With `DISTRIBUTABLE_EVENTS_RELIABLE_PUBLISH=true`, it is also written in that transaction, in the
 module's own database: a committed event is not lost if the process dies before sending it, and a
 row whose sending fails stays pending until `stream:republish`. With it off, no row is kept, and an
 event is lost if the process dies, or the stream is down, between the commit and the sending. No
 container role is needed to send the rows.
 
-The starter leaves it off: `docker-compose.yml` does not set `MICROSERVICES_EVENTS_RELIABLE_PUBLISH`.
+The starter leaves it off: `docker-compose.yml` does not set `DISTRIBUTABLE_EVENTS_RELIABLE_PUBLISH`.
 
 ## Consuming per module
 
@@ -142,7 +142,7 @@ What it implies:
 | a failing handler delays only its own module | with `on_failure` at `block`, the module that failed retries its entry before reading further, while the others go on |
 | never two consumers for the same module and stream | two would break the order it reads in |
 | a module's handlers only get the envelopes addressed to it | an envelope with `recipients` set is skipped by the other consumers |
-| `--stream=` picks another stream than `microservices.events.stream` | one `stream:consume` per stream, serving every module |
+| `--stream=` picks another stream than `distributable.events.stream` | one `stream:consume` per stream, serving every module |
 | a `SIGTERM` or `SIGINT` doesn't cut a handler | the consumer finishes the envelope it holds, then stops (it needs the `pcntl` extension) |
 
 ## Targeting an event

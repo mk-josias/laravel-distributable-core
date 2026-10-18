@@ -63,7 +63,7 @@ it('leaves the copies of analytics to the analytics consumer, when one process r
 });
 
 it('writes each keeper copy in its own database when no module consumes the announcement', function () {
-    $envelope = new Envelope((string) str()->uuid7(), 'iam', 'microservices.shadow.changed', ['source' => 'iam_users', 'key' => 9, 'attributes' => ['name' => 'barbara']], [], now()->toImmutable());
+    $envelope = new Envelope((string) str()->uuid7(), 'iam', 'distributable.shadow.changed', ['source' => 'iam_users', 'key' => 9, 'attributes' => ['name' => 'barbara']], [], now()->toImmutable());
 
     app(Dispatcher::class)->dispatch($envelope);
 
@@ -71,11 +71,11 @@ it('writes each keeper copy in its own database when no module consumes the anno
 });
 
 it('fills a copy from the announcement alone, so a service in another language can be its source', function () {
-    $this->receive('analytics', 'microservices.shadow.changed', ['source' => 'iam_users', 'key' => 7, 'attributes' => ['name' => 'linus']]);
+    $this->receive('analytics', 'distributable.shadow.changed', ['source' => 'iam_users', 'key' => 7, 'attributes' => ['name' => 'linus']]);
 
     expect(copies()->where('id', 7)->value('name'))->toBe('linus');
 
-    $this->receive('analytics', 'microservices.shadow.changed', ['source' => 'iam_users', 'key' => 7, 'attributes' => ['name' => 'linus', 'deleted_at' => '2026-10-02 10:00:00']]);
+    $this->receive('analytics', 'distributable.shadow.changed', ['source' => 'iam_users', 'key' => 7, 'attributes' => ['name' => 'linus', 'deleted_at' => '2026-10-02 10:00:00']]);
 
     expect(copies()->where('id', 7)->value('deleted_at'))->not->toBeNull();
 });

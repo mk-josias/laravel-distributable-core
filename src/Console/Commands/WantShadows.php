@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Distributable\Console\Commands;
 
-use Distributable\Contracts\Colocation;
 use Distributable\Contracts\Stream\Bus;
 use Distributable\Events\ShadowWanted;
+use Distributable\Services\ModuleRegistry;
 use Distributable\Services\Shadows\ShadowRegistry;
 use Illuminate\Console\Command;
 
@@ -19,12 +19,12 @@ final class WantShadows extends Command
 
     protected $description = 'Ask the owners of the source tables copied here to announce their rows.';
 
-    public function handle(ShadowRegistry $catalog, Colocation $colocation, Bus $bus): int
+    public function handle(ShadowRegistry $catalog, ModuleRegistry $registry, Bus $bus): int
     {
         $keepers = (array) $this->option('keepers');
         $sources = (array) $this->option('sources');
 
-        foreach ($colocation->local() as $keeper) {
+        foreach ($registry->localNames() as $keeper) {
             if ($keepers !== [] && ! in_array($keeper, $keepers, true)) {
                 continue;
             }

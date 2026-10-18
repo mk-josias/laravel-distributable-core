@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Distributable\Services\Stream\Outbox;
 
 use Distributable\Config\Streamer;
-use Distributable\Contracts\Colocation;
 use Distributable\Data\Envelope;
+use Distributable\Services\ModuleRegistry;
 use Distributable\Services\Stream\TransportManager;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
@@ -26,7 +26,7 @@ final class Relay
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly TransportManager $transports,
-        private readonly Colocation $colocation,
+        private readonly ModuleRegistry $registry,
         private readonly Streamer $config,
     ) {}
 
@@ -112,6 +112,6 @@ final class Relay
 
     private function table(string $service): Builder
     {
-        return $this->db->connection($this->colocation->connection($service))->table($this->config->getPublicationsTable());
+        return $this->db->connection($this->registry->connectionOf($service))->table($this->config->getPublicationsTable());
     }
 }

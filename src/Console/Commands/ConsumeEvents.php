@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace Distributable\Console\Commands;
 
-use Distributable\Config\Services;
 use Distributable\Config\Streamer;
-use Distributable\Contracts\Colocation;
+use Distributable\Context\ModuleContext;
 use Distributable\Contracts\Stream\ReportsAcknowledgements;
 use Distributable\Contracts\Stream\Transport;
 use Distributable\Data\Envelope;
+use Distributable\Data\Module;
+use Distributable\Services\ModuleRegistry;
 use Distributable\Services\Stream\Dispatcher;
 use Distributable\Services\Stream\TransportManager;
 use Illuminate\Console\Command;
@@ -23,18 +24,18 @@ final class ConsumeEvents extends Command
 {
     protected $signature = 'stream:consume
         {--service= : The consuming service (default: the one running, or every local one)}
-        {--stream= : The stream to read (default: microservices.events.stream)}';
+        {--stream= : The stream to read (default: distributable.events.stream)}';
 
     protected $description = 'Consume events from a stream and run this service handlers.';
 
-    public function handle(Colocation $colocation, Services $services, TransportManager $transports, Dispatcher $dispatcher, Streamer $streamer): int
+    public function handle(ModuleRegistry $registry, ModuleContext $context, TransportManager $transports, Dispatcher $dispatcher, Streamer $streamer): int
     {
         $transport = $transports->stream($this->option('stream') !== null ? (string) $this->option('stream') : null);
 
         if ($transport instanceof ReportsAcknowledgements && $streamer->getGuardCleanup() === 'acknowledge') {
             $transport->onAcknowledged($dispatcher->forget(...));
         }
-        $consumers = $this->consumers($colocation);
+        $consumers = $this->consumers($registry, $context);
 
         if ($consumers === []) {
             $this->error('No service runs here — name the consuming one with --service.');
@@ -42,7 +43,7 @@ final class ConsumeEvents extends Command
             return self::FAILURE;
         }
 
-        $channels = $services->getDeclared();
+        $channels = array_map(static fn (Module $module): string => $module->name, $registry->all());
 
         $this->info('Consuming as ['.implode(', ', $consumers).'] from: '.implode(', ', $channels));
 
@@ -78,7 +79,7 @@ final class ConsumeEvents extends Command
     }
 
     /** @return list<string> */
-    private function consumers(Colocation $colocation): array
+    private function consumers(ModuleRegistry $registry, ModuleContext $context): array
     {
         $service = $this->option('service');
 
@@ -86,8 +87,8 @@ final class ConsumeEvents extends Command
             return [$service];
         }
 
-        $current = $colocation->current();
+        $current = $context->current()?->name;
 
-        return $current !== null ? [$current] : $colocation->local();
+        return $current !== null ? [$current] : $registry->localNames();
     }
 }

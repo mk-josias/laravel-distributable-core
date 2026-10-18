@@ -30,8 +30,8 @@ abstract class ModuleAppTestCase extends TestCase
         // The group iam's routes/admin.php lands in.
         $app->make('router')->middlewareGroup('admin', []);
 
-        $config->set('microservices.events.streams.default.driver', 'array');
-        $config->set('microservices.rpc.secret', 'test-secret');
+        $config->set('distributable.events.streams.default.driver', 'array');
+        $config->set('distributable.rpc.secret', 'test-secret');
 
         // Root config the iam module's config/iam.php fragment merges over.
         $config->set('iam', [

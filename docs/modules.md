@@ -286,7 +286,7 @@ module directory:
 | `resources/views/` | Loaded under the module name: `view('iam::welcome')`. Anonymous components of `resources/views/components` and class components of `app/View/Components` are `<x-iam::alert />`. |
 | Artisan commands | Every `Illuminate\Console\Command` in `app/` is registered (console only). |
 | `$listen` on the provider | The Laravel events the module listens to, written as in `EventServiceProvider::$listen`. Each listener runs in the module, whichever module dispatched the event; a queued one keeps working as Laravel queues it, and an after-commit one runs once the transaction commits, still in the module. |
-| `$handlers` on the provider | The stream events the module handles, written as `microservices.events.listen`: event name => `Handler` classes. Merged into that config only where the module runs. |
+| `$handlers` on the provider | The stream events the module handles, written as `distributable.events.listen`: event name => `Handler` classes. Merged into that config only where the module runs. |
 | `schedule(Schedule $schedule)` on the provider | The module's scheduled tasks. Only a process that runs the module schedules them, and `schedule:run` runs each one in the module, closures included. A task scheduled elsewhere runs in no module. |
 
 A module's config files follow the same idea as the module itself: the application's `config/`
@@ -378,7 +378,7 @@ php artisan modules:doctor
 | two copies kept in one table | `[analytics] keeps two copies in table [users]: … Give each its own $table.` |
 | an RPC contract that isn't in the foundation of a declared module | `Foundation\Iam\Contracts\IamService is not in the foundation of a declared module.` |
 | a module running elsewhere that serves a contract, with no host | `[iam] runs elsewhere and serves Foundation\Iam\Contracts\IamService, but distributable.declared.iam.host is not set.` |
-| RPC contracts declared while the secret is empty | `Modules serve RPC contracts but microservices.rpc.secret is empty: set MICROSERVICES_RPC_SECRET or APP_KEY.` |
+| RPC contracts declared while the secret is empty | `Modules serve RPC contracts but distributable.rpc.secret is empty: set DISTRIBUTABLE_RPC_SECRET or APP_KEY.` |
 | a module using another module's classes, or the foundation or the application (`app/`, `routes/`, `config/`) using a module | `Boundary crossed: apps/Analytics/app/Models/Report.php: Apps\Iam\Models\User` |
 | a module naming another module's connection, or a table that module's migrations create | `Boundary crossed: apps/Analytics/app/Models/Report.php: 'iam_users'` |
 | two local modules setting one config key to different values | `Modules [analytics, iam] set config [iam.flag] to different values: in one process, the module registered last wins.` |

@@ -7,7 +7,7 @@ namespace Distributable\Events;
 /** A service keeping a copy asks the owner of the source table to announce every row, to it alone. */
 final class ShadowWanted extends Event
 {
-    public const string NAME = 'microservices.shadow.wanted';
+    public const string NAME = 'distributable.shadow.wanted';
 
     public function __construct(
         private readonly string $keeper,

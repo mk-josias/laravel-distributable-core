@@ -23,6 +23,7 @@ final class ModuleRegistry
     public function __construct(
         array $modules,
         private readonly array $loadedModules = ['*'],
+        private readonly string $foundationNamespace = 'Foundation',
     ) {
         $keyed = [];
 
@@ -38,8 +39,11 @@ final class ModuleRegistry
 
         $folder = static fn (Module $module): string => rtrim(realpath($module->path()) ?: $module->path(), '/').'/';
 
-        foreach ($keyed as $outer) {
-            foreach ($keyed as $inner) {
+        // Only the folders of this process: a module running elsewhere has no code here.
+        $local = $this->local();
+
+        foreach ($local as $outer) {
+            foreach ($local as $inner) {
                 if ($inner !== $outer && str_starts_with($folder($inner), $folder($outer))) {
                     throw ModuleException::nested($inner->name, $outer->name);
                 }
@@ -101,6 +105,26 @@ final class ModuleRegistry
         }
 
         return $best;
+    }
+
+    /** @return list<string> the names of the modules this process loads */
+    public function localNames(): array
+    {
+        return array_map(static fn (Module $module): string => $module->name, $this->local());
+    }
+
+    /** The module a class belongs to: its own code, or its foundation's (its contracts, its RpcService). */
+    public function ownerOf(string $class): ?Module
+    {
+        return $this->forClass($class) ?? $this->forFoundationClass($class, $this->foundationNamespace);
+    }
+
+    /** The connection of a module's database; null for a module without one, or an unknown name. */
+    public function connectionOf(string $name): ?string
+    {
+        $module = $this->find($name);
+
+        return $module !== null && $module->hasDatabase ? $module->defaultConnection() : null;
     }
 
     public function isLocal(string $name): bool

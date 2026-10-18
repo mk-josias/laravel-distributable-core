@@ -10,7 +10,7 @@ Four sources feed one module's database:
 | Source | Where it lives | In the starter | Why it is in every module's database |
 |---|---|---|---|
 | The application | `database/migrations` | `failed_jobs` and `job_batches` | a failed job or a batch is stored in the database of the module that owns the job class, so each module database needs the table |
-| The packages | the paths a package registers | laravel-microservices: `event_consumptions`, unless the guard is off; `event_publications` and its `version` column, only when `MICROSERVICES_EVENTS_RELIABLE_PUBLISH` is on | the publication row is written in the emitting module's database, in its transaction; the consumption mark is written in the consuming module's database |
+| The packages | the paths a package registers | laravel-microservices: `event_consumptions`, unless the guard is off; `event_publications` and its `version` column, only when `DISTRIBUTABLE_EVENTS_RELIABLE_PUBLISH` is on | the publication row is written in the emitting module's database, in its transaction; the consumption mark is written in the consuming module's database |
 | The module | `{module}/database/migrations` | iam: its users and its permission tables | the module's own tables; no other module may name them |
 | The copies | the files or folders the copy's `migrations()` names | `iam_users`, copied into analytics and notifications | the owner publishes the migration, each module that keeps the copy runs it |
 
@@ -26,8 +26,8 @@ they come from, not the order they run in.
 | `notifications` | 1 | 0 | 1 | 1 | 3 |
 
 The package column counts laravel-microservices only, with the starter's settings: events not
-published reliably and the guard off, so no table. `MICROSERVICES_EVENTS_RELIABLE_PUBLISH=true`
-adds 2 (`event_publications` and its `version` column), and removing `MICROSERVICES_STREAM_GUARD=false` adds `event_consumptions`. The copy exists in `analytics` and
+published reliably and the guard off, so no table. `DISTRIBUTABLE_EVENTS_RELIABLE_PUBLISH=true`
+adds 2 (`event_publications` and its `version` column), and removing `DISTRIBUTABLE_STREAM_GUARD=false` adds `event_consumptions`. The copy exists in `analytics` and
 `notifications` because their providers list `UserShadow` in `$shadows`; iam owns the table and
 keeps no copy.
 

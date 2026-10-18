@@ -20,7 +20,7 @@ function streamOfOrders(): ArchivingTransport
 {
     $transport = new ArchivingTransport;
     app(TransportManager::class)->extend('archiving', fn (): Transport => $transport);
-    config()->set('microservices.events.streams.default.driver', 'archiving');
+    config()->set('distributable.events.streams.default.driver', 'archiving');
 
     foreach ([1, 2, 3] as $id) {
         Date::setTestNow("2026-09-0{$id} 10:00:00");

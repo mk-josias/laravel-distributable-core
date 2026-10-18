@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace Distributable\Console;
 
-use Distributable\Contracts\Colocation;
+use Distributable\Context\ModuleContext;
+use Distributable\Services\ModuleRegistry;
 use Illuminate\Container\Container;
 
 /** The services a command works on: those --service names, else the one running, else every local one. */
@@ -19,9 +20,10 @@ trait LocalServicesOption
             return $named;
         }
 
-        $colocation = Container::getInstance()->make(Colocation::class);
-        $current = $colocation->current();
+        $current = Container::getInstance()->make(ModuleContext::class)->current();
 
-        return $current !== null ? [$current] : $colocation->local();
+        return $current !== null
+            ? [$current->name]
+            : Container::getInstance()->make(ModuleRegistry::class)->localNames();
     }
 }

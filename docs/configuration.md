@@ -14,13 +14,10 @@ configuration: see [Conventions](modules.md#conventions).
 | `foundation.namespace` | `Foundation` | root namespace of the foundation |
 | `status_route` | `env('MODULES_STATUS_ROUTE')` | path of the status route, `null` for none |
 
-Calls and events are configured in `config/microservices.php`
-(`php artisan vendor:publish --tag=microservices-config`): the RPC secret, transports and cache
-store, the streams, the guard and the propagated context. See
-[laravel-microservices' configuration](https://mk-josias.github.io/laravel-microservices/docs/configuration).
-Every module of `distributable.declared`, with its host, is a service there: don't declare it again. A
-module declares its handlers in `$handlers` of its service provider, and its streams in its own
-`config/microservices.php`.
+Calls and events are configured in the same file, under `rpc` and `events`: the RPC secret,
+transports and cache store, the streams, the guard and the propagated context. A module's host is
+its `host` in `declared`. A module declares its handlers in `$handlers` of its service provider,
+its copies in `$shadows`, and its own streams in its `config/distributable.php`.
 
 ## Source layout
 
@@ -39,13 +36,13 @@ src/
 ├── Traits/             ResolvesModule
 ├── Exceptions/         ModuleException
 ├── Testing/            Boundaries · ModuleAware
-├── Services/           ModuleRegistry · ModuleColocation · SingleService
+├── Services/           ModuleRegistry
 ├── Services/Discovery/ ClassDiscovery · DiscoveryCache
 ├── Services/Migrations/ ModuleMigrations
 ├── Services/Rpc/       ModuleRpcTransport · …
 └── Services/Shadows/   CachedShadowRegistry · ShadowRegistry
 ```
 
-`ModuleColocation` is what makes each module a service of laravel-microservices: it tells which
-modules this process runs, which module a class belongs to, and which connection each one uses.
+`ModuleRegistry` tells which modules this process runs, which module a class belongs to
+(`ownerOf()`), and which connection each one uses (`connectionOf()`).
 `ModuleRpcTransport` turns a call to a module this process runs into a direct method call.

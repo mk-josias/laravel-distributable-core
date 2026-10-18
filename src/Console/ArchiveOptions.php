@@ -12,7 +12,7 @@ trait ArchiveOptions
 {
     protected function archiveStore(): ArchiveStore
     {
-        $name = $this->stringOption('store') ?? (string) config('microservices.events.archive', 'file');
+        $name = $this->stringOption('store') ?? (string) config('distributable.events.archive', 'file');
 
         return $this->laravel->make(ArchiveStores::class)->store($name);
     }

@@ -7,7 +7,7 @@ modules, it is one more service.
 
 | In a distributable application | |
 |---|---|
-| declare it | in `config/microservices.php` under `services`, with its `host` |
+| declare it | in `config/distributable.php` under `declared`, with its `host` |
 | call a module | `POST {host}/{module}/rpc/{method}`: each module answers on its own name |
 | be called by a module | its contract and `RpcService` sit in `foundation/{Name}/`, like a module's |
 | be the source of a copy | the copy's shape sits in `foundation/{Name}/Shadows/`, with the service as `owner()` |

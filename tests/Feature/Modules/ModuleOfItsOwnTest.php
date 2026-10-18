@@ -17,7 +17,7 @@ abstract class ModuleOfItsOwnTestCase extends TestCase
     protected function defineEnvironment($app): void
     {
         $app->make(Repository::class)->set('distributable.declared', ['shop' => ['path' => '.', 'namespace' => 'Shop']]);
-        $app->make(Repository::class)->set('microservices.events.streams.default.driver', 'array');
+        $app->make(Repository::class)->set('distributable.events.streams.default.driver', 'array');
     }
 }
 

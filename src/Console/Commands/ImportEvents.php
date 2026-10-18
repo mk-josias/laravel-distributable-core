@@ -15,9 +15,9 @@ final class ImportEvents extends Command
 
     protected $signature = 'stream:import
         {source : What stream:export wrote, e.g. its JSON-lines file for `file`}
-        {--store= : The archive store (default: microservices.events.archive)}
+        {--store= : The archive store (default: distributable.events.archive)}
         {--service=* : Only entries these services emitted}
-        {--stream= : The stream to publish on (default: microservices.events.stream)}
+        {--stream= : The stream to publish on (default: distributable.events.stream)}
         {--since= : Only entries emitted on or after this date}
         {--until= : Only entries emitted before this date}
         {--where=* : Only entries matching name=value, emitter=value, or payload.field=value}';

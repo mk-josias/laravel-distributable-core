@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Distributable\Services\Stream;
 
 use Distributable\Config\Streamer;
-use Distributable\Contracts\Colocation;
+use Distributable\Context\ModuleContext;
 use Distributable\Contracts\Stream\Handler;
 use Distributable\Contracts\Stream\Idempotent;
 use Distributable\Contracts\Stream\RedeliversEnvelopes;
@@ -16,6 +16,7 @@ use Distributable\Exceptions\ConfigurationException;
 use Distributable\Exceptions\ServiceException;
 use Distributable\Handlers\AnnounceShadowSource;
 use Distributable\Handlers\SyncShadows;
+use Distributable\Services\ModuleRegistry;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\Context;
@@ -36,7 +37,8 @@ final class Dispatcher
     public function __construct(
         private readonly Container $container,
         private readonly Streamer $config,
-        private readonly Colocation $colocation,
+        private readonly ModuleRegistry $registry,
+        private readonly ModuleContext $context,
         private readonly DatabaseManager $db,
         private readonly TransportManager $transports,
         private readonly PayloadVersions $versions,
@@ -48,7 +50,7 @@ final class Dispatcher
         $guarded = $this->guarded($envelope->stream);
 
         foreach ($this->handlersFor($envelope->name) as $class) {
-            $owner = $this->colocation->serviceOf($class);
+            $owner = $this->registry->ownerOf($class)?->name;
 
             if ($consumer !== null && $owner !== null && $owner !== $consumer) {
                 continue;
@@ -86,7 +88,7 @@ final class Dispatcher
             return;
         }
 
-        $this->db->connection($this->colocation->connection($consumer))
+        $this->db->connection($this->registry->connectionOf($consumer))
             ->table($this->config->getConsumptionsTable())
             ->where('event_id', $envelope->id)
             ->delete();
@@ -95,10 +97,10 @@ final class Dispatcher
     /** @param class-string $class */
     private function runGuarded(string $class, Envelope $envelope): void
     {
-        $service = $this->colocation->serviceOf($class)
+        $service = $this->registry->ownerOf($class)->name
             ?? throw ServiceException::outsideService($class);
 
-        $connection = $this->db->connection($this->colocation->connection($service));
+        $connection = $this->db->connection($this->registry->connectionOf($service));
 
         $connection->transaction(function () use ($connection, $class, $envelope, $service): void {
             $claimed = $connection->table($this->config->getConsumptionsTable())->insertOrIgnore([
@@ -129,8 +131,8 @@ final class Dispatcher
 
         $payload = $this->versions->lift($envelope);
 
-        $this->colocation->within(
-            $service,
+        $this->context->within(
+            $service === null ? null : $this->registry->get($service),
             fn () => $this->withContext($envelope->headers, static fn () => $handler->handle($envelope->name, $payload)),
         );
     }

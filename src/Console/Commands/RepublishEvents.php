@@ -26,7 +26,7 @@ final class RepublishEvents extends Command
     public function handle(Relay $relay, Streamer $config): int
     {
         if (! $config->publishesReliably()) {
-            $this->error('Events are not published reliably: set MICROSERVICES_EVENTS_RELIABLE_PUBLISH=true first.');
+            $this->error('Events are not published reliably: set DISTRIBUTABLE_EVENTS_RELIABLE_PUBLISH=true first.');
 
             return self::FAILURE;
         }

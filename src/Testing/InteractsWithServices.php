@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Distributable\Testing;
 
-use Distributable\Contracts\Colocation;
+use Distributable\Context\ModuleContext;
 use Distributable\Data\Envelope;
 use Distributable\Services\Stream\Dispatcher;
 use Illuminate\Support\Facades\Date;
@@ -30,6 +30,6 @@ trait InteractsWithServices
             version: $version,
         );
 
-        $this->app->make(Dispatcher::class)->dispatch($envelope, $service ?? $this->app->make(Colocation::class)->current());
+        $this->app->make(Dispatcher::class)->dispatch($envelope, $service ?? $this->app->make(ModuleContext::class)->current()?->name);
     }
 }

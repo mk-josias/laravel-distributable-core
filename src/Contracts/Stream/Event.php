@@ -18,7 +18,7 @@ interface Event
     /** @return list<string> the only services that handle it; empty for every service */
     public function recipients(): array;
 
-    /** The stream of microservices.events.streams it travels on; null for the default one. */
+    /** The stream of distributable.events.streams it travels on; null for the default one. */
     public function stream(): ?string;
 
     /** The version of the payload's shape: raised when a field is renamed, removed or changes meaning. */

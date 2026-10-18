@@ -43,7 +43,7 @@ abstract class ServiceProvider extends BaseServiceProvider
     /** @var array<class-string, list<string>> as EventServiceProvider::$listen: event => listener classes, or Class@method */
     protected array $listen = [];
 
-    /** @var array<string, list<class-string>> as microservices.events.listen: event name => Handler classes */
+    /** @var array<string, list<class-string>> as distributable.events.listen: event name => Handler classes */
     protected array $handlers = [];
 
     /** @var list<class-string<ShadowModel>> the copies this module keeps: a foundation class, or a subclass of its own */
@@ -55,7 +55,7 @@ abstract class ServiceProvider extends BaseServiceProvider
         if (! $this->app->configurationIsCached()) {
             $this->mergeModuleConfigs();
             $this->mergeModuleHandlers();
-            config()->set("microservices.shadows.{$this->module->name}", $this->shadows);
+            config()->set("distributable.shadows.{$this->module->name}", $this->shadows);
         }
 
         $local = $this->app->make(LocalServices::class);
@@ -169,13 +169,13 @@ abstract class ServiceProvider extends BaseServiceProvider
 
     private function mergeModuleHandlers(): void
     {
-        $listen = (array) config('microservices.events.listen', []);
+        $listen = (array) config('distributable.events.listen', []);
 
         foreach ($this->handlers as $event => $handlers) {
             $listen[$event] = array_values(array_unique([...$listen[$event] ?? [], ...$handlers]));
         }
 
-        config()->set('microservices.events.listen', $listen);
+        config()->set('distributable.events.listen', $listen);
     }
 
     /** @var array<string, array<array-key, mixed>> each root config file as the application set it, before any module */

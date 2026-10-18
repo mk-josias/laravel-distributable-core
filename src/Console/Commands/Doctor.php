@@ -71,7 +71,7 @@ final class Doctor extends Command
         }
 
         if ($services->all() !== [] && class_exists(RpcHttp::class) && app(RpcHttp::class)->getSecret() === '') {
-            $problems[] = 'Modules serve RPC contracts but microservices.rpc.secret is empty: set MICROSERVICES_RPC_SECRET or APP_KEY.';
+            $problems[] = 'Modules serve RPC contracts but distributable.rpc.secret is empty: set DISTRIBUTABLE_RPC_SECRET or APP_KEY.';
         }
 
         foreach ($boundaries->violations() as $violation) {

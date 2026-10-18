@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Distributable\Contracts\Stream;
 
 /**
- * A service's reaction to an event, declared in microservices.events.listen. The signature is
+ * A service's reaction to an event, declared in distributable.events.listen. The signature is
  * transport-neutral — a distributed consumer only ever has the name and the raw payload, so the
  * in-process driver hands over the same thing.
  */

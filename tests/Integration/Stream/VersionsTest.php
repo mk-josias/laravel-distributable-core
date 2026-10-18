@@ -9,7 +9,7 @@ use Distributable\Contracts\Stream\Transport;
 use Distributable\Data\Envelope;
 use Distributable\Exceptions\ConfigurationException;
 use Distributable\Exceptions\ServiceException;
-use Distributable\Providers\MicroservicesServiceProvider;
+use Distributable\Providers\DistributableServiceProvider;
 use Distributable\Services\Stream\Dispatcher;
 use Distributable\Services\Stream\Outbox\Relay;
 use Distributable\Services\Stream\PayloadVersions;
@@ -82,13 +82,13 @@ it('refuses a payload class that declares no version', function () {
 })->throws(ConfigurationException::class, 'must implement Distributable\Contracts\Stream\Versioned');
 
 it('keeps the version through the publications table, up to the sent envelope', function () {
-    Config::set('microservices.events.reliable_publish', true);
-    Config::set('microservices.events.streams.default.driver', 'recording');
+    Config::set('distributable.events.reliable_publish', true);
+    Config::set('distributable.events.streams.default.driver', 'recording');
     $this->app->instance(RecordingTransport::class, new RecordingTransport);
     $this->app->make(TransportManager::class)->extend('recording', fn ($app): Transport => $app->make(RecordingTransport::class));
     Config::set('database.default', 'iam');
 
-    foreach (glob(dirname((string) (new ReflectionClass(MicroservicesServiceProvider::class))->getFileName(), 3).'/database/migrations/*.php') as $file) {
+    foreach (glob(dirname((string) (new ReflectionClass(DistributableServiceProvider::class))->getFileName(), 3).'/database/migrations/*.php') as $file) {
         (require $file)->up();
     }
 

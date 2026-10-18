@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace Distributable\Services\Shadows;
 
-use Distributable\Contracts\Colocation;
 use Distributable\Contracts\Shadows\Shadowed;
 use Distributable\Models\ShadowModel;
 use Distributable\Services\Discovery\ClassDiscovery;
+use Distributable\Services\ModuleRegistry;
 use Illuminate\Database\Eloquent\Model;
 
 /** Finds, among the services this process runs, the copies each one declares and the source models it owns. */
 class ShadowRegistry
 {
-    public function __construct(protected readonly Colocation $colocation) {}
+    public function __construct(protected readonly ModuleRegistry $registry) {}
 
     /** @return list<class-string<ShadowModel>> the copies of $sourceTable kept here, or by $keeper alone */
     public function shadowsOf(string $sourceTable, ?string $keeper = null): array
@@ -29,7 +29,7 @@ class ShadowRegistry
     {
         $shadows = [];
 
-        foreach ($keeper === null ? $this->colocation->local() : [$keeper] as $service) {
+        foreach ($keeper === null ? $this->registry->localNames() : [$keeper] as $service) {
             $shadows = [...$shadows, ...$this->kept($service)];
         }
 
@@ -40,7 +40,7 @@ class ShadowRegistry
     public function keepersOf(string $sourceTable): array
     {
         return array_values(array_filter(
-            $this->colocation->local(),
+            $this->registry->localNames(),
             fn (string $service): bool => $this->shadowsOf($sourceTable, $service) !== [],
         ));
     }
@@ -48,7 +48,7 @@ class ShadowRegistry
     /** The local source model of $sourceTable, if this process runs its owner (or $owner is it). */
     public function sourceOf(string $sourceTable, ?string $owner = null): ?Shadowed
     {
-        foreach ($owner === null ? $this->colocation->local() : [$owner] as $service) {
+        foreach ($owner === null ? $this->registry->localNames() : [$owner] as $service) {
             foreach ($this->sources($service) as $class) {
                 /** @var Model&Shadowed $model */
                 $model = new $class;
@@ -65,18 +65,14 @@ class ShadowRegistry
     /** @return list<class-string> */
     public function scanSources(string $service): array
     {
-        return ClassDiscovery::with(Shadowed::class, $this->colocation->classPath($service));
+        return ClassDiscovery::with(Shadowed::class, $this->registry->get($service)->classPath());
     }
 
-    /** @return list<class-string<ShadowModel>> microservices.shadows: this service's list, or its entry when keyed by service */
-    protected function kept(string $service): array
+    /** @return list<class-string<ShadowModel>> the copies a module's provider lists in $shadows */
+    protected function kept(string $module): array
     {
-        $declared = (array) config('microservices.shadows', []);
-
         /** @var list<class-string<ShadowModel>> */
-        return array_values(array_is_list($declared)
-            ? ($service === config('microservices.name') ? $declared : [])
-            : (array) ($declared[$service] ?? []));
+        return array_values((array) config("distributable.shadows.{$module}", []));
     }
 
     /** @return list<class-string> */

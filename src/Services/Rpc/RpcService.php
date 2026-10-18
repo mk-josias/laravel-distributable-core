@@ -6,9 +6,9 @@ namespace Distributable\Services\Rpc;
 
 use Closure;
 use Distributable\Config\Rpc;
-use Distributable\Contracts\Colocation;
 use Distributable\Contracts\Rpc\Transport;
 use Distributable\Exceptions\ServiceException;
+use Distributable\Services\ModuleRegistry;
 use Illuminate\Cache\RedisStore;
 use Illuminate\Cache\TaggableStore;
 use Illuminate\Cache\TaggedCache;
@@ -28,7 +28,7 @@ abstract class RpcService
 
     /** The service this one calls, read from its namespace. */
     public string $service {
-        get => app(Colocation::class)->serviceOf(static::class)
+        get => app(ModuleRegistry::class)->ownerOf(static::class)->name
             ?? throw ServiceException::outsideService(static::class);
     }
 
@@ -158,7 +158,7 @@ abstract class RpcService
     }
 
     /**
-     * The store shared by every process (microservices.rpc.cache): the caller keeps the answer, the
+     * The store shared by every process (distributable.rpc.cache): the caller keeps the answer, the
      * owner forgets it, so both must reach the same one.
      *
      * @param  list<string>|null  $tags

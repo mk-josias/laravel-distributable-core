@@ -4,25 +4,30 @@ declare(strict_types=1);
 
 namespace Distributable\Tests;
 
-use Distributable\Providers\MicroservicesServiceProvider;
+use Distributable\Context\ModuleContext;
+use Distributable\Providers\DistributableServiceProvider;
+use Distributable\Services\ModuleRegistry;
 use Distributable\Testing\InteractsWithServices;
-use Distributable\Tests\Fixtures\Orders\Models\CustomerShadow;
+use Distributable\Tests\Fixtures\Orders\Providers\OrdersFoundationProvider;
 use Distributable\Tests\Fixtures\Orders\Providers\OrdersServiceProvider;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Orchestra\Testbench\TestCase as Orchestra;
 
-/** The `orders` application, on its own: it answers OrdersService and calls `billing`, which runs elsewhere. */
+/** The `orders` application, a module of its own: it answers OrdersService and calls `billing`, which runs elsewhere. */
 abstract class OrdersAppTestCase extends Orchestra
 {
     use InteractsWithServices;
     use RefreshDatabase;
 
+    /** @var list<string> the connection of the orders module, outside of which no default connection exists */
+    protected $connectionsToTransact = ['testing'];
+
     /** @return list<class-string> */
     protected function getPackageProviders($app): array
     {
-        return [MicroservicesServiceProvider::class, OrdersServiceProvider::class];
+        return [DistributableServiceProvider::class];
     }
 
     /** @param Application $app */
@@ -33,25 +38,32 @@ abstract class OrdersAppTestCase extends Orchestra
         $config = $app->make(Repository::class);
 
         $config->set('database.default', 'testing');
-        $config->set('microservices.name', 'orders');
-        $config->set('microservices.services', [
-            'billing' => ['host' => 'http://billing.test', 'namespace' => 'Distributable\Tests\Fixtures\Billing'],
+        $config->set('distributable.declared', [
+            'orders' => ['path' => __DIR__.'/Fixtures/Orders', 'namespace' => 'Distributable\Tests\Fixtures\Orders'],
+            'billing' => ['host' => 'http://billing.test'],
         ]);
-        $config->set('microservices.shadows', [CustomerShadow::class]);
-        $config->set('microservices.rpc.secret', 'test-secret');
-        $config->set('microservices.events.streams.default.driver', 'array');
-        $config->set('microservices.events.reliable_publish', true);
+        // Billing's contract and RpcService are its foundation's: Fixtures/Billing.
+        $config->set('distributable.foundation.namespace', 'Distributable\Tests\Fixtures');
+        $config->set('distributable.foundation.path', __DIR__.'/Fixtures');
+        $config->set('distributable.runs', 'orders');
+
+        // As the package registers a module's providers: once the declaration is read.
+        $app->booting(static function () use ($app): void {
+            $app->register(OrdersServiceProvider::class);
+            $app->register(OrdersFoundationProvider::class);
+        });
+        $config->set('distributable.rpc.secret', 'test-secret');
+        $config->set('distributable.events.streams.default.driver', 'array');
+        $config->set('distributable.events.reliable_publish', true);
     }
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        config()->set('microservices.events.reliable_publish', false);
-    }
+        config()->set('distributable.events.reliable_publish', false);
 
-    protected function defineDatabaseMigrations(): void
-    {
-        $this->loadMigrationsFrom([__DIR__.'/Fixtures/Orders/database/migrations', ...CustomerShadow::migrations()]);
+        // The test runs as the application's own code: inside its one module.
+        $this->app->make(ModuleContext::class)->enter($this->app->make(ModuleRegistry::class)->get('orders'));
     }
 }

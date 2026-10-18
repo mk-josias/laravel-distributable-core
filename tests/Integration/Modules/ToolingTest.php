@@ -156,10 +156,10 @@ it('fails on a module folder that distributable.declared does not declare', func
 });
 
 it('fails when modules serve RPC contracts and no secret signs the calls', function () {
-    config()->set('microservices.rpc.secret', '');
+    config()->set('distributable.rpc.secret', '');
 
     $this->artisan('modules:doctor')
-        ->expectsOutputToContain('microservices.rpc.secret is empty')
+        ->expectsOutputToContain('distributable.rpc.secret is empty')
         ->assertFailed();
 });
 
@@ -179,7 +179,7 @@ it('fails on two modules setting one new config key to different values, and lea
 });
 
 it('fails on a module keeping two copies in one table', function () {
-    config()->set('microservices.shadows.analytics', [UserShadow::class, IamUserShadow::class]);
+    config()->set('distributable.shadows.analytics', [UserShadow::class, IamUserShadow::class]);
 
     $this->artisan('modules:doctor')
         ->expectsOutputToContain('[analytics] keeps two copies in table [iam_users]')
@@ -187,7 +187,7 @@ it('fails on a module keeping two copies in one table', function () {
 });
 
 it('fails on a copy naming a folder without any migration', function () {
-    config()->set('microservices.shadows.analytics', [UserShadow::class, MisplacedShadow::class]);
+    config()->set('distributable.shadows.analytics', [UserShadow::class, MisplacedShadow::class]);
 
     $this->artisan('modules:doctor')
         ->expectsOutputToContain('[analytics] keeps '.MisplacedShadow::class.', whose migrations [')

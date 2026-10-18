@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Distributable\Services\Stream;
 
 use Distributable\Config\Streamer;
-use Distributable\Contracts\Colocation;
 use Distributable\Contracts\Stream\Bus;
 use Distributable\Contracts\Stream\Event;
+use Distributable\Services\ModuleRegistry;
 use Distributable\Services\Stream\Outbox\Relay;
 use Distributable\Services\Stream\Outbox\Writer;
 use Illuminate\Database\DatabaseManager;
@@ -25,7 +25,7 @@ final class Emitter implements Bus
         private readonly Writer $outbox,
         private readonly Relay $relay,
         private readonly DatabaseManager $db,
-        private readonly Colocation $colocation,
+        private readonly ModuleRegistry $registry,
         private readonly Streamer $config,
     ) {}
 
@@ -33,7 +33,7 @@ final class Emitter implements Bus
     {
         $envelope = $this->envelopes->for($event);
 
-        $connection = $this->db->connection($this->colocation->connection($envelope->emitter));
+        $connection = $this->db->connection($this->registry->connectionOf($envelope->emitter));
 
         if (! $this->config->publishesReliably()) {
             $connection->afterCommit(fn () => $this->transports->stream($envelope->stream)->publish($envelope));
