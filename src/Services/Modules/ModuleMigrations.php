@@ -6,8 +6,8 @@ namespace Distributable\Services\Modules;
 
 use Distributable\Contracts\PublishesMigrations;
 use Distributable\Data\Module;
+use Distributable\Services\Shadows\ShadowRegistry;
 use Illuminate\Container\Container;
-use Microservices\Services\Shadows\ShadowRegistry;
 
 /**
  * The migrations of a module database: the application's (laravel-microservices' outbox tables

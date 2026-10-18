@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Apps\Analytics\Reports;
 
+use Distributable\Contracts\Colocation;
 use Distributable\Services\Modules\ModuleContext;
 use Distributable\Services\Modules\ModuleRegistry;
-use Microservices\Contracts\Colocation;
 
 /** Analytics code that switches to a module by itself, as boundaries forbid for any module but its own. */
 final readonly class EntersIam

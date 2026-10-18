@@ -97,7 +97,7 @@ authenticated user of a request from its own copy.
 
 ## Creating its table
 
-iam publishes the migration of the copy's table, extending `Microservices\Migrations\ShadowMigration`,
+iam publishes the migration of the copy's table, extending `Distributable\Migrations\ShadowMigration`,
 and `UserShadow::migrations()` names where it is: `foundation/Iam/database/shadows/users`. `migrate`
 runs it in the database of every module that keeps a copy. See [Migrations](./migrations#writing-a-migration).
 

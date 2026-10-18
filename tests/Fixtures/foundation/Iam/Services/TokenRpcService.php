@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Foundation\Iam\Services;
 
-use Microservices\Services\Rpc\RpcService;
+use Distributable\Services\Rpc\RpcService;
 
 final class TokenRpcService extends RpcService
 {

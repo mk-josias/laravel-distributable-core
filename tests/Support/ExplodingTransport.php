@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Distributable\Tests\Support;
 
-use Microservices\Contracts\Stream\Transport;
-use Microservices\Data\Envelope;
+use Distributable\Contracts\Stream\Transport;
+use Distributable\Data\Envelope;
 use RuntimeException;
 
 /** A broker that is down. */

@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace Distributable\Testing;
 
 use Closure;
+use Distributable\Data\Envelope;
 use Distributable\Data\Module;
 use Distributable\Exceptions\ModuleException;
 use Distributable\Services\Modules\ModuleContext;
 use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\Stream\Dispatcher;
 use Illuminate\Foundation\Testing\WithConsoleEvents;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Str;
-use Microservices\Data\Envelope;
-use Microservices\Services\Stream\Dispatcher;
 use PHPUnit\Framework\Assert;
 use ReflectionClass;
 use ReflectionFunction;

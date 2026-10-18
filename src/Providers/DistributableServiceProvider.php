@@ -19,6 +19,8 @@ use Distributable\Console\Migrations;
 use Distributable\Console\ModuleGenerators;
 use Distributable\Console\ModuleOption;
 use Distributable\Console\ModuleSeedCommand;
+use Distributable\Contracts\Colocation;
+use Distributable\Contracts\Rpc\Transport as RpcTransport;
 use Distributable\Data\Module;
 use Distributable\Exceptions\ModuleException;
 use Distributable\Http\Controllers\StatusController;
@@ -30,6 +32,7 @@ use Distributable\Services\Modules\ModuleColocation;
 use Distributable\Services\Modules\ModuleContext;
 use Distributable\Services\Modules\ModuleRegistry;
 use Distributable\Services\Modules\ModuleRpcTransport;
+use Distributable\Services\Shadows\ShadowRegistry;
 use Distributable\Support\ModuleConcurrencyDriver;
 use Distributable\Support\ModuleDatabaseManager;
 use Distributable\Support\ModuleDeferredCallbacks;
@@ -64,9 +67,6 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
 use Laravel\Octane\Contracts\DispatchesTasks;
-use Microservices\Contracts\Colocation;
-use Microservices\Contracts\Rpc\Transport as RpcTransport;
-use Microservices\Services\Shadows\ShadowRegistry;
 
 final class DistributableServiceProvider extends BaseServiceProvider
 {

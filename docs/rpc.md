@@ -34,7 +34,7 @@ final class IamServiceProvider extends \Distributable\Providers\ServiceProvider
 }
 
 // foundation/Iam/Services/IamRpcService.php
-final class IamRpcService extends \Microservices\Services\Rpc\RpcService implements IamService
+final class IamRpcService extends \Distributable\Services\Rpc\RpcService implements IamService
 {
     public function findUser(int $id): ?array
     {

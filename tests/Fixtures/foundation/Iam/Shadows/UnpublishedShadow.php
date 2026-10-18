@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Foundation\Iam\Shadows;
 
-use Microservices\Models\ShadowModel;
+use Distributable\Models\ShadowModel;
 
 /** A copy whose owner names no migration: modules:doctor reports it. */
 final class UnpublishedShadow extends ShadowModel

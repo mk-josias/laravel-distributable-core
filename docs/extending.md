@@ -1,7 +1,7 @@
 # Extending
 
 What you can replace, and with what. These contracts come from laravel-microservices
-(`Microservices\` namespace):
+(`Distributable\` namespace):
 
 | Contract | Default | Replace it with |
 |---|---|---|

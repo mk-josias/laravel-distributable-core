@@ -8,10 +8,10 @@ use Distributable\Config\Modules;
 use Distributable\Contracts\PublishesMigrations;
 use Distributable\Services\Modules\ComposerAutoload;
 use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\Rpc\RpcServices;
+use Distributable\Services\Shadows\ShadowRegistry;
 use Distributable\Testing\Boundaries;
 use Illuminate\Console\Command;
-use Microservices\Services\Rpc\RpcServices;
-use Microservices\Services\Shadows\ShadowRegistry;
 use RpcHttp\RpcHttp;
 
 final class Doctor extends Command

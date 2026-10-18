@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Distributable\Tests;
 
 use Distributable\Providers\DistributableServiceProvider;
-use Microservices\Providers\MicroservicesServiceProvider;
+use Distributable\Providers\MicroservicesServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 use RpcHttp\RpcHttpServiceProvider;
 use StreamQueue\StreamQueueServiceProvider;

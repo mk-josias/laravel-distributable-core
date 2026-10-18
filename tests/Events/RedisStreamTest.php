@@ -3,11 +3,11 @@
 declare(strict_types=1);
 
 use Apps\Iam\Events\UserRegistered;
+use Distributable\Data\Envelope;
+use Distributable\Services\Stream\TransportManager;
 use Distributable\Tests\Support\ModuleAppTestCase;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
-use Microservices\Data\Envelope;
-use Microservices\Services\Stream\TransportManager;
 use StreamRedis\RedisStreamTransport;
 
 uses(ModuleAppTestCase::class);

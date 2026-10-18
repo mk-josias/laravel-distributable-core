@@ -5,19 +5,19 @@ declare(strict_types=1);
 use Apps\Iam\Events\UserRegistered;
 use Apps\Iam\Events\UserRenamed;
 use Apps\Iam\Support\Recorder;
+use Distributable\Contracts\Stream\Bus;
+use Distributable\Contracts\Stream\Transport;
+use Distributable\Data\Envelope;
+use Distributable\Exceptions\ConfigurationException;
+use Distributable\Exceptions\ServiceException;
+use Distributable\Providers\MicroservicesServiceProvider;
+use Distributable\Services\Stream\Dispatcher;
+use Distributable\Services\Stream\Outbox\Relay;
+use Distributable\Services\Stream\PayloadVersions;
+use Distributable\Services\Stream\TransportManager;
 use Distributable\Tests\Support\ModuleAppTestCase;
 use Distributable\Tests\Support\RecordingTransport;
 use Illuminate\Support\Facades\Config;
-use Microservices\Contracts\Stream\Bus;
-use Microservices\Contracts\Stream\Transport;
-use Microservices\Data\Envelope;
-use Microservices\Exceptions\ConfigurationException;
-use Microservices\Exceptions\ServiceException;
-use Microservices\Providers\MicroservicesServiceProvider;
-use Microservices\Services\Stream\Dispatcher;
-use Microservices\Services\Stream\Outbox\Relay;
-use Microservices\Services\Stream\PayloadVersions;
-use Microservices\Services\Stream\TransportManager;
 
 uses(ModuleAppTestCase::class);
 
@@ -79,7 +79,7 @@ it('reads an event nobody declared a version for as version 1 only', function ()
 
 it('refuses a payload class that declares no version', function () {
     $this->app->make(PayloadVersions::class)->add(['iam.user.registered' => Recorder::class]);
-})->throws(ConfigurationException::class, 'must implement Microservices\Contracts\Stream\Versioned');
+})->throws(ConfigurationException::class, 'must implement Distributable\Contracts\Stream\Versioned');
 
 it('keeps the version through the publications table, up to the sent envelope', function () {
     Config::set('microservices.events.reliable_publish', true);

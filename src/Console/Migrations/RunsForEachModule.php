@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Distributable\Console\Migrations;
 
+use Distributable\Migrations\ShadowMigration;
 use Distributable\Services\Modules\ModuleContext;
 use Distributable\Services\Modules\ModuleMigrations;
 use Distributable\Services\Modules\ModuleRegistry;
-use Microservices\Migrations\ShadowMigration;
 use Symfony\Component\Console\Input\InputOption;
 
 /**

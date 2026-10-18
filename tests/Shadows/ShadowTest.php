@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 use Apps\Analytics\Models\UserShadow;
 use Apps\Iam\Models\User;
+use Distributable\Data\Envelope;
+use Distributable\Services\Stream\Dispatcher;
 use Distributable\Tests\Support\ModuleAppTestCase;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Microservices\Data\Envelope;
-use Microservices\Services\Stream\Dispatcher;
 
 uses(ModuleAppTestCase::class);
 

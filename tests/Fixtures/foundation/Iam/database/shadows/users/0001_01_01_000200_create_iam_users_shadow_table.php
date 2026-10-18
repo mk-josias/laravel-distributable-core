@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
+use Distributable\Migrations\ShadowMigration;
 use Foundation\Iam\Shadows\UserShadow;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Microservices\Migrations\ShadowMigration;
 
 return new class extends ShadowMigration
 {

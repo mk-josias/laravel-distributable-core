@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Apps\Iam\Events;
 
-use Microservices\Events\Event;
+use Distributable\Events\Event;
 
 final class UserRegistered extends Event
 {

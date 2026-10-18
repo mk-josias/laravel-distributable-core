@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Foundation\Iam\Services;
 
+use Distributable\Services\Rpc\RpcService;
 use Foundation\Iam\Contracts\IamService;
-use Microservices\Services\Rpc\RpcService;
 
 final class IamRpcService extends RpcService implements IamService
 {

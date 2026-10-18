@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Apps\Iam\Events;
 
-use Microservices\Events\Event;
+use Distributable\Events\Event;
 
 /** Travels on the `audit` stream the module declares in its config/microservices.php. */
 final class UserAudited extends Event

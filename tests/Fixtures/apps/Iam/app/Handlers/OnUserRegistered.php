@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Apps\Iam\Handlers;
 
 use Apps\Iam\Support\Recorder;
+use Distributable\Contracts\Stream\Handler;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\DB;
-use Microservices\Contracts\Stream\Handler;
 
 final class OnUserRegistered implements Handler
 {

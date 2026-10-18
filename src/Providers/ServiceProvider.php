@@ -7,7 +7,9 @@ namespace Distributable\Providers;
 use Distributable\Config\Modules;
 use Distributable\Exceptions\ModuleException;
 use Distributable\Http\Middleware\SetModuleContext;
+use Distributable\Models\ShadowModel;
 use Distributable\Services\Modules\ModuleContext;
+use Distributable\Services\Rpc\LocalServices;
 use Distributable\Support\ScheduledTasks;
 use Distributable\Traits\ResolvesModule;
 use Illuminate\Console\Command;
@@ -21,8 +23,6 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\View\Compilers\BladeCompiler;
-use Microservices\Models\ShadowModel;
-use Microservices\Services\Rpc\LocalServices;
 
 /**
  * Base service provider a module extends to get, without manual wiring: config merging

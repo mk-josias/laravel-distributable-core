@@ -2,7 +2,11 @@
 
 declare(strict_types=1);
 
+use Distributable\Contracts\Rpc\Transport as RpcTransport;
+use Distributable\Exceptions\ConfigurationException;
+use Distributable\Exceptions\ServiceException;
 use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\Rpc\TransportManager as RpcTransportManager;
 use Distributable\Tests\Support\ModuleAppTestCase;
 use Foundation\Iam\Contracts\IamService;
 use Foundation\Iam\Services\IamRpcService;
@@ -14,10 +18,6 @@ use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
-use Microservices\Contracts\Rpc\Transport as RpcTransport;
-use Microservices\Exceptions\ConfigurationException;
-use Microservices\Exceptions\ServiceException;
-use Microservices\Services\Rpc\TransportManager as RpcTransportManager;
 use RpcHttp\HttpTransport;
 use RpcHttp\RpcSignature;
 

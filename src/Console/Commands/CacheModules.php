@@ -8,8 +8,8 @@ use Composer\Autoload\ClassLoader;
 use Distributable\Data\Module;
 use Distributable\Services\Modules\DiscoveryCache;
 use Distributable\Services\Modules\ModuleRegistry;
+use Distributable\Services\Shadows\ShadowRegistry;
 use Illuminate\Console\Command;
-use Microservices\Services\Shadows\ShadowRegistry;
 
 /** Run on deploy (php artisan optimize runs it): what the module folders tell is read from a file. */
 final class CacheModules extends Command

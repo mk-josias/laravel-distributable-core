@@ -69,7 +69,7 @@ php artisan migrate
 ## Emit an event from one module and handle it in another
 
 ```php
-final class UserRegistered extends \Microservices\Events\Event
+final class UserRegistered extends \Distributable\Events\Event
 {
     public function __construct(private readonly int $id) {}
 
@@ -92,12 +92,12 @@ final class UserRegistered extends \Microservices\Events\Event
 ```
 
 ```php
-app(\Microservices\Contracts\Stream\Bus::class)->emit(new UserRegistered($user->id));
+app(\Distributable\Contracts\Stream\Bus::class)->emit(new UserRegistered($user->id));
 ```
 
 ```php
 // apps/Analytics/app/Handlers/RecordSignup.php
-final class RecordSignup implements \Microservices\Contracts\Stream\Handler
+final class RecordSignup implements \Distributable\Contracts\Stream\Handler
 {
     public function handle(string $name, array $payload): void
     {

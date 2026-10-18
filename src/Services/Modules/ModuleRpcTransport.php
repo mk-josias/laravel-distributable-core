@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Distributable\Services\Modules;
 
+use Distributable\Contracts\Rpc\Transport;
+use Distributable\Services\Rpc\LocalServices;
+use Distributable\Services\Rpc\TransportManager;
 use Illuminate\Container\Container;
-use Microservices\Contracts\Rpc\Transport;
-use Microservices\Services\Rpc\LocalServices;
-use Microservices\Services\Rpc\TransportManager;
 
 /** A call to a module this process runs is a direct method call; any other goes out on the module's transport. */
 final readonly class ModuleRpcTransport implements Transport

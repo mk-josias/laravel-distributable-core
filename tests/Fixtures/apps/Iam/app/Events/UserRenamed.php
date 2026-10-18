@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Apps\Iam\Events;
 
+use Distributable\Events\Event;
 use Foundation\Iam\Events\UserRenamedPayload;
-use Microservices\Events\Event;
 
 final class UserRenamed extends Event
 {

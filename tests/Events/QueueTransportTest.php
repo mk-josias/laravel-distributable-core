@@ -3,15 +3,15 @@
 declare(strict_types=1);
 
 use Apps\Iam\Events\UserRegistered;
+use Distributable\Contracts\Stream\Bus;
+use Distributable\Contracts\Stream\Transport;
+use Distributable\Data\Envelope;
+use Distributable\Providers\MicroservicesServiceProvider;
 use Distributable\Tests\Support\ModuleAppTestCase;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Microservices\Contracts\Stream\Bus;
-use Microservices\Contracts\Stream\Transport;
-use Microservices\Data\Envelope;
-use Microservices\Providers\MicroservicesServiceProvider;
 use StreamQueue\QueueTransport;
 
 uses(ModuleAppTestCase::class);

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Distributable\Services\Modules;
 
-use Microservices\Contracts\Colocation;
-use Microservices\Services\Shadows\ShadowRegistry;
+use Distributable\Contracts\Colocation;
+use Distributable\Services\Shadows\ShadowRegistry;
 
 /** The shadow sources of each module, read from modules:cache when it ran, scanned otherwise; copies come from each module's $shadows. */
 final class CachedShadowRegistry extends ShadowRegistry

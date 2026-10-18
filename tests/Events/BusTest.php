@@ -6,18 +6,18 @@ use Apps\Iam\Events\UserAudited;
 use Apps\Iam\Events\UserIgnored;
 use Apps\Iam\Events\UserRegistered;
 use Apps\Iam\Support\Recorder;
+use Distributable\Contracts\Stream\Bus;
+use Distributable\Contracts\Stream\Transport;
+use Distributable\Data\Envelope;
+use Distributable\Exceptions\ConfigurationException;
+use Distributable\Services\Stream\Dispatcher;
+use Distributable\Services\Stream\TransportManager;
 use Distributable\Tests\Support\ModuleAppTestCase;
 use Distributable\Tests\Support\RecordingTransport;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\DB;
-use Microservices\Contracts\Stream\Bus;
-use Microservices\Contracts\Stream\Transport;
-use Microservices\Data\Envelope;
-use Microservices\Exceptions\ConfigurationException;
-use Microservices\Services\Stream\Dispatcher;
-use Microservices\Services\Stream\TransportManager;
 
 uses(ModuleAppTestCase::class);
 

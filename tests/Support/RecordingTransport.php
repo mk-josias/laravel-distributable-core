@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Distributable\Tests\Support;
 
-use Microservices\Contracts\Stream\Transport;
-use Microservices\Data\Envelope;
+use Distributable\Contracts\Stream\Transport;
+use Distributable\Data\Envelope;
 
 /** A consumer-supplied transport, registered through TransportManager::extend(). */
 final class RecordingTransport implements Transport
