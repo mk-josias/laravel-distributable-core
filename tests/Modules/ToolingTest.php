@@ -19,13 +19,13 @@ it('installs the config, the modules directory and the foundation provider, then
     $root = sys_get_temp_dir().'/distributable-install-'.uniqid();
     File::ensureDirectoryExists($root.'/config');
     $this->app->useConfigPath($root.'/config');
-    config()->set('modules.paths.modules', $root.'/apps');
-    config()->set('modules.paths.foundation', $root.'/foundation');
+    config()->set('distributable.modules.path', $root.'/apps');
+    config()->set('distributable.foundation.path', $root.'/foundation');
 
     try {
         $this->artisan('modules:install')->assertSuccessful();
 
-        expect(is_file($root.'/config/modules.php'))->toBeTrue()
+        expect(is_file($root.'/config/distributable.php'))->toBeTrue()
             ->and(is_dir($root.'/apps'))->toBeTrue()
             ->and(file_get_contents($root.'/foundation/FoundationServiceProvider.php'))
             ->toContain('namespace Foundation;')
@@ -33,7 +33,7 @@ it('installs the config, the modules directory and the foundation provider, then
 
         $this->artisan('modules:make billing')->assertSuccessful();
 
-        expect((require $root.'/config/modules.php')['declared'])->toHaveKey('billing');
+        expect((require $root.'/config/distributable.php')['declared'])->toHaveKey('billing');
     } finally {
         File::deleteDirectory($root);
     }
@@ -42,10 +42,10 @@ it('installs the config, the modules directory and the foundation provider, then
 it('creates a module, its provider and its foundation directory, and declares it', function () {
     $root = sys_get_temp_dir().'/distributable-make-'.uniqid();
     File::ensureDirectoryExists($root.'/config');
-    File::copy(dirname(__DIR__, 2).'/config/modules.php', $root.'/config/modules.php');
+    File::copy(dirname(__DIR__, 2).'/config/distributable.php', $root.'/config/distributable.php');
     $this->app->useConfigPath($root.'/config');
-    config()->set('modules.paths.modules', $root.'/apps');
-    config()->set('modules.paths.foundation', $root.'/foundation');
+    config()->set('distributable.modules.path', $root.'/apps');
+    config()->set('distributable.foundation.path', $root.'/foundation');
 
     try {
         $this->artisan('modules:make point_of_sale --database')->assertSuccessful();
@@ -57,7 +57,7 @@ it('creates a module, its provider and its foundation directory, and declares it
             ->and(is_file($root.'/apps/PointOfSale/routes/api.php'))->toBeTrue()
             ->and(file_get_contents($root.'/apps/PointOfSale/config/database.php'))->toContain("'point_of_sale_owner'")
             ->and(is_dir($root.'/foundation/PointOfSale/Contracts'))->toBeTrue()
-            ->and((require $root.'/config/modules.php')['declared'])->toBe(['point_of_sale' => []]);
+            ->and((require $root.'/config/distributable.php')['declared'])->toBe(['point_of_sale' => []]);
 
         $this->artisan('modules:make point_of_sale')->assertFailed();
     } finally {
@@ -68,12 +68,12 @@ it('creates a module, its provider and its foundation directory, and declares it
 it('adds the module and the foundation to composer.json for the tools that read it, and tells an entry gone stale', function () {
     $root = sys_get_temp_dir().'/distributable-composer-'.uniqid();
     File::ensureDirectoryExists($root.'/config');
-    File::copy(dirname(__DIR__, 2).'/config/modules.php', $root.'/config/modules.php');
+    File::copy(dirname(__DIR__, 2).'/config/distributable.php', $root.'/config/distributable.php');
     File::put($root.'/composer.json', '{"autoload": {"psr-4": {"App\\\\": "app/"}}, "extra": {}}');
     $this->app->setBasePath($root);
     $this->app->useConfigPath($root.'/config');
-    config()->set('modules.paths.modules', 'apps');
-    config()->set('modules.paths.foundation', 'foundation');
+    config()->set('distributable.modules.path', 'apps');
+    config()->set('distributable.foundation.path', 'foundation');
 
     try {
         $this->artisan('modules:make billing')->expectsOutputToContain('Added to composer.json')->assertSuccessful();
@@ -102,17 +102,17 @@ it('adds the module and the foundation to composer.json for the tools that read 
 it('deletes a module: its folder, its foundation folder, its declaration and its composer.json entries', function () {
     $root = sys_get_temp_dir().'/distributable-delete-'.uniqid();
     File::ensureDirectoryExists($root.'/config');
-    File::copy(dirname(__DIR__, 2).'/config/modules.php', $root.'/config/modules.php');
+    File::copy(dirname(__DIR__, 2).'/config/distributable.php', $root.'/config/distributable.php');
     File::put($root.'/composer.json', '{"autoload": {"psr-4": {"App\\\\": "app/"}}}');
     $this->app->setBasePath($root);
     $this->app->useConfigPath($root.'/config');
-    config()->set('modules.paths.modules', 'apps');
-    config()->set('modules.paths.foundation', 'foundation');
+    config()->set('distributable.modules.path', 'apps');
+    config()->set('distributable.foundation.path', 'foundation');
 
     try {
         $this->artisan('modules:make billing')->assertSuccessful();
         $this->artisan('modules:make shipping')->assertSuccessful();
-        config()->set('modules.declared', ['billing' => [], 'shipping' => []]);
+        config()->set('distributable.declared', ['billing' => [], 'shipping' => []]);
         $this->app->forgetInstance(ModuleRegistry::class);
 
         $this->artisan('modules:delete billing --force')->assertSuccessful();
@@ -122,7 +122,7 @@ it('deletes a module: its folder, its foundation folder, its declaration and its
         expect(is_dir($root.'/apps/Billing'))->toBeFalse()
             ->and(is_dir($root.'/foundation/Billing'))->toBeFalse()
             ->and(is_dir($root.'/apps/Shipping'))->toBeTrue()
-            ->and((require $root.'/config/modules.php')['declared'])->toBe(['shipping' => []])
+            ->and((require $root.'/config/distributable.php')['declared'])->toBe(['shipping' => []])
             ->and(array_keys($composer['autoload']['psr-4']))->toBe([
                 'App\\', 'Foundation\\', 'Apps\\Shipping\\', 'Apps\\Shipping\\Database\\Factories\\', 'Apps\\Shipping\\Database\\Seeders\\',
             ])
@@ -133,7 +133,7 @@ it('deletes a module: its folder, its foundation folder, its declaration and its
 });
 
 it('lists every module and where it runs', function () {
-    config()->set('modules.declared.iam', []);
+    config()->set('distributable.declared.iam', []);
 
     $this->artisan('modules:list')
         ->expectsTable(['Module', 'Namespace', 'Runs here', 'Database', 'Remote host'], [
@@ -145,19 +145,19 @@ it('lists every module and where it runs', function () {
 });
 
 it('fails on a module with no bootstrap/providers.php, and names it', function () {
-    config()->set('modules.declared.ghost', []);
+    config()->set('distributable.declared.ghost', []);
     $this->app->forgetInstance(ModuleRegistry::class);
 
     $this->artisan('modules:doctor')
-        ->expectsOutputToContain('[ghost] '.config('modules.paths.modules').'/Ghost/bootstrap/providers.php does not exist.')
+        ->expectsOutputToContain('[ghost] '.config('distributable.modules.path').'/Ghost/bootstrap/providers.php does not exist.')
         ->assertFailed();
 });
 
 it('fails on a provider that bootstrap/providers.php lists and that does not exist, and names it', function () {
-    $file = config('modules.paths.modules').'/Ghost/bootstrap/providers.php';
+    $file = config('distributable.modules.path').'/Ghost/bootstrap/providers.php';
     File::ensureDirectoryExists(dirname($file));
     File::put($file, "<?php\n\nreturn ['Apps\\Ghost\\Providers\\GhostServiceProvider'];\n");
-    config()->set('modules.declared.ghost', []);
+    config()->set('distributable.declared.ghost', []);
     $this->app->forgetInstance(ModuleRegistry::class);
 
     try {
@@ -169,12 +169,12 @@ it('fails on a provider that bootstrap/providers.php lists and that does not exi
     }
 });
 
-it('fails on a module folder that modules.declared does not declare', function () {
-    config()->set('modules.declared', ['analytics' => [], 'iam' => []]);
+it('fails on a module folder that distributable.declared does not declare', function () {
+    config()->set('distributable.declared', ['analytics' => [], 'iam' => []]);
     $this->app->forgetInstance(ModuleRegistry::class);
 
     $this->artisan('modules:doctor')
-        ->expectsOutputToContain('/Gateway] is not declared in modules.declared.')
+        ->expectsOutputToContain('/Gateway] is not declared in distributable.declared.')
         ->assertFailed();
 });
 

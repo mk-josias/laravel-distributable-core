@@ -36,9 +36,9 @@ it('serves a module route file under the {module}/{name} prefix', function () {
     $this->get('/iam/api/v1/ping')->assertOk()->assertContent('pong');
 });
 
-it('takes the route prefix from modules.routes.prefix, and a module its own from modules.declared', function () {
-    config()->set('modules.routes.prefix', 'modules/{module}/{name}');
-    config()->set('modules.declared.iam.prefix', 'identity/{name}');
+it('takes the route prefix from distributable.routes.prefix, and a module its own from distributable.declared', function () {
+    config()->set('distributable.routes.prefix', 'modules/{module}/{name}');
+    config()->set('distributable.declared.iam.prefix', 'identity/{name}');
     $config = $this->app->make(Modules::class);
 
     expect($config->getRoutePrefix('analytics', 'api'))->toBe('modules/analytics/api')

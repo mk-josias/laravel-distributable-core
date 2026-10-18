@@ -51,6 +51,13 @@ it('resolves the module of a foundation class from its foundation folder, its st
         ->and($registry->forFoundationClass('Foundation\Iam\Contracts\IamService', 'Foundation'))->toBeNull();
 });
 
+it('refuses a module whose folder is inside the folder of another', function () {
+    new ModuleRegistry([
+        Module::fromName('shop', 'Apps', 'apps', null, '.', 'App'),
+        Module::fromName('billing', 'Apps', 'apps'),
+    ]);
+})->throws(ModuleException::class, 'is inside the folder of module [shop]');
+
 it('resolves the module owning a class from its namespace', function () {
     $registry = registryLoading();
 

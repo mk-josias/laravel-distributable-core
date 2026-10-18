@@ -8,7 +8,7 @@ use Distributable\Services\Modules\ModuleRegistry;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 
-/** For an image that runs only some modules: config/modules.php still declares the others. */
+/** For an image that runs only some modules: config/distributable.php still declares the others. */
 final class PurgeModules extends Command
 {
     protected $signature = 'modules:purge {--force : Skip the confirmation}';
@@ -17,7 +17,9 @@ final class PurgeModules extends Command
 
     public function handle(ModuleRegistry $registry, Filesystem $files): int
     {
-        $remote = array_values(array_filter($registry->all(), static fn ($module): bool => ! $registry->isLocal($module->name)));
+        // The folder of the application is never purged.
+        $remote = array_values(array_filter($registry->all(), static fn ($module): bool => ! $registry->isLocal($module->name)
+            && realpath($module->path()) !== realpath(base_path())));
 
         if ($remote === []) {
             $this->components->info('Every module runs here: nothing to purge.');

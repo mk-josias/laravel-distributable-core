@@ -7,7 +7,7 @@ use Distributable\Tests\Support\ModuleAppTestCase;
 
 uses(ModuleAppTestCase::class);
 
-it('knows the modules modules.declared lists, and nothing else', function () {
+it('knows the modules distributable.declared lists, and nothing else', function () {
     expect(array_map(fn ($module) => $module->name, app(ModuleRegistry::class)->all()))->toBe(['analytics', 'gateway', 'iam']);
 });
 

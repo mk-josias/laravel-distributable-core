@@ -13,9 +13,9 @@ previous context back afterwards.
 
 | Step | What it does |
 |---|---|
-| configuration | the application's values come first (`modules.overlay_base`), then the module's own (`modules.overlays.{module}`); see [the module's configuration](./modules#the-module-service-provider) |
+| configuration | the application's values come first (`distributable.overlay_base`), then the module's own (`distributable.overlays.{module}`); see [the module's configuration](./modules#the-module-service-provider) |
 | connection | `database.default` becomes the module's connection, or `no_module` when the module has no database |
-| services | each service listed in `modules.per_module` is built once for that module, with its configuration, and swapped in while it runs |
+| services | each service listed in `distributable.per_module` is built once for that module, with its configuration, and swapped in while it runs |
 | `Context` | the module's name is kept in Laravel's `Context` (hidden key `distributable.module`), which is how it follows a job to its worker |
 
 Outside any module the connection is `no_module`, and any query on it throws a `ModuleException`.

@@ -144,7 +144,8 @@ abstract class ServiceProvider extends BaseServiceProvider
     {
         $configPath = $this->module->path().'/config';
 
-        if (! is_dir($configPath)) {
+        // The application's own config/ when the module's folder is the application's: nothing to merge.
+        if (! is_dir($configPath) || realpath($configPath) === realpath(config_path())) {
             return;
         }
 
@@ -166,8 +167,8 @@ abstract class ServiceProvider extends BaseServiceProvider
             // A scalar the application already sets is the module's own value: applied while the module runs.
             foreach (Arr::dot($values) as $path => $value) {
                 if (! is_array($value) && $this->overridesApplicationScalar(self::$applicationConfig[$key], $path)) {
-                    config()->set("modules.overlays.{$this->module->name}.{$key}.{$path}", $value);
-                    config()->set("modules.overlay_base.{$key}.{$path}", Arr::get(self::$applicationConfig[$key], $path));
+                    config()->set("distributable.overlays.{$this->module->name}.{$key}.{$path}", $value);
+                    config()->set("distributable.overlay_base.{$key}.{$path}", Arr::get(self::$applicationConfig[$key], $path));
                     Arr::forget($values, $path);
                 }
             }
@@ -244,10 +245,16 @@ abstract class ServiceProvider extends BaseServiceProvider
     private function loadModuleRoutes(): void
     {
         $module = $this->module;
+
+        // The application's own routes/, loaded by bootstrap/app.php.
+        if (realpath($module->path().'/routes') === realpath(base_path('routes'))) {
+            return;
+        }
+
         $router = $this->app->make(Router::class);
         $config = $this->app->make(Modules::class);
 
-        // routes/{name}.php → modules.routes.prefix ({module}/{name}/… by default), wrapped in the
+        // routes/{name}.php → distributable.routes.prefix ({module}/{name}/… by default), wrapped in the
         // `{name}` middleware group when the application defines one.
         foreach (glob($module->path().'/routes/*.php') ?: [] as $routeFile) {
             $name = basename($routeFile, '.php');

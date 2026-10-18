@@ -91,18 +91,18 @@ final class MakeModule extends Command
 
     private function declare(Module $module): void
     {
-        $config = config_path('modules.php');
+        $config = config_path('distributable.php');
         $contents = is_file($config) ? (string) file_get_contents($config) : '';
         $declared = preg_replace("/('declared'\s*=>\s*\[)/", "$1\n        '{$module->name}' => [],", $contents, 1, $count);
 
         if ($count === 1 && is_string($declared)) {
             file_put_contents($config, $declared);
-            $this->components->info('Declared in config/modules.php.');
+            $this->components->info('Declared in config/distributable.php.');
 
             return;
         }
 
-        $this->components->warn("Declare it in config/modules.php: 'declared' => ['{$module->name}' => []].");
+        $this->components->warn("Declare it in config/distributable.php:'declared' => ['{$module->name}' => []].");
     }
 
     private function write(string $path, string $contents): void

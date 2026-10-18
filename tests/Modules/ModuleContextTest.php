@@ -74,8 +74,8 @@ it('tells which listeners a module attached, where Event::assertListening() only
 });
 
 it('keeps the context connection when a module config sets database.default', function () {
-    config()->set('modules.overlay_base.database.default', 'sqlite');
-    config()->set('modules.overlays.iam.database.default', 'elsewhere');
+    config()->set('distributable.overlay_base.database.default', 'sqlite');
+    config()->set('distributable.overlays.iam.database.default', 'elsewhere');
 
     app(ModuleContext::class)->switchTo(null);
 

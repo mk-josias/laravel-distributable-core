@@ -26,26 +26,27 @@ final readonly class Module
      * Every convention derives from the name; a module has a database once a connection named after it exists, in its config/database.php or the root one.
      *
      * @param  string|null  $foundationFolder  its folder and namespace segment under the foundation root, when not its studly name
-     * @param  string|null  $moduleFolder  its folder and namespace segment under the modules root, when not its studly name
+     * @param  string|null  $path  its own folder (the one holding app/, config/, routes/), when not {modulesPath}/{Name}; '.' is the project
+     * @param  string|null  $namespace  the namespace of its app/, when not {modulesNamespace}\{Name}
      */
-    public static function fromName(string $name, string $modulesNamespace, string $modulesPath = 'apps', ?string $foundationFolder = null, ?string $moduleFolder = null): self
+    public static function fromName(string $name, string $modulesNamespace, string $modulesPath = 'apps', ?string $foundationFolder = null, ?string $path = null, ?string $namespace = null): self
     {
         if (preg_match('/^[a-z][a-z0-9_]*$/', $name) !== 1) {
             throw ModuleException::invalidName($name);
         }
 
-        $studly = $moduleFolder ?? Str::studly($name);
-        $namespace = $modulesNamespace.'\\'.$studly;
-        $path = $modulesPath.'/'.$studly;
+        $studly = Str::studly($name);
+        $path ??= $modulesPath.'/'.$studly;
+        $namespace = trim($namespace ?? $modulesNamespace.'\\'.$studly, '\\');
         $absolute = str_starts_with($path, DIRECTORY_SEPARATOR) ? $path : base_path($path);
 
         return new self(
             name: $name,
             namespace: $namespace,
-            provider: $namespace.'\\Providers\\'.$studly.'ServiceProvider',
+            provider: $namespace.'\\Providers\\'.class_basename($namespace).'ServiceProvider',
             path: $path,
             hasDatabase: is_file($absolute.'/config/database.php') || config("database.connections.{$name}") !== null,
-            foundation: $foundationFolder ?? Str::studly($name),
+            foundation: $foundationFolder ?? $studly,
         );
     }
 

@@ -27,7 +27,7 @@ it('caches what the module folders tell, and reads it back as the same modules',
 
 it('lists only the declared modules, even when the cache knew others', function () {
     $this->artisan('modules:cache')->assertSuccessful();
-    config()->set('modules.declared', ['iam' => []]);
+    config()->set('distributable.declared', ['iam' => []]);
     $this->app->forgetInstance(ModuleRegistry::class);
 
     expect(array_map(fn ($module) => $module->name, $this->app->make(ModuleRegistry::class)->all()))->toBe(['iam']);

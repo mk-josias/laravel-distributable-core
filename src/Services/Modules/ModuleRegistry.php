@@ -8,7 +8,7 @@ use Distributable\Data\Module;
 use Distributable\Exceptions\ModuleException;
 
 /**
- * The process-level view of the modules: every module modules.declared lists, and the ones
+ * The process-level view of the modules: every module distributable.declared lists, and the ones
  * this process loads (RUN_MODULES). Being loaded is a fact about the process, never about a module.
  */
 final class ModuleRegistry
@@ -35,6 +35,16 @@ final class ModuleRegistry
         }
 
         $this->modules = $keyed;
+
+        $folder = static fn (Module $module): string => rtrim(realpath($module->path()) ?: $module->path(), '/').'/';
+
+        foreach ($keyed as $outer) {
+            foreach ($keyed as $inner) {
+                if ($inner !== $outer && str_starts_with($folder($inner), $folder($outer))) {
+                    throw ModuleException::nested($inner->name, $outer->name);
+                }
+            }
+        }
     }
 
     /** @return list<Module> */

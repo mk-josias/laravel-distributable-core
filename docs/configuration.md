@@ -1,24 +1,24 @@
 # Configuration
 
-`php artisan vendor:publish --tag=distributable-config` publishes `config/modules.php`. The package
+`php artisan vendor:publish --tag=distributable-config` publishes `config/distributable.php`. The package
 reads it only through `Distributable\Config\Modules`. What a module's folder must look like is not
 configuration: see [Conventions](modules.md#conventions).
 
 | Key | Default | |
 |---|---|---|
-| `declared` | `[]` | `'iam' => ['host' => …, 'module' => …, 'foundation' => …]`: every module, the URL of the ones running elsewhere, and its folders under the modules and the foundation when not its name (`Iam`) |
+| `declared` | `[]` | `'iam' => ['host' => …, 'path' => …, 'namespace' => …, 'foundation' => …]`: every module, the URL of the ones running elsewhere, its own folder and namespace, and its folder under the foundation when not its name (`Iam`) |
 | `runs` | `env('RUN_MODULES', '*')` | modules this process runs |
-| `paths.modules` | `apps` | directory of the modules |
-| `paths.foundation` | `foundation` | directory of what modules share with each other |
-| `namespaces.modules` | `Apps` | root namespace of the modules |
-| `namespaces.foundation` | `Foundation` | root namespace of the foundation |
+| `modules.path` | `apps` | directory of the modules |
+| `modules.namespace` | `Apps` | root namespace of the modules |
+| `foundation.path` | `foundation` | directory of what modules share with each other |
+| `foundation.namespace` | `Foundation` | root namespace of the foundation |
 | `status_route` | `env('MODULES_STATUS_ROUTE')` | path of the status route, `null` for none |
 
 Calls and events are configured in `config/microservices.php`
 (`php artisan vendor:publish --tag=microservices-config`): the RPC secret, transports and cache
 store, the streams, the guard and the propagated context. See
 [laravel-microservices' configuration](https://mk-josias.github.io/laravel-microservices/docs/configuration).
-Every module of `modules.declared`, with its host, is a service there: don't declare it again. A
+Every module of `distributable.declared`, with its host, is a service there: don't declare it again. A
 module declares its handlers in `$handlers` of its service provider, and its streams in its own
 `config/microservices.php`.
 

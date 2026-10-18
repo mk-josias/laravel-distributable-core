@@ -37,7 +37,7 @@ it('refuses to load a class of a module running elsewhere, whatever is on disk',
 it('deletes the folder of the modules this process does not run, which config still declares', function () {
     $root = sys_get_temp_dir().'/distributable-purge-'.uniqid();
     File::copyDirectory(dirname(__DIR__).'/Fixtures/apps', $root);
-    config()->set('modules.paths.modules', $root);
+    config()->set('distributable.modules.path', $root);
     $this->app->forgetInstance(ModuleRegistry::class);
 
     // The purge deletes files: it must only ever see the copy.
@@ -60,7 +60,7 @@ it('deletes the folder of the modules this process does not run, which config st
 it('lists the packages only the modules running elsewhere require', function () {
     $root = sys_get_temp_dir().'/distributable-packages-'.uniqid();
     File::copyDirectory(dirname(__DIR__).'/Fixtures/apps', $root);
-    config()->set('modules.paths.modules', $root);
+    config()->set('distributable.modules.path', $root);
     $this->app->forgetInstance(ModuleRegistry::class);
 
     File::put($root.'/Iam/composer.json', json_encode(['require' => ['php' => '^8.4', 'ext-json' => '*', 'acme/only-iam' => '^1.0', 'acme/shared' => '^1.0']]));

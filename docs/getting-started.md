@@ -5,7 +5,7 @@ from a working application, use the
 [starter](https://github.com/mk-josias/laravel-distributable-modules-starter).
 
 ```
-config/modules.php                         declares the modules: 'declared' => ['iam' => [], …]
+config/distributable.php                   declares the modules: 'declared' => ['iam' => [], …]
 
 apps/Iam/
 ├── app/                              Apps\Iam\, laid out like a Laravel app
@@ -29,7 +29,7 @@ foundation/
 ## Declare the modules
 
 ```php
-// config/modules.php
+// config/distributable.php
 'declared' => [
     'iam' => [],
     'analytics' => [],
@@ -131,7 +131,7 @@ php artisan modules:doctor
 
 ```
 Boundary crossed: apps/Analytics/app/Models/Report.php: Apps\Iam\Models\User
-[iam] runs elsewhere and serves Foundation\Iam\Contracts\IamService, but modules.declared.iam.host is not set.
+[iam] runs elsewhere and serves Foundation\Iam\Contracts\IamService, but distributable.declared.iam.host is not set.
 ```
 
 It reports a module that imports another module's class or names its tables, an undeclared module,

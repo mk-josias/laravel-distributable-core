@@ -25,8 +25,8 @@ it('derives every convention from the module name', function () {
         ->and($module->ownerConnection())->toBe('point_of_sale');
 });
 
-it('takes its folders under the modules and foundation roots from the declaration, when set', function () {
-    $module = Module::fromName('iam', 'Apps', 'apps', 'Accounts', 'Identity');
+it('takes its own path, namespace and foundation folder from the declaration, when set', function () {
+    $module = Module::fromName('iam', 'Apps', 'apps', 'Accounts', 'apps/Identity', 'Apps\Identity');
 
     expect($module->name)->toBe('iam')
         ->and($module->namespace)->toBe('Apps\Identity')
@@ -34,6 +34,15 @@ it('takes its folders under the modules and foundation roots from the declaratio
         ->and($module->path())->toBe(base_path('apps/Identity'))
         ->and($module->foundation)->toBe('Accounts')
         ->and($module->connection())->toBe('iam');
+});
+
+it('can be the project itself: its path is the project, its classes app/ under its namespace', function () {
+    $module = Module::fromName('shop', 'Apps', 'apps', null, '.', 'App');
+
+    expect($module->namespace)->toBe('App')
+        ->and($module->provider)->toBe('App\Providers\AppServiceProvider')
+        ->and(realpath($module->path()))->toBe(realpath(base_path()))
+        ->and(realpath($module->classPath()))->toBe(realpath(base_path('app')));
 });
 
 it('has no database when no connection is named after the module', function () {
@@ -81,8 +90,8 @@ it('refuses two modules declaring one connection name', function () {
     $connection = 'main_'.strtolower(Str::random(6));
     moduleWithDatabase($root, 'Billing', ['connections' => [$connection => ['driver' => 'sqlite']]]);
     moduleWithDatabase($root, 'Shipping', ['connections' => [$connection => ['driver' => 'sqlite']]]);
-    config()->set('modules.declared', ['billing' => [], 'shipping' => []]);
-    config()->set('modules.paths.modules', $root);
+    config()->set('distributable.declared', ['billing' => [], 'shipping' => []]);
+    config()->set('distributable.modules.path', $root);
     app()->forgetInstance(ModuleRegistry::class);
 
     app()->register(BillingServiceProvider::class);

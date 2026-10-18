@@ -7,26 +7,26 @@ namespace Distributable\Config;
 use Distributable\Data\Module;
 use Illuminate\Contracts\Config\Repository;
 
-/** The modules.* settings, typed and defaulted; read live, never snapshotted. */
+/** The distributable.* settings of the modules, typed and defaulted; read live, never snapshotted. */
 final readonly class Modules
 {
     public function __construct(private Repository $config) {}
 
-    /** @return list<string> the names modules.declared declares */
+    /** @return list<string> the names distributable.declared declares */
     public function getDeclaredModules(): array
     {
-        return array_map(strval(...), array_keys((array) $this->config->get('modules.declared', [])));
+        return array_map(strval(...), array_keys((array) $this->config->get('distributable.declared', [])));
     }
 
-    /** The module declared under $name, its folders read from modules.declared.{name}.module and .foundation. */
+    /** The module declared under $name: its own path, namespace and foundation folder when distributable.declared.{name} gives them. */
     public function module(string $name): Module
     {
-        return Module::fromName($name, $this->getModulesNamespace(), $this->getModulesPath(), $this->declared($name, 'foundation'), $this->declared($name, 'module'));
+        return Module::fromName($name, $this->getModulesNamespace(), $this->getModulesPath(), $this->declared($name, 'foundation'), $this->declared($name, 'path'), $this->declared($name, 'namespace'));
     }
 
     private function declared(string $name, string $key): ?string
     {
-        $value = $this->config->get("modules.declared.{$name}.{$key}");
+        $value = $this->config->get("distributable.declared.{$name}.{$key}");
 
         return is_string($value) && $value !== '' ? $value : null;
     }
@@ -34,15 +34,15 @@ final readonly class Modules
     /** The URL a module answers on when it runs in another process; null when none is set. */
     public function getHost(string $module): ?string
     {
-        $host = $this->config->get("modules.declared.{$module}.host");
+        $host = $this->config->get("distributable.declared.{$module}.host");
 
         return is_array($host) ? (is_string($host['url'] ?? null) ? $host['url'] : null) : (is_string($host) ? $host : null);
     }
 
-    /** The URL prefix of $module's routes file $name: modules.declared.{module}.prefix, or else modules.routes.prefix. */
+    /** The URL prefix of $module's routes file $name: distributable.declared.{module}.prefix, or else distributable.routes.prefix. */
     public function getRoutePrefix(string $module, string $name): string
     {
-        $pattern = $this->declared($module, 'prefix') ?? (string) $this->config->get('modules.routes.prefix', '{module}/{name}');
+        $pattern = $this->declared($module, 'prefix') ?? (string) $this->config->get('distributable.routes.prefix', '{module}/{name}');
 
         return trim(strtr($pattern, ['{module}' => $module, '{name}' => $name]), '/');
     }
@@ -50,25 +50,25 @@ final readonly class Modules
     /** @return list<string> ['*'] for every module, or the names RUN_MODULES lists */
     public function getLoadedModules(): array
     {
-        $names = array_map(trim(...), explode(',', (string) $this->config->get('modules.runs', '*')));
+        $names = array_map(trim(...), explode(',', (string) $this->config->get('distributable.runs', '*')));
 
         return array_values(array_filter($names, static fn (string $name): bool => $name !== ''));
     }
 
     public function getModulesPath(): string
     {
-        return (string) $this->config->get('modules.paths.modules', 'apps');
+        return (string) $this->config->get('distributable.modules.path', 'apps');
     }
 
     public function getModulesNamespace(): string
     {
-        return (string) $this->config->get('modules.namespaces.modules', 'Apps');
+        return (string) $this->config->get('distributable.modules.namespace', 'Apps');
     }
 
     /** Absolute; the foundation directory, or the one of a module (foundation/Iam) when given. */
     public function getFoundationPath(?Module $module = null): string
     {
-        $path = (string) $this->config->get('modules.paths.foundation', 'foundation');
+        $path = (string) $this->config->get('distributable.foundation.path', 'foundation');
         $root = str_starts_with($path, DIRECTORY_SEPARATOR) ? $path : base_path($path);
 
         return $module === null ? $root : $root.'/'.$module->foundation;
@@ -76,12 +76,12 @@ final readonly class Modules
 
     public function getFoundationNamespace(): string
     {
-        return (string) $this->config->get('modules.namespaces.foundation', 'Foundation');
+        return (string) $this->config->get('distributable.foundation.namespace', 'Foundation');
     }
 
     public function getStatusRoute(): ?string
     {
-        $route = $this->config->get('modules.status_route');
+        $route = $this->config->get('distributable.status_route');
 
         return is_string($route) && $route !== '' ? $route : null;
     }

@@ -12,12 +12,12 @@ final class Install extends Command
 {
     protected $signature = 'modules:install';
 
-    protected $description = 'Publish config/modules.php and create the modules and foundation directories.';
+    protected $description = 'Publish config/distributable.php and create the modules and foundation directories.';
 
     public function handle(Modules $config, ComposerAutoload $autoload): int
     {
-        if (! is_file(config_path('modules.php'))) {
-            copy(dirname(__DIR__, 3).'/config/modules.php', config_path('modules.php'));
+        if (! is_file(config_path('distributable.php'))) {
+            copy(dirname(__DIR__, 3).'/config/distributable.php', config_path('distributable.php'));
         }
 
         $modules = $config->getModulesPath();

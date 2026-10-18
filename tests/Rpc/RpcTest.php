@@ -42,7 +42,7 @@ function rpcBody(string $contract, array $arguments = []): array
 /** iam runs in another process from here on: its calls leave through its host. */
 function iamRunsElsewhere(): void
 {
-    config()->set('modules.runs', 'analytics');
+    config()->set('distributable.runs', 'analytics');
     app()->forgetInstance(ModuleRegistry::class);
     app()->forgetInstance(RpcTransportManager::class);
 }

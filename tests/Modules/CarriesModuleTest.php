@@ -31,7 +31,7 @@ it('refuses a module code that enters another module, directly or through Coloca
 });
 
 it('gives each module its own instance of a per_module service, built once and swapped in as it runs', function () {
-    config()->set('modules.per_module', ['cache', 'cache.store']);
+    config()->set('distributable.per_module', ['cache', 'cache.store']);
 
     $this->inModule('iam', fn () => Cache::put('owner', 'iam'));
     $this->inModule('analytics', fn () => Cache::put('owner', 'analytics'));
@@ -50,7 +50,7 @@ it('builds a per_module service of a deferred provider on the first switch, thro
 
         return $reports;
     });
-    config()->set('modules.per_module', ['reports']);
+    config()->set('distributable.per_module', ['reports']);
 
     $iam = $this->inModule('iam', fn () => app('reports'));
     $analytics = $this->inModule('analytics', fn () => app('reports'));

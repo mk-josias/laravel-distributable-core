@@ -72,7 +72,7 @@ the implementation runs in iam's [context](./module-context), so it never has to
 switch to its own database.
 
 The module writes no route: the package serves `POST {module}/rpc/{method}` for every module the
-process runs. A module's host comes from `modules.declared`; the secret, the cache store and the
+process runs. A module's host comes from `distributable.declared`; the secret, the cache store and the
 transports are in `config/microservices.php`. A contract with no `RpcService` stays bound to the
 module's implementation, and works only in a process that runs that module.
 
@@ -82,7 +82,7 @@ A module that runs in another process is reached at its host. Give it, for each 
 it:
 
 ```dotenv
-# read by modules.declared.iam.host
+# read by distributable.declared.iam.host
 IAM_HOST=http://iam.svc:8000
 ```
 

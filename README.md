@@ -27,9 +27,9 @@ composer require mk-josias/laravel-distributable-modules
 composer require mk-josias/laravel-microservices-stream-redis
 # calls to a module running in another process
 composer require mk-josias/laravel-microservices-rpc-http
-# config/modules.php, apps/, foundation/FoundationServiceProvider.php
+# config/distributable.php, apps/, foundation/FoundationServiceProvider.php
 php artisan modules:install
-# apps/Iam and foundation/Iam, declared in config/modules.php
+# apps/Iam and foundation/Iam, declared in config/distributable.php
 php artisan modules:make iam --database
 ```
 
@@ -114,7 +114,7 @@ Shadows, the read-only copies described below, are built on events.
 
 When the application boots, the package:
 
-1. reads the modules declared in `config/modules.php`, and autoloads the ones this process runs
+1. reads the modules declared in `config/distributable.php`, and autoloads the ones this process runs
    under `Apps\{Module}\`;
 2. registers the service provider of every module this process runs. The provider merges the
    module's config files, loads its routes, translations and commands, and records the

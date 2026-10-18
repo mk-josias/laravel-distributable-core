@@ -15,6 +15,6 @@ abstract class WithoutIamTestCase extends ModuleAppTestCase
     {
         parent::defineEnvironment($app);
 
-        $app->make(Repository::class)->set('modules.runs', 'gateway');
+        $app->make(Repository::class)->set('distributable.runs', 'gateway');
     }
 }

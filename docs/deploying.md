@@ -17,14 +17,14 @@ RUN_MODULES=analytics
 IAM_HOST=http://iam.internal:8000
 ```
 
-`config/modules.php` declares every module in every process, so each process still knows the others
+`config/distributable.php` declares every module in every process, so each process still knows the others
 exist. What a process that runs a module needs:
 
 | It needs | Why |
 |---|---|
 | the database of each module it runs | `migrate` makes one pass per module database it runs, so two processes never migrate the same one |
 | the event stream, shared by every process | events travel on it between processes (Redis in the starter) |
-| `modules.declared.{module}.host` for each module it calls but doesn't run | its calls go to that host; `modules:doctor` reports a module that serves a contract without one |
+| `distributable.declared.{module}.host` for each module it calls but doesn't run | its calls go to that host; `modules:doctor` reports a module that serves a contract without one |
 | the same `APP_KEY`, or the same `MICROSERVICES_RPC_SECRET`, as the other processes | it signs the RPC calls, and the called process rejects any it can't verify |
 
 ## One image per module

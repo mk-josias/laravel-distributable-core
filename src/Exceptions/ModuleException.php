@@ -29,6 +29,16 @@ final class ModuleException extends RuntimeException
         return new self("Duplicate module name [{$name}] in the module source.");
     }
 
+    public static function nested(string $inner, string $outer): self
+    {
+        return new self("The folder of module [{$inner}] is inside the folder of module [{$outer}]: each module has its own folder.");
+    }
+
+    public static function isTheApplication(string $module): self
+    {
+        return new self("The folder of module [{$module}] is the application's: deleting it would delete the application.");
+    }
+
     public static function notLocal(string $class, string $module): self
     {
         return new self("[{$class}] belongs to module [{$module}], which this process does not run (RUN_MODULES): go through its foundation contract or an event.");

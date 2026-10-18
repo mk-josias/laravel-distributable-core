@@ -19,14 +19,14 @@ abstract class ModuleAppTestCase extends TestCase
     {
         $config = $app->make(Repository::class);
 
-        $config->set('modules.declared', [
+        $config->set('distributable.declared', [
             'analytics' => [],
             'gateway' => [],
             'iam' => ['host' => 'http://iam.test'],
         ]);
-        $config->set('modules.paths.modules', dirname(__DIR__).'/Fixtures/apps');
-        $config->set('modules.paths.foundation', dirname(__DIR__).'/Fixtures/foundation');
-        $config->set('modules.status_route', '/');
+        $config->set('distributable.modules.path', dirname(__DIR__).'/Fixtures/apps');
+        $config->set('distributable.foundation.path', dirname(__DIR__).'/Fixtures/foundation');
+        $config->set('distributable.status_route', '/');
 
         // The group iam's routes/admin.php lands in.
         $app->make('router')->middlewareGroup('admin', []);

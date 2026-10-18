@@ -13,8 +13,8 @@ uses(ModuleAppTestCase::class);
 beforeEach(function () {
     $this->root = sys_get_temp_dir().'/distributable-generators-'.uniqid();
     File::ensureDirectoryExists($this->root.'/apps/Billing/app/Providers');
-    config()->set('modules.declared', ['billing' => []]);
-    config()->set('modules.paths.modules', $this->root.'/apps');
+    config()->set('distributable.declared', ['billing' => []]);
+    config()->set('distributable.modules.path', $this->root.'/apps');
     $this->app->forgetInstance(ModuleRegistry::class);
     $this->module = $this->root.'/apps/Billing';
 });

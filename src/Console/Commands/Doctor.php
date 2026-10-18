@@ -30,7 +30,7 @@ final class Doctor extends Command
 
         foreach (glob($root.'/*', GLOB_ONLYDIR) ?: [] as $directory) {
             if (! in_array(realpath($directory) ?: $directory, $declared, true)) {
-                $problems[] = "[{$modulesPath}/".basename($directory).'] is not declared in modules.declared.';
+                $problems[] = "[{$modulesPath}/".basename($directory).'] is not declared in distributable.declared.';
             }
         }
 
@@ -86,7 +86,7 @@ final class Doctor extends Command
             if ($service['service'] === null) {
                 $problems[] = "{$contract} is not in the foundation of a declared module.";
             } elseif (! $registry->isLocal($service['service']) && $config->getHost($service['service']) === null) {
-                $problems[] = "[{$service['service']}] runs elsewhere and serves {$contract}, but modules.declared.{$service['service']}.host is not set.";
+                $problems[] = "[{$service['service']}] runs elsewhere and serves {$contract}, but distributable.declared.{$service['service']}.host is not set.";
             }
         }
 
@@ -136,7 +136,7 @@ final class Doctor extends Command
 
         foreach ($values as $key => $byModule) {
             // A value the application already sets is each module's own, applied while it runs.
-            if (config()->has("modules.overlay_base.{$key}")) {
+            if (config()->has("distributable.overlay_base.{$key}")) {
                 continue;
             }
 
