@@ -86,8 +86,10 @@ redis-cli XGROUP DESTROY distributable:events analytics
 
 ## Scheduling
 
-The starter schedules none of these commands. To run the two that are cleanups every day, add them
-to a module's provider, whose `schedule()` runs only where that module runs:
+The starter schedules `stream:republish` every minute when events are published reliably
+(`DISTRIBUTABLE_EVENTS_RELIABLE_PUBLISH=true`, in its `bootstrap/app.php`). To run the two that are
+cleanups every day, add them to a module's provider, whose `schedule()` runs only where that module
+runs:
 
 ```php
 // apps/Notifications/app/Providers/NotificationsServiceProvider.php
