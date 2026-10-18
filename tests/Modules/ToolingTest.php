@@ -5,8 +5,11 @@ declare(strict_types=1);
 use Apps\Analytics\Models\UserShadow;
 use Distributable\Data\Module;
 use Distributable\Services\Modules\ComposerAutoload;
+use Distributable\Services\Modules\ModuleMigrations;
 use Distributable\Services\Modules\ModuleRegistry;
 use Distributable\Tests\Support\ModuleAppTestCase;
+use Foundation\Iam\Shadows\MisplacedShadow;
+use Foundation\Iam\Shadows\UnpublishedShadow;
 use Foundation\Iam\Shadows\UserShadow as IamUserShadow;
 use Illuminate\Support\Facades\File;
 
@@ -226,6 +229,21 @@ it('fails on a module keeping two copies in one table', function () {
     $this->artisan('modules:doctor')
         ->expectsOutputToContain('[analytics] keeps two copies in table [iam_users]')
         ->assertFailed();
+});
+
+it('fails on a copy whose owner names no migration, and on one naming a folder without any', function () {
+    config()->set('microservices.shadows.analytics', [UserShadow::class, UnpublishedShadow::class, MisplacedShadow::class]);
+
+    $this->artisan('modules:doctor')
+        ->expectsOutputToContain('[analytics] keeps '.UnpublishedShadow::class.', which names no migration')
+        ->expectsOutputToContain('[analytics] keeps '.MisplacedShadow::class.', whose migrations [')
+        ->doesntExpectOutputToContain('keeps '.UserShadow::class)
+        ->assertFailed();
+});
+
+it('runs the migrations a copy names in the database of the module keeping it', function () {
+    expect(app(ModuleMigrations::class)->forModule(app(ModuleRegistry::class)->get('analytics')))
+        ->toContain(dirname(__DIR__).'/Fixtures/foundation/Iam/Shadows/../database/shadows/users');
 });
 
 it('passes once every module can run', function () {

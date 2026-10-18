@@ -206,7 +206,7 @@ it('keeps the raw answer and maps it on every read, dropping one that no longer 
 
     expect(Cache::get('iam:shaped'))->toBeNull()
         ->and($service->shaped(fn (): array => ['id' => 7]))->toBe(['id' => 7])
-        ->and(Cache::get('iam:shaped'))->toBe(['id' => 7]);
+        ->and(Cache::get('iam:shaped'))->toBe('{"id":7}');
 });
 
 it('keeps the answers in the store microservices.rpc.cache names, shared by the caller and the owner', function () {
@@ -215,7 +215,7 @@ it('keeps the answers in the store microservices.rpc.cache names, shared by the 
 
     app(IamRpcService::class)->findUser(1);
 
-    expect(Cache::store('rpc')->get('iam:user:1'))->toBe(['id' => 1, 'name' => 'ada'])
+    expect(Cache::store('rpc')->get('iam:user:1'))->toBe('{"id":1,"name":"ada"}')
         ->and(Cache::get('iam:user:1'))->toBeNull();
 });
 

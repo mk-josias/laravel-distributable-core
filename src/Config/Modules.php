@@ -39,6 +39,14 @@ final readonly class Modules
         return is_array($host) ? (is_string($host['url'] ?? null) ? $host['url'] : null) : (is_string($host) ? $host : null);
     }
 
+    /** The URL prefix of $module's routes file $name: modules.declared.{module}.prefix, or else modules.routes.prefix. */
+    public function getRoutePrefix(string $module, string $name): string
+    {
+        $pattern = $this->declared($module, 'prefix') ?? (string) $this->config->get('modules.routes.prefix', '{module}/{name}');
+
+        return trim(strtr($pattern, ['{module}' => $module, '{name}' => $name]), '/');
+    }
+
     /** @return list<string> ['*'] for every module, or the names RUN_MODULES lists */
     public function getLoadedModules(): array
     {

@@ -10,9 +10,9 @@ Four sources feed one module's database:
 | Source | Where it lives | In the starter | Why it is in every module's database |
 |---|---|---|---|
 | The application | `database/migrations` | `failed_jobs` and `job_batches` | a failed job or a batch is stored in the database of the module that owns the job class, so each module database needs the table |
-| The packages | the paths a package registers | laravel-microservices: `event_publications`, `event_consumptions`, and a `version` column | the outbox row is written in the emitting module's database, in its transaction; the consumption mark is written in the consuming module's database |
+| The packages | the paths a package registers | laravel-microservices: `event_consumptions`, unless the guard is off; `event_publications` and its `version` column, only when `MICROSERVICES_EVENTS_RELIABLE_PUBLISH` is on | the publication row is written in the emitting module's database, in its transaction; the consumption mark is written in the consuming module's database |
 | The module | `{module}/database/migrations` | iam: its users and its permission tables | the module's own tables; no other module may name them |
-| The copies | `foundation/{Owner}/database/shadows/` | `iam_users`, copied into analytics and notifications | the owner publishes the migration, each module that keeps the copy runs it |
+| The copies | the files or folders the copy's `migrations()` names | `iam_users`, copied into analytics and notifications | the owner publishes the migration, each module that keeps the copy runs it |
 
 Laravel sorts every migration of a run by file name, whatever its source. The table lists where
 they come from, not the order they run in.
@@ -21,11 +21,13 @@ they come from, not the order they run in.
 
 | Database | Application | Package | Module | Copy | Files |
 |---|---|---|---|---|---|
-| `iam` | 1 | 3 | 2 | 0 | 6 |
-| `analytics` | 1 | 3 | 3 | 1 | 8 |
-| `notifications` | 1 | 3 | 1 | 1 | 6 |
+| `iam` | 1 | 0 | 2 | 0 | 3 |
+| `analytics` | 1 | 0 | 3 | 1 | 5 |
+| `notifications` | 1 | 0 | 1 | 1 | 3 |
 
-The package column counts laravel-microservices only. The copy exists in `analytics` and
+The package column counts laravel-microservices only, with the starter's settings: events not
+published reliably and the guard off, so no table. `MICROSERVICES_EVENTS_RELIABLE_PUBLISH=true`
+adds 2 (`event_publications` and its `version` column), and removing `MICROSERVICES_STREAM_GUARD=false` adds `event_consumptions`. The copy exists in `analytics` and
 `notifications` because their providers list `UserShadow` in `$shadows`; iam owns the table and
 keeps no copy.
 
@@ -62,17 +64,34 @@ php artisan make:migration add_archived_at_to_notifications_inbox --module=notif
 
 It lands in `apps/Notifications/database/migrations`.
 
-The migration of a copy is published by the module that owns the table, in
-`foundation/{Owner}/database/shadows/`. Its file name matches `*_{source_table}_shadow*.php`, and
-it extends `ShadowMigration`:
+The migration of a copy is published by the module that owns the table. The copy names where its
+migrations are, by implementing `Distributable\Contracts\PublishesMigrations`: files or folders, as
+Laravel's `loadMigrationsFrom()`. A folder brings every migration in it, whatever its file name.
 
 ```php
-// foundation/Iam/database/shadows/2026_01_01_000100_create_iam_users_shadow_table.php
+// foundation/Iam/Shadows/UserShadow.php
+class UserShadow extends ShadowModel implements PublishesMigrations
+{
+    public static function owner(): string { return 'iam'; }
+
+    public static function sourceTable(): string { return 'iam_users'; }
+
+    public static function migrations(): array
+    {
+        return [__DIR__.'/../database/shadows/users'];
+    }
+}
+```
+
+The migration extends `ShadowMigration` and names the copy by its class:
+
+```php
+// foundation/Iam/database/shadows/users/2026_01_01_000100_create_iam_users_shadow_table.php
 return new class extends ShadowMigration
 {
-    protected function source(): string
+    protected function shadow(): string
     {
-        return 'iam_users';
+        return UserShadow::class;
     }
 
     public function up(): void
@@ -94,9 +113,11 @@ return new class extends ShadowMigration
 };
 ```
 
-`source()` names the owner's table. `$this->table()` is the table the keeper's copy model reads,
-for the module being migrated: two modules can keep the copy under different names, and the same
-file creates each one.
+The source table is written once, in the copy's `sourceTable()`: renaming it moves neither the
+folder nor the migration. `$this->table()` is the table the keeper's copy model reads, for the
+module being migrated: two modules can keep the copy under different names, and the same file
+creates each one. `modules:doctor` reports a kept copy that names no migration, and a path that
+holds none.
 
 ## Limits
 

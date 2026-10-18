@@ -116,14 +116,14 @@ it('retries a failed entry before any later one when the stream blocks on failur
     expect(consumeFailingOnce('1', 2))->toBe([1, 2]);
 });
 
-it('goes on past a failed entry, left pending for later, when the stream skips on failure', function () {
+it('goes on past a failed entry and drops it when the stream skips on failure', function () {
     config()->set('microservices.events.streams.default.on_failure', 'skip');
     $transport = redisTransport();
     $transport->publish(Envelope::for(new UserRegistered(1, 'a'), 'iam'));
     $transport->publish(Envelope::for(new UserRegistered(2, 'b'), 'iam'));
 
     expect(consumeFailingOnce('1', 2))->toBe([2])
-        ->and(Redis::connection()->command('xpending', [config('microservices.events.streams.default.key'), 'analytics'])[0])->toBe(1);
+        ->and(Redis::connection()->command('xpending', [config('microservices.events.streams.default.key'), 'analytics'])[0])->toBe(0);
 });
 
 it('replays an entry a dead consumer left unacknowledged', function () {
@@ -152,21 +152,20 @@ it('trims only the entries every consumer group has acknowledged', function () {
         ->and((int) Redis::connection()->command('xlen', [config('microservices.events.streams.default.key')]))->toBe(1);
 });
 
-it('tells an entry acknowledged only once every consumer group has read it', function () {
+it('gives back only the entries below what every consumer group has read', function () {
     $transport = redisTransport();
-    $first = $transport->publishTracked(Envelope::for(new UserRegistered(1, 'a'), 'iam'));
+    $ids = fn (): array => collect($transport->entries(null, null, true))->map(fn (Envelope $envelope): int => $envelope->payload['id'])->all();
 
-    expect($transport->isAcknowledged($first))->toBeFalse();
+    foreach ([1, 2, 3] as $id) {
+        $transport->publish(Envelope::for(new UserRegistered($id, 'a'), 'iam'));
+    }
 
-    consumeAll($transport, 'analytics', 1);
-    Redis::connection()->command('xgroup', ['CREATE', config('microservices.events.streams.default.key'), 'iam', '$', true]);
-    $second = $transport->publishTracked(Envelope::for(new UserRegistered(2, 'b'), 'iam'));
+    consumeAll($transport, 'analytics', 3);
+    Redis::connection()->command('xgroup', ['CREATE', config('microservices.events.streams.default.key'), 'iam', '0', true]);
 
-    expect($transport->isAcknowledged($first))->toBeTrue()
-        ->and($transport->isAcknowledged($second))->toBeFalse();
+    expect($ids())->toBe([]);
 
-    consumeAll($transport, 'analytics', 1);
-    consumeAll($transport, 'iam', 1);
+    consumeAll($transport, 'iam', 3);
 
-    expect($transport->isAcknowledged($second))->toBeTrue();
+    expect($ids())->toBe([1, 2]);
 });

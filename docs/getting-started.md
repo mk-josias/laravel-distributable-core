@@ -23,7 +23,7 @@ foundation/
     ├── Contracts/IamService.php
     ├── Services/IamRpcService.php    how another process calls iam
     ├── Shadows/UserShadow.php
-    └── database/shadows/             the migration of the copies of iam's tables
+    └── database/shadows/users/       the migration of the copy of iam's users, named by UserShadow::migrations()
 ```
 
 ## Declare the modules
@@ -51,15 +51,12 @@ final class User extends \Illuminate\Database\Eloquent\Model {}
 ```php
 // apps/Iam/config/database.php, merged into config/database.php when iam boots
 return [
+    // creates and alters tables; optional, `default` (here `iam`) otherwise
+    'owner' => 'iam_owner',
     'connections' => [
-        'iam' => [
-            'driver' => 'pgsql',
-            'database' => 'iam',
-            // reads and writes
-            'username' => 'iam_app',
-            // creates and alters tables; optional
-            'owner' => ['username' => 'iam_owner'],
-        ],
+        // reads and writes
+        'iam' => ['driver' => 'pgsql', 'database' => 'iam', 'username' => 'iam_app'],
+        'iam_owner' => ['driver' => 'pgsql', 'database' => 'iam', 'username' => 'iam_owner'],
     ],
 ];
 ```

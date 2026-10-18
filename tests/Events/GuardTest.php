@@ -59,15 +59,15 @@ it('leaves no mark when the handler fails, so the event is replayed', function (
 
 it('stays off when delivery is exactly-once', function () {
     Config::set('microservices.events.guard', null);
-    Config::set('microservices.events.streams.default.outbox', false);
+    Config::set('microservices.events.reliable_publish', false);
     Config::set('microservices.events.streams.default.driver', 'array');
 
     expect($this->app->make(Dispatcher::class)->guarded())->toBeFalse();
 });
 
-it('turns itself on when the outbox is on', function () {
+it('turns itself on when events are published reliably', function () {
     Config::set('microservices.events.guard', null);
-    Config::set('microservices.events.streams.default.outbox', true);
+    Config::set('microservices.events.reliable_publish', true);
 
     expect($this->app->make(Dispatcher::class)->guarded())->toBeTrue();
 });

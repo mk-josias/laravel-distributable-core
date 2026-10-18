@@ -13,11 +13,28 @@ it('migrates each local module database on its owner connection, and no other da
     $this->artisan('migrate')->assertSuccessful();
 
     expect(Schema::connection('iam')->hasTable('iam_users'))->toBeTrue()
-        ->and(Schema::connection('iam')->hasTable('event_publications'))->toBeTrue()
         ->and(Schema::connection('iam')->hasTable('event_consumptions'))->toBeTrue()
         ->and(Schema::connection('iam')->hasTable('migrations'))->toBeTrue()
         ->and(Schema::connection('analytics')->hasTable('migrations'))->toBeTrue()
         ->and(config('database.default'))->toBe(ModuleContext::NO_MODULE);
+});
+
+it('creates the publications table in a module database only when events are published reliably', function () {
+    $this->artisan('migrate')->assertSuccessful();
+
+    expect(Schema::connection('iam')->hasTable('event_publications'))->toBeFalse();
+
+    config()->set('microservices.events.reliable_publish', true);
+    $this->artisan('migrate')->assertSuccessful();
+
+    expect(Schema::connection('iam')->hasTable('event_publications'))->toBeTrue();
+});
+
+it('creates no consumption table once the guard is switched off', function () {
+    config()->set('microservices.events.guard', false);
+    $this->artisan('migrate')->assertSuccessful();
+
+    expect(Schema::connection('iam')->hasTable('event_consumptions'))->toBeFalse();
 });
 
 it('runs the migrations a third-party package loads in each module database', function () {

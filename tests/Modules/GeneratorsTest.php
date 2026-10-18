@@ -83,6 +83,32 @@ it('gives the application its paths and its namespace back once the command ends
     expect([app_path(), database_path(), config_path(), config('view.paths'), $this->app->getNamespace()])->toBe($paths);
 });
 
+it('finds the models of the module for model:prune with --module, and only them without it', function () {
+    File::ensureDirectoryExists($this->module.'/app/Models');
+    file_put_contents($this->module.'/app/Models/Invoice.php', <<<'PHP'
+        <?php
+
+        namespace Apps\Billing\Models;
+
+        use Illuminate\Database\Eloquent\Model;
+        use Illuminate\Database\Eloquent\Prunable;
+
+        class Invoice extends Model
+        {
+            use Prunable;
+
+            public function pruneAll(int $chunkSize = 1000): int
+            {
+                return 0;
+            }
+        }
+        PHP);
+    require_once $this->module.'/app/Models/Invoice.php';
+
+    $this->artisan('model:prune --module=billing')->expectsOutputToContain('No prunable [Apps\Billing\Models\Invoice] records found.');
+    $this->artisan('model:prune')->expectsOutputToContain('No prunable models found.');
+});
+
 it('offers --module on every generator but make:provider, a module having one provider', function () {
     $offers = fn (string $command): bool => Artisan::all()[$command]->getDefinition()->hasOption('module');
 

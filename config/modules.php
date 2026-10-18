@@ -19,6 +19,13 @@ return [
     'declared' => [
         // 'iam' => ['host' => env('IAM_HOST')],
         // 'iam' => ['module' => 'Identity', 'foundation' => 'Identity'],   // apps/Identity, foundation/Identity
+        // 'iam' => ['prefix' => 'identity/{name}'],                       // /identity/api/…, in place of routes.prefix
+    ],
+
+    // The URL of a module's routes file: {module} its name, {name} the file's (routes/api.php → api).
+    // A gateway routing by path (the starter's gateway/traefik/dynamic/routers.yml) must match it.
+    'routes' => [
+        'prefix' => '{module}/{name}',
     ],
 
     // Modules booted by THIS process: '*' = all, or a comma-separated list.

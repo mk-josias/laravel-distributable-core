@@ -51,7 +51,6 @@ the `http` role is on:
 |---|---|---|---|
 | `http` (Octane) | `WITH_HTTP` | `true` | as many as you need |
 | `worker` (`queue:work`) | `WITH_WORKER` | `false` | as many as you need |
-| `publisher` (`stream:publish`) | `WITH_PUBLISHER` | `false` | one per set of modules: two would publish the outbox out of order |
 | `scheduler` (`schedule:run` every minute) | `WITH_SCHEDULER` | `false` | one per set of modules: two would run each task twice |
 | `consumers` (`stream:consume`) | `WITH_CONSUMERS` | `false` | one per set of modules: it serves every module of `RUN_MODULES`, each with its own cursor, and two would break the order a module reads in |
 
@@ -136,7 +135,7 @@ x-env: &env
   SESSION_DRIVER: array
   QUEUE_CONNECTION: redis
   MICROSERVICES_STREAM_DRIVER: redis
-  AUTH_TOKEN_VALIDATION_STRATEGY: rpc
+  AUTH_GATEWAY_SECRET: gateway-secret
   IAM_HOST: "http://iam.svc:8000"
   OCTANE_WORKERS: "2"
   BROADCAST_CONNECTION: reverb

@@ -24,8 +24,8 @@ changes is that they are in place by default, with no ceremony in the business c
 | Bounded context | where a domain ends | one module = one domain, with its code, its config, its routes |
 | Autonomous service (database per service, and beyond) | a service reaching what belongs to another | the module's context: its connections, its configuration, its services; nothing that belongs to a neighbour is reachable from it |
 | Shared kernel | what two domains share, and nothing more | the *foundation*: contracts, exchanged data, event names |
-| Transactional outbox | an event lost when the data is saved but sending fails | the event is written in the same transaction as the data, then published |
-| Idempotent consumer | an event received twice | each handled event is marked; a replay does nothing |
+| Transactional outbox | an event lost when the data is saved but sending fails | opt-in: the event is kept in the same transaction as the data until it is sent |
+| Idempotent consumer | an event received twice | on with a transport that redelivers: each handled event is marked; a replay does nothing |
 | Event-carried state transfer | reading another's data without calling it every time | shadows: a local reflection of its data, kept up to date by its events |
 | Event versioning | evolving a message without breaking those who listen to it | each event carries a version; older ones are converted on read |
 | Ports & adapters | changing transport without touching the business logic | the same contract as a local call or over RPC; stream and RPC are swappable |

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Distributable\Services\Modules;
 
-use Distributable\Config\Modules;
+use Distributable\Contracts\PublishesMigrations;
 use Distributable\Data\Module;
 use Illuminate\Container\Container;
 use Microservices\Services\Shadows\ShadowRegistry;
@@ -15,11 +15,7 @@ use Microservices\Services\Shadows\ShadowRegistry;
  */
 final readonly class ModuleMigrations
 {
-    public function __construct(
-        private ModuleRegistry $registry,
-        private ShadowRegistry $shadows,
-        private Modules $config,
-    ) {}
+    public function __construct(private ShadowRegistry $shadows) {}
 
     /** @return list<string> */
     public function forModule(Module $module): array
@@ -47,22 +43,20 @@ final readonly class ModuleMigrations
     }
 
     /**
-     * The migrations of the copies this module keeps, published by their owners in foundation/{Owner}/database/shadows/.
+     * The migrations of the copies this module keeps: the files or folders each names in migrations().
      *
      * @return list<string>
      */
     private function shadowMigrations(Module $module): array
     {
-        $files = [];
+        $paths = [];
 
         foreach ($this->shadows->localShadows($module->name) as $shadow) {
-            $owner = $this->registry->get($shadow::owner());
-            $files = [...$files, ...(glob($this->config->getFoundationPath($owner).'/database/shadows/*_'.$shadow::sourceTable().'_shadow*.php') ?: [])];
+            if (is_subclass_of($shadow, PublishesMigrations::class)) {
+                $paths = [...$paths, ...$shadow::migrations()];
+            }
         }
 
-        $files = array_values(array_unique($files));
-        sort($files);
-
-        return $files;
+        return array_values(array_unique($paths));
     }
 }

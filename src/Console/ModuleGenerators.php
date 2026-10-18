@@ -12,9 +12,11 @@ use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Foundation\Application;
 use Symfony\Component\Finder\Finder;
 
-/** With --module, what a Laravel make:* command generates lands in that module, under its namespace. */
+/** With --module, what a Laravel make:* command generates lands in that module, under its namespace, and model:prune and model:show find its models. */
 final class ModuleGenerators
 {
+    private const array SCANS_MODELS = ['model:prune', 'model:show'];
+
     /** @var array{module: Module, app: string, database: string, config: string, views: mixed, namespace: string|null, files: list<string>}|null */
     private ?array $swapped = null;
 
@@ -33,7 +35,9 @@ final class ModuleGenerators
             return;
         }
 
-        $name = str_starts_with($event->command, 'make:') ? $event->input->getParameterOption('--module', null) : null;
+        $name = str_starts_with((string) $event->command, 'make:') || in_array($event->command, self::SCANS_MODELS, true)
+            ? $event->input->getParameterOption('--module', null)
+            : null;
 
         if (! is_string($name)) {
             return;

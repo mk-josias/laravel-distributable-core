@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Distributable\Providers;
 
+use Distributable\Config\Modules;
+use Distributable\Exceptions\ModuleException;
 use Distributable\Http\Middleware\SetModuleContext;
 use Distributable\Services\Modules\ModuleContext;
 use Distributable\Support\ScheduledTasks;
@@ -151,6 +153,16 @@ abstract class ServiceProvider extends BaseServiceProvider
             self::$applicationConfig[$key] ??= (array) config($key, []);
             $values = require $configFile;
 
+            if ($key === 'database') {
+                foreach (array_keys((array) ($values['connections'] ?? [])) as $connection) {
+                    $owner = self::$declaredConnections[$connection] ??= $this->module->name;
+
+                    if ($owner !== $this->module->name) {
+                        throw ModuleException::sharedConnection((string) $connection, $owner, $this->module->name);
+                    }
+                }
+            }
+
             // A scalar the application already sets is the module's own value: applied while the module runs.
             foreach (Arr::dot($values) as $path => $value) {
                 if (! is_array($value) && $this->overridesApplicationScalar(self::$applicationConfig[$key], $path)) {
@@ -174,6 +186,9 @@ abstract class ServiceProvider extends BaseServiceProvider
 
         config()->set('microservices.events.listen', $listen);
     }
+
+    /** @var array<string, string> each connection a module's config/database.php declares, and that module */
+    private static array $declaredConnections = [];
 
     /** @var array<string, array<array-key, mixed>> each root config file as the application set it, before any module */
     private static array $applicationConfig = [];
@@ -230,14 +245,15 @@ abstract class ServiceProvider extends BaseServiceProvider
     {
         $module = $this->module;
         $router = $this->app->make(Router::class);
+        $config = $this->app->make(Modules::class);
 
-        // routes/{name}.php → {module}/{name}/…, wrapped in the `{name}` middleware group when the
-        // application defines one.
+        // routes/{name}.php → modules.routes.prefix ({module}/{name}/… by default), wrapped in the
+        // `{name}` middleware group when the application defines one.
         foreach (glob($module->path().'/routes/*.php') ?: [] as $routeFile) {
             $name = basename($routeFile, '.php');
             $middleware = $router->hasMiddlewareGroup($name) ? [$name] : [];
 
-            Route::prefix($module->name.'/'.$name)
+            Route::prefix($config->getRoutePrefix($module->name, $name))
                 ->middleware([...$middleware, SetModuleContext::class.':'.$module->name])
                 ->group($routeFile);
         }

@@ -116,6 +116,7 @@ A model's factory is found without any code: `Preference::factory()` resolves
 | `make:*` | generates in the module (above) |
 | `migrate`, `migrate:fresh`… | migrates that module's database only; it can be repeated |
 | `db:seed` | runs `Apps\Notifications\Database\Seeders\DatabaseSeeder`; `--class=NotificationSeeder` names a seeder of the module |
+| `model:prune`, `model:show` | finds the models in the module's `app/Models`: `model:show Notification` needs no namespace |
 | any other command, yours or a package's | runs in the module's context, on its database |
 
 ```bash
@@ -144,14 +145,14 @@ folder and the namespace, so there is nothing to register.
 | Where the foundation lives | `paths.foundation` (`foundation`), `namespaces.foundation` (`Foundation`); a module's own folder there with `declared.{name}.foundation` | what module `iam` shares is `{paths.foundation}/Iam`, under `Foundation\Iam\` |
 | A module's code | | `app/`, under `{namespaces.modules}\{Name}\` |
 | A module's providers | | in `app/Providers/`, listed in the module's own `bootstrap/providers.php`: Laravel's layout, read by the package and only where the module runs |
-| A module's database | | it has one exactly when a connection named `{name}` exists, declared in the module's `config/database.php` or the root one |
+| A module's database | | it has one exactly when a connection named `{name}` exists, declared in the module's `config/database.php` or the root one; its code uses only that one, its owner one and the others of its `config/database.php` |
 | A module's config, routes, translations, migrations | | `config/*.php`, `routes/{surface}.php` (served under `{name}/{surface}`), `lang/`, `database/migrations/` |
 | A module's commands | | every `Illuminate\Console\Command` under `app/` |
 | A module's factories and seeders | | `database/factories/` under `{namespaces.modules}\{Name}\Database\Factories\`, `database/seeders/` under `…\Database\Seeders\` |
 | A module's views | | `resources/views/`, under the view namespace `{name}::` |
 | A module's tests | | `tests/`, under `{namespaces.modules}\{Name}\Tests\` |
 | An RPC service | | under the module's foundation folder: `Foundation\Iam\` for `iam`, or `Foundation\Identity\` with `'iam' => ['foundation' => 'Identity']` |
-| The migration of a copy | | `{paths.foundation}/{Owner}/database/shadows/` |
+| The migration of a copy | | where the copy's `migrations()` points; the starter keeps it in `{paths.foundation}/{Owner}/database/shadows/{copy}/` |
 | The foundation's provider | | `{namespaces.foundation}\FoundationServiceProvider` |
 
 These conventions are what the features are built on. Because the folder says everything, a module
@@ -245,7 +246,7 @@ module directory:
 | Source | What happens |
 |---|---|
 | `config/*.php` | Merged into the root config file with the same name (see below). Once `config:cache` has run, the cache already holds the merge and the files are not read again. |
-| `routes/{name}.php` | Loaded under the `{module}/{name}` prefix, in the `{name}` middleware group if the application defines one. |
+| `routes/{name}.php` | Loaded under `modules.routes.prefix`, `{module}/{name}` by default (`apps/Iam/routes/api.php` → `/iam/api/…`), in the `{name}` middleware group if the application defines one. A module sets its own with `modules.declared.{module}.prefix`, e.g. `'iam' => ['prefix' => 'identity/{name}']` → `/identity/api/…`. A gateway that routes by path must use the same prefixes: the package does not tell it. |
 | `lang/` | Loaded under the module name: `__('iam::messages.hello')`. |
 | `resources/views/` | Loaded under the module name: `view('iam::welcome')`. Anonymous components of `resources/views/components` and class components of `app/View/Components` are `<x-iam::alert />`. |
 | Artisan commands | Every `Illuminate\Console\Command` in `app/` is registered (console only). |
@@ -310,17 +311,17 @@ It has two kinds of folders:
 | Folder | What it is | In the starter |
 |---|---|---|
 | `foundation/{Module}/` | what that module publishes to the others: its contracts, its `RpcService`, its events and their payloads, the shape of its copies, its permission enums | `Foundation\Iam\Contracts\IamService`, `Foundation\Iam\Services\IamRpcService`, `Foundation\Iam\Events\UserRegisteredPayload`, `Foundation\Iam\Shadows\UserShadow`, `Foundation\Analytics\Enums\AnalyticsPermission` |
-| `foundation/Common/` | not a module: it isn't in `modules.declared`. The base classes every module uses, grouped by technical concern (`Auth`, `Http`, `Database`, `Exceptions`, `Validation`…), not by domain | `Foundation\Common\Http\Controller`, `Foundation\Common\Auth\Authenticate` |
+| `foundation/Common/` | not a module: it isn't in `modules.declared`. The base classes every module uses, grouped by technical concern (`Auth`, `Http`, `Database`, `Exceptions`, `Validation`…), not by domain | `Foundation\Common\Http\Controller`, `Foundation\Common\Http\Middleware\Authenticate` |
 
-`Foundation\Common\Auth\Authenticate` reads from left to right: `Foundation` is the root namespace
-of the foundation (`modules.namespaces.foundation`), `Common` is shared by every module and owned
-by none, `Auth` is the concern, `Authenticate` is the class. The package doesn't depend on
+`Foundation\Common\Http\Middleware\Authenticate` reads from left to right: `Foundation` is the root
+namespace of the foundation (`modules.namespaces.foundation`), `Common` is shared by every module
+and owned by none, `Http\Middleware` is the concern, `Authenticate` is the class. The package doesn't depend on
 `Common`: these classes are yours, to change or delete. The starter labels how firmly each piece
 is meant, see [`foundation/Common`](https://github.com/mk-josias/laravel-distributable-modules-starter#foundationcommon) in its README.
 
 Where the code of a concern sits follows who needs it: the code that every module uses goes in
-`Common`; what only one module's neighbours need to know about it (here, how `iam`'s tokens are
-checked: `Foundation\Iam\Auth\JwtTokens`, `RpcTokens`, `GatewayTokens`) goes in that module's folder.
+`Common`; what only one module's neighbours need to know about it (here, how `iam`'s tokens and
+the gateway's identity are checked: `Foundation\Iam\Auth\JwtTokens`, `TrustedIdentity`) goes in that module's folder.
 
 ## Checking the application
 

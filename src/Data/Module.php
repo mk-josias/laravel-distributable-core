@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Distributable\Data;
 
 use Distributable\Exceptions\ModuleException;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
 /**
@@ -96,28 +95,43 @@ final readonly class Module
         return $this->path().'/app';
     }
 
+    /** The `default` of its config/database.php, as the root one names the application's; without it, its name. */
     public function connection(): string
     {
-        return $this->name;
+        return $this->databaseKey('default') ?? $this->name;
+    }
+
+    /** @return list<string> the connections its code may use: its own, its owner, and each one its config/database.php declares */
+    public function connections(): array
+    {
+        $declared = array_keys((array) ($this->databaseConfig()['connections'] ?? []));
+
+        return array_values(array_unique([$this->connection(), $this->ownerConnection(), ...array_map(strval(...), $declared)]));
     }
 
     /**
-     * The connection the migrate commands use: the module's own, or, when its `owner` key names
-     * the role that owns the tables and may run DDL, a connection built from it. The runtime
-     * connection stays least-privileged — and on PostgreSQL, subject to the row-level security
-     * policies the owner installs.
+     * The connection the migrate commands and DDL use: the `owner` its config/database.php names, as
+     * `default` names the one it runs on; without it, that one. The runtime connection stays
+     * least-privileged — and on PostgreSQL, subject to the row-level security policies the owner installs.
      */
     public function ownerConnection(): string
     {
-        $connection = (array) config("database.connections.{$this->name}");
+        return $this->databaseKey('owner') ?? $this->connection();
+    }
 
-        if (! is_array($connection['owner'] ?? null)) {
-            return $this->name;
-        }
+    private function databaseKey(string $key): ?string
+    {
+        $value = $this->databaseConfig()[$key] ?? null;
 
-        $name = $this->name.':owner';
-        config()->set("database.connections.{$name}", [...Arr::except($connection, 'owner'), ...$connection['owner']]);
+        return is_string($value) && $value !== '' ? $value : null;
+    }
 
-        return $name;
+    /** @return array<string, mixed> its config/database.php, read once */
+    private function databaseConfig(): array
+    {
+        static $configs = [];
+        $file = $this->path().'/config/database.php';
+
+        return $configs[$file] ??= is_file($file) ? (array) require $file : [];
     }
 }

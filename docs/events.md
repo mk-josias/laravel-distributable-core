@@ -4,7 +4,7 @@ An event announces that something happened in a module. The modules that care ha
 each in its own context. The emitter doesn't wait and doesn't know who listens.
 
 Events between modules are [laravel-microservices' events](https://mk-josias.github.io/laravel-microservices/docs/events):
-each module is a service, named after it. The envelope, the transports, the outbox and the
+each module is a service, named after it. The envelope, the transports, the stored events and the
 consumption guard are described there. This page covers what a module adds.
 
 Events go through the stream even when both modules run in the same process, so they behave the
@@ -15,9 +15,9 @@ same in every setup.
 ```
 iam: Bus::emit(UserRegistered)
   └─ envelope: name iam.user.registered, payload, emitter iam
-       ├─ outbox on:  a row in event_publications, in iam's database, in iam's transaction
-       │                └─ the publisher sends it to the stream
-       └─ outbox off: straight onto the stream
+       ├─ reliable_publish on:  a row in event_publications, in iam's database, in iam's transaction
+       │                          └─ after the commit, it is sent to the stream
+       └─ reliable_publish off: sent to the stream after the commit, no row
             └─ stream
                  ├─ analytics' consumer ─► RecordSignup, in analytics' context
                  └─ notifications' consumer ─► SendWelcome, in notifications' context
@@ -100,27 +100,25 @@ database.
 |---|---|
 | the emitter | the module the event class belongs to |
 | the handlers | `$handlers` of the module's service provider |
-| the outbox | `event_publications` in the emitting module's database, inside the module's transaction |
-| the guard | `event_consumptions` in the consuming module's database |
+| the publications | `event_publications` in the emitting module's database, inside the module's transaction |
+| the guard | `event_consumptions` in the consuming module's database; the starter turns it off with `MICROSERVICES_STREAM_GUARD=false` |
 | versions | the payload class sits in the emitter's foundation, declared in `FoundationServiceProvider::$payloads` |
 | streams | a module can add its own in its `config/microservices.php` |
 
-## The outbox and the publisher
+## Reliable publishing
 
-With the outbox on, an event is written in the same transaction as the data: both are committed
-or both are rolled back, and a publisher sends the row to the stream afterwards. With it off, the
-event goes onto the stream when `emit()` is called, whatever happens to the transaction after.
+An event is sent once the transaction it was emitted in has committed, and never if that transaction
+rolls back. With `MICROSERVICES_EVENTS_RELIABLE_PUBLISH=true`, it is also written in that transaction, in the
+module's own database: a committed event is not lost if the process dies before sending it, and a
+row whose sending fails stays pending until `stream:republish`. With it off, no row is kept, and an
+event is lost if the process dies, or the stream is down, between the commit and the sending. No
+container role is needed to send the rows.
 
-The outbox is a setting of the stream: `MICROSERVICES_STREAM_OUTBOX=true` for the default one. The
-publisher is a role of the container, `WITH_PUBLISHER`. Run one per module set: two would publish
-an outbox out of order.
+The starter leaves it off: `docker-compose.yml` does not set `MICROSERVICES_EVENTS_RELIABLE_PUBLISH`.
 
-The starter leaves the outbox off: `docker-compose.yml` does not set `MICROSERVICES_STREAM_OUTBOX`.
-Its events leave as soon as they are emitted.
+## Consuming per module
 
-## Consuming and publishing per module
-
-`stream:consume` reads the envelopes that every declared module publishes, and runs the handlers of
+`stream:consume` reads the envelopes that every declared module emits, and runs the handlers of
 the modules that run in the process. Each module's name is its subscription, with its own cursor on
 the stream, so adding a module disturbs none of the others. `stream:consume` has no `--module` of its
 own: the option is on every command, and runs it in that module's context. The command then reads the
@@ -129,8 +127,6 @@ module it runs in as the only consuming one.
 ```bash
 # every module this process runs, one cursor each
 php artisan stream:consume
-# every local module's outbox; --module=iam for one
-php artisan stream:publish
 ```
 
 | You run | The consuming modules are |
@@ -162,7 +158,7 @@ each handler run is guarded: an `(event_id, handler)` row is inserted in `event_
 the consuming module's database, in the same transaction as the handler's writes. A second
 delivery finds the row and the handler doesn't run.
 
-That table grows, and so do the stream and the outbox. What cleans each one, and when, is in
+That table grows, and so does the stream. What cleans each one, and when, is in
 [Operating the event stream](./operating-streams).
 
 ## Changing the shape of a payload

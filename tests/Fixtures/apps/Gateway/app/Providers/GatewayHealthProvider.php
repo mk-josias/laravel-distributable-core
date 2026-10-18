@@ -6,10 +6,10 @@ namespace Apps\Gateway\Providers;
 
 use Illuminate\Support\ServiceProvider;
 
-final class GatewayTokensProvider extends ServiceProvider
+final class GatewayHealthProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->instance('gateway.tokens', 'registered');
+        $this->app->instance('gateway.health', 'registered');
     }
 }

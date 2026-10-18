@@ -2,22 +2,34 @@
 
 ## Connections
 
-A module with a database has one connection, named after it. There is no mapping to fill in: the
-name is the link, so module `iam` uses the connection `iam`, and no other.
+A module declares its connections in its `config/database.php`, as the root one does for the
+application: `default` names the one it runs on.
 
 ```php
-'iam' => [
-    'driver' => 'pgsql', 'database' => 'iam',
+// apps/Analytics/config/database.php
+'default' => 'main',
+'connections' => ['main' => [...], 'warehouse' => [...]],
+```
+
+Without `default`, the module runs on the connection named after it: module `iam` on `iam`. A
+connection name belongs to one module: two modules declaring the same one throw `ModuleException`
+at boot, rather than one overwriting the other.
+
+```php
+// apps/Iam/config/database.php
+'owner' => 'iam_owner',
+'connections' => [
     // reads and writes rows
-    'username' => env('IAM_USERNAME'), 'password' => env('IAM_PASSWORD'),
-    // optional
-    'owner' => ['username' => env('IAM_OWNER'), 'password' => env('IAM_OWNER_PASSWORD')],
+    'iam' => ['driver' => 'pgsql', 'database' => 'iam', 'username' => env('IAM_USERNAME'), 'password' => env('IAM_PASSWORD')],
+    // creates and alters tables
+    'iam_owner' => ['driver' => 'pgsql', 'database' => 'iam', 'username' => env('IAM_OWNER'), 'password' => env('IAM_OWNER_PASSWORD')],
 ],
 ```
 
-The `owner` key is the role that owns the tables and can create and alter them. Only the `migrate`
-commands use it: they run on a connection built from `iam` with the `owner` values over it
-(`iam:owner`). Without the key, they run on `iam` itself, which suits one role for everything.
+`owner` names, as `default` does, a connection the file declares: the role that owns the tables
+and can create and alter them. Only the `migrate` commands and the module's DDL use it. Without
+it, they run on `default`, which suits one role for everything. The root `config/database.php`
+sets `'owner' => null`, as it sets `default`, so that each module's value is its own.
 
 Declare the connection where you prefer; the module has a database as soon as it exists:
 
@@ -27,9 +39,32 @@ Declare the connection where you prefer; the module has a database as soon as it
 | the root `config/database.php`, next to `sqlite` and `pgsql` | the same, with every connection in one file |
 | nowhere | the module has no database: its queries fail with `no_module`, and `modules:doctor` reports any migration it has |
 
+A module may need a second database, a warehouse next to its own for instance. It declares that
+connection in its `config/database.php`, and its code names it, on a model or a query:
+
+```php
+// apps/Analytics/config/database.php
+'connections' => [
+    'analytics' => ['driver' => 'pgsql', 'database' => 'analytics'],
+    'warehouse' => ['driver' => 'pgsql', 'database' => 'warehouse'],
+],
+```
+
+```php
+// apps/Analytics/app/Models/Report.php
+protected $connection = 'warehouse';
+```
+
+A module's code uses only the connections its module declares: its own, the one `owner` names,
+and each connection of its `config/database.php`. Naming another one, another module's
+or one of the root `config/database.php` only, throws `ModuleException`. A migration that sets
+`$connection = 'warehouse'` runs on that connection; the others run on the owner connection. Laravel's
+and the packages' code (queues, sessions, failed jobs, events) opens the connections it needs and is
+not checked.
+
 The connections can point to separate databases on one server, separate schemas of one database,
 separate servers, or sqlite files in tests. The code is the same in every case. Several modules can
-also share one database; the outbox filters its rows by emitting module.
+also share one database; the stored events filter their rows by emitting module.
 
 There are no foreign keys between modules. Reference another module's rows by id, or keep a
 [shadow](shadows.md) of them.

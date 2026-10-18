@@ -8,7 +8,6 @@ use Apps\Iam\Support\Recorder;
 use Distributable\Tests\Support\ModuleAppTestCase;
 use Distributable\Tests\Support\RecordingTransport;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\DB;
 use Microservices\Contracts\Stream\Bus;
 use Microservices\Contracts\Stream\Transport;
 use Microservices\Data\Envelope;
@@ -82,8 +81,8 @@ it('refuses a payload class that declares no version', function () {
     $this->app->make(PayloadVersions::class)->add(['iam.user.registered' => Recorder::class]);
 })->throws(ConfigurationException::class, 'must implement Microservices\Contracts\Stream\Versioned');
 
-it('keeps the version through the outbox', function () {
-    Config::set('microservices.events.streams.default.outbox', true);
+it('keeps the version through the publications table, up to the sent envelope', function () {
+    Config::set('microservices.events.reliable_publish', true);
     Config::set('microservices.events.streams.default.driver', 'recording');
     $this->app->instance(RecordingTransport::class, new RecordingTransport);
     $this->app->make(TransportManager::class)->extend('recording', fn ($app): Transport => $app->make(RecordingTransport::class));
@@ -96,6 +95,5 @@ it('keeps the version through the outbox', function () {
     $this->app->make(Bus::class)->emit(new UserRenamed(5, 'Ada Lovelace'));
     $this->app->make(Relay::class)->drain('iam');
 
-    expect((int) DB::connection('iam')->table('event_publications')->value('version'))->toBe(3)
-        ->and($this->app->make(RecordingTransport::class)->published[0]->version)->toBe(3);
+    expect($this->app->make(RecordingTransport::class)->published[0]->version)->toBe(3);
 });

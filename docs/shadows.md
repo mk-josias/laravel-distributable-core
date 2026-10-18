@@ -48,8 +48,8 @@ final class User extends Model implements Principal, Shadowed
 }
 ```
 
-Only the `$shadowed` fields, and the dates the row has, leave the module. The `password` and the
-`api_token` of iam's users never do.
+Only the `$shadowed` fields, and the dates the row has, leave the module. The `password` of
+iam's users, and their tokens, never do.
 
 ```php
 // foundation/Iam/Shadows/UserShadow.php, the shape of the copy, declared once by iam
@@ -97,9 +97,9 @@ authenticated user of a request from its own copy.
 
 ## Creating its table
 
-iam publishes the migration of the copy's table in `foundation/Iam/database/shadows/`, extending
-`Microservices\Migrations\ShadowMigration`. `migrate` runs it in the database of every module that
-keeps a copy. See [Migrations](./migrations#writing-a-migration).
+iam publishes the migration of the copy's table, extending `Microservices\Migrations\ShadowMigration`,
+and `UserShadow::migrations()` names where it is: `foundation/Iam/database/shadows/users`. `migrate`
+runs it in the database of every module that keeps a copy. See [Migrations](./migrations#writing-a-migration).
 
 ## Filling a copy that is created late
 

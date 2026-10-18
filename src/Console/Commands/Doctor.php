@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Distributable\Console\Commands;
 
 use Distributable\Config\Modules;
+use Distributable\Contracts\PublishesMigrations;
 use Distributable\Services\Modules\ComposerAutoload;
 use Distributable\Services\Modules\ModuleRegistry;
 use Distributable\Testing\Boundaries;
@@ -60,6 +61,18 @@ final class Doctor extends Command
 
             foreach ($shadows->localShadows($module->name) as $shadow) {
                 $tables[(new $shadow)->getTable()][] = $shadow;
+
+                if (! is_subclass_of($shadow, PublishesMigrations::class)) {
+                    $problems[] = "[{$module->name}] keeps {$shadow}, which names no migration: implement ".PublishesMigrations::class.'.';
+
+                    continue;
+                }
+
+                foreach ($shadow::migrations() as $path) {
+                    if (! file_exists($path) || (is_dir($path) && (glob($path.'/*_*.php') ?: []) === [])) {
+                        $problems[] = "[{$module->name}] keeps {$shadow}, whose migrations [{$path}] hold no migration.";
+                    }
+                }
             }
 
             foreach ($tables as $table => $copies) {

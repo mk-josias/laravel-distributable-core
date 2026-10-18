@@ -2,15 +2,16 @@
 
 declare(strict_types=1);
 
+use Foundation\Iam\Shadows\UserShadow;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Microservices\Migrations\ShadowMigration;
 
 return new class extends ShadowMigration
 {
-    protected function source(): string
+    protected function shadow(): string
     {
-        return 'iam_users';
+        return UserShadow::class;
     }
 
     public function up(): void

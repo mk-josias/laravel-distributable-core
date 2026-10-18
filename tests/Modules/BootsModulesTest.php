@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Apps\Iam\Models\User;
 use Apps\Iam\Providers\IamServiceProvider;
+use Distributable\Config\Modules;
 use Distributable\Services\Modules\ModuleRegistry;
 use Distributable\Tests\Support\ModuleAppTestCase;
 use Illuminate\Database\Migrations\Migrator;
@@ -20,7 +21,7 @@ it('builds the registry from the configured source', function () {
 });
 
 it('registers every provider a module lists in its bootstrap/providers.php', function () {
-    expect($this->app->make('gateway.tokens'))->toBe('registered');
+    expect($this->app->make('gateway.health'))->toBe('registered');
 });
 
 it('answers which modules this process runs on the status route', function () {
@@ -31,8 +32,17 @@ it('answers which modules this process runs on the status route', function () {
     ]);
 });
 
-it('serves a module route file under the {module}/{file} prefix', function () {
+it('serves a module route file under the {module}/{name} prefix', function () {
     $this->get('/iam/api/v1/ping')->assertOk()->assertContent('pong');
+});
+
+it('takes the route prefix from modules.routes.prefix, and a module its own from modules.declared', function () {
+    config()->set('modules.routes.prefix', 'modules/{module}/{name}');
+    config()->set('modules.declared.iam.prefix', 'identity/{name}');
+    $config = $this->app->make(Modules::class);
+
+    expect($config->getRoutePrefix('analytics', 'api'))->toBe('modules/analytics/api')
+        ->and($config->getRoutePrefix('iam', 'api'))->toBe('identity/api');
 });
 
 it('wraps a route file in the middleware group of the same name when one exists', function () {

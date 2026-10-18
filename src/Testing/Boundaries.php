@@ -79,7 +79,7 @@ final readonly class Boundaries
             array_push($tables, ...$matches[1]);
         }
 
-        return [$module->connection(), $module->ownerConnection(), ...$tables];
+        return [...$module->connections(), ...$tables];
     }
 
     /** @return array<string, list<string>> the qualified names each PHP file under $path references */
