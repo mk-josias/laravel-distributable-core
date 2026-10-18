@@ -120,5 +120,5 @@ a path a kept copy names that holds no migration.
   every module needs.
 - A module cannot name a table that another module's migrations create. `Boundaries` reports it.
   The table of a copy the module keeps is its own.
-- The `database` drivers of the cache, the queue and the session have no database to use:
-  `modules:doctor` reports them.
+- The `database` drivers of the cache, the queue and the session need a `connection` naming a
+  module's: outside a module, the default connection is `no_module`.

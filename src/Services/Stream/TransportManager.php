@@ -15,7 +15,7 @@ use Illuminate\Contracts\Container\Container;
 /**
  * Resolves a named stream of distributable.events.streams to its transport, like QueueManager::connection(),
  * and stays open: extend('kafka', fn ($app, array $options, string $stream) => …) registers any
- * driver. The package ships only `array` and `null`; `redis` and `queue` come with their own packages.
+ * driver. The package ships only `array` and `null`; `redis` comes with its own package.
  */
 final class TransportManager
 {

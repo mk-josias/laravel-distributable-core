@@ -83,8 +83,8 @@ return [
     | Named streams, like queue connections: each has a driver and that
     | driver's options. An event travels on the stream its stream() method
     | names, or on the default one. Drivers: `array` (in memory, for tests),
-    | `null` (drops everything), and from their own packages `redis`
-    | (mk-josias/laravel-distributable-stream-redis) and `queue` (mk-josias/laravel-distributable-stream-queue).
+    | `null` (drops everything), and from its own package `redis`
+    | (mk-josias/laravel-distributable-stream-redis).
     | Any other driver resolves through a creator registered with extend().
     */
 
@@ -95,21 +95,14 @@ return [
 
             // Nothing is trimmed on write: stream:trim drops only what every consumer group acknowledged.
             'default' => [
-                'driver' => env('DISTRIBUTABLE_STREAM_DRIVER', 'array'), // redis or queue once its package is installed
+                'driver' => env('DISTRIBUTABLE_STREAM_DRIVER', 'array'), // redis once its package is installed
                 'connection' => env('DISTRIBUTABLE_STREAM_CONNECTION'), // null: the driver's own default connection
-                'key' => 'distributable:events', // the Redis stream every module writes to, or the queue prefix
+                'key' => 'distributable:events', // the Redis stream every module writes to
                 'block' => 5_000,           // read block window, ms
                 'count' => 50,              // entries per read
                 'claim_after' => 60_000,    // reclaim entries a dead consumer left pending, ms
                 'on_failure' => 'block',    // block: a failed entry is retried before later ones; skip: later ones go on, the failed one is dropped
             ],
-
-            // 'jobs' => [
-            //     'driver' => 'queue', // mk-josias/laravel-distributable-stream-queue
-            //     'connection' => env('DISTRIBUTABLE_QUEUE_CONNECTION'),
-            //     'key' => 'distributable-jobs', // each module reads {key}-{module}
-            //     'sleep' => 1,                  // seconds to wait when the queue is empty
-            // ],
 
         ],
 

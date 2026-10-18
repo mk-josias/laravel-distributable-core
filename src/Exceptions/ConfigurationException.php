@@ -26,7 +26,7 @@ final class ConfigurationException extends RuntimeException
 
     public static function unknownDriver(string $driver, string $stream): self
     {
-        $package = ['redis' => 'mk-josias/laravel-distributable-stream-redis', 'queue' => 'mk-josias/laravel-distributable-stream-queue'][$driver] ?? null;
+        $package = ['redis' => 'mk-josias/laravel-distributable-stream-redis'][$driver] ?? null;
 
         return new self($package === null
             ? "Stream driver [{$driver}] of stream [{$stream}] is not supported: register it with Services\\Stream\\TransportManager::extend()."

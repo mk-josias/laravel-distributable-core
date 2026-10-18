@@ -23,7 +23,7 @@ another. The package sets up what is missing:
 
 ```bash
 composer require mk-josias/laravel-distributable
-# the events driver: Redis Streams (or stream-queue, or yours); DISTRIBUTABLE_STREAM_DRIVER=redis
+# the events driver: Redis Streams (or yours); DISTRIBUTABLE_STREAM_DRIVER=redis
 composer require mk-josias/laravel-distributable-stream-redis
 # calls to a module running in another process
 composer require mk-josias/laravel-distributable-rpc-http
