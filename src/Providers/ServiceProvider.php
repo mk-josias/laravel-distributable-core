@@ -9,6 +9,7 @@ use Distributable\Context\ModuleContext;
 use Distributable\Context\ScheduledTasks;
 use Distributable\Http\Middleware\SetModuleContext;
 use Distributable\Models\ShadowModel;
+use Distributable\Services\ClassDiscovery;
 use Distributable\Services\Rpc\LocalServices;
 use Distributable\Traits\ResolvesModule;
 use Illuminate\Console\Command;
@@ -267,6 +268,6 @@ abstract class ServiceProvider extends BaseServiceProvider
             return;
         }
 
-        $this->commands(microservices_classes_with(Command::class, $this->module->classPath()));
+        $this->commands(ClassDiscovery::with(Command::class, $this->module->classPath()));
     }
 }

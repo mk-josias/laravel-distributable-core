@@ -2,15 +2,22 @@
 
 declare(strict_types=1);
 
+namespace Distributable\Services;
+
+use ReflectionClass;
 use Symfony\Component\Finder\Finder;
 
-if (! function_exists('microservices_declared_class')) {
+final class ClassDiscovery
+{
+    /** @var array<string, list<class-string>> */
+    private static array $found = [];
+
     /**
      * The FQCN declared in a PHP file, read via the tokenizer (the file is NOT executed, so
      * route/config files have no side effects). Null when the file declares no named type
      * (routes, config arrays, anonymous-class migrations).
      */
-    function microservices_declared_class(string $file): ?string
+    public static function declaredIn(string $file): ?string
     {
         $tokens = token_get_all((string) @file_get_contents($file));
         $namespace = '';
@@ -35,32 +42,29 @@ if (! function_exists('microservices_declared_class')) {
 
         return null;
     }
-}
 
-if (! function_exists('microservices_classes_with')) {
     /**
-     * Discover the classes under a directory carrying a given trait/interface/attribute/parent,
-     * by scanning the source tree (so classes not yet autoloaded are found, unlike
-     * get_declared_classes).
+     * The classes under a directory carrying a given trait/interface/attribute/parent, by scanning
+     * the source tree (so classes not yet autoloaded are found, unlike get_declared_classes).
      *
      * @return list<class-string>
      */
-    function microservices_classes_with(string $target, string $directory): array
+    public static function with(string $target, string $directory): array
     {
-        static $cache = [];
         $key = $target.'|'.$directory;
-        if (isset($cache[$key])) {
-            return $cache[$key];
+
+        if (isset(self::$found[$key])) {
+            return self::$found[$key];
         }
 
         if (! is_dir($directory)) {
-            return $cache[$key] = [];
+            return self::$found[$key] = [];
         }
 
         $found = [];
 
         foreach (Finder::create()->files()->name('*.php')->in($directory) as $file) {
-            $class = microservices_declared_class($file->getRealPath());
+            $class = self::declaredIn($file->getRealPath());
             if ($class === null || ! class_exists($class)) {
                 continue;
             }
@@ -76,6 +80,6 @@ if (! function_exists('microservices_classes_with')) {
             }
         }
 
-        return $cache[$key] = $found;
+        return self::$found[$key] = $found;
     }
 }

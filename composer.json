@@ -32,10 +32,7 @@
     "autoload": {
         "psr-4": {
             "Distributable\\": "src/"
-        },
-        "files": [
-            "src/helpers.php"
-        ]
+        }
     },
     "extra": {
         "laravel": {

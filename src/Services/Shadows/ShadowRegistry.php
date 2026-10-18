@@ -7,6 +7,7 @@ namespace Distributable\Services\Shadows;
 use Distributable\Contracts\Colocation;
 use Distributable\Contracts\Shadows\Shadowed;
 use Distributable\Models\ShadowModel;
+use Distributable\Services\ClassDiscovery;
 use Illuminate\Database\Eloquent\Model;
 
 /** Finds, among the services this process runs, the copies each one declares and the source models it owns. */
@@ -64,7 +65,7 @@ class ShadowRegistry
     /** @return list<class-string> */
     public function scanSources(string $service): array
     {
-        return microservices_classes_with(Shadowed::class, $this->colocation->classPath($service));
+        return ClassDiscovery::with(Shadowed::class, $this->colocation->classPath($service));
     }
 
     /** @return list<class-string<ShadowModel>> microservices.shadows: this service's list, or its entry when keyed by service */
