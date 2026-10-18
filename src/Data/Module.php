@@ -23,7 +23,7 @@ final readonly class Module
     ) {}
 
     /**
-     * Every convention derives from the name; a module has a database once a connection named after it exists, in its config/database.php or the root one.
+     * Every convention derives from the name; a module has a database once its config/database.php names its `default`.
      *
      * @param  string|null  $foundationFolder  its folder and namespace segment under the foundation root, when not its studly name
      * @param  string|null  $path  its own folder (the one holding app/, config/, routes/), when not {modulesPath}/{Name}; '.' is the project
@@ -45,7 +45,7 @@ final readonly class Module
             namespace: $namespace,
             provider: $namespace.'\\Providers\\'.class_basename($namespace).'ServiceProvider',
             path: $path,
-            hasDatabase: is_file($absolute.'/config/database.php') || config("database.connections.{$name}") !== null,
+            hasDatabase: self::stringKey(self::databaseConfigAt($absolute.'/config/database.php'), 'default') !== null,
             foundation: $foundationFolder ?? $studly,
         );
     }
@@ -96,18 +96,18 @@ final readonly class Module
         return $this->path().'/app';
     }
 
-    /** The `default` of its config/database.php, as the root one names the application's; without it, its name. */
-    public function connection(): string
+    /** The `default` of its config/database.php, as the root one names the application's. */
+    public function defaultConnection(): ?string
     {
-        return $this->databaseKey('default') ?? $this->name;
+        return $this->databaseKey('default');
     }
 
-    /** @return list<string> the connections its code may use: its own, its owner, and each one its config/database.php declares */
+    /** @return list<string> its default, its owner, and each connection its config/database.php declares */
     public function connections(): array
     {
-        $declared = array_keys((array) ($this->databaseConfig()['connections'] ?? []));
+        $declared = array_map(strval(...), array_keys((array) ($this->databaseConfig()['connections'] ?? [])));
 
-        return array_values(array_unique([$this->connection(), $this->ownerConnection(), ...array_map(strval(...), $declared)]));
+        return array_values(array_unique(array_filter([$this->defaultConnection(), $this->ownerConnection(), ...$declared], is_string(...))));
     }
 
     /**
@@ -115,24 +115,35 @@ final readonly class Module
      * `default` names the one it runs on; without it, that one. The runtime connection stays
      * least-privileged — and on PostgreSQL, subject to the row-level security policies the owner installs.
      */
-    public function ownerConnection(): string
+    public function ownerConnection(): ?string
     {
-        return $this->databaseKey('owner') ?? $this->connection();
+        return $this->databaseKey('owner') ?? $this->defaultConnection();
     }
 
     private function databaseKey(string $key): ?string
     {
-        $value = $this->databaseConfig()[$key] ?? null;
-
-        return is_string($value) && $value !== '' ? $value : null;
+        return self::stringKey($this->databaseConfig(), $key);
     }
 
     /** @return array<string, mixed> its config/database.php, read once */
     private function databaseConfig(): array
     {
+        return self::databaseConfigAt($this->path().'/config/database.php');
+    }
+
+    /** @return array<string, mixed> */
+    private static function databaseConfigAt(string $file): array
+    {
         static $configs = [];
-        $file = $this->path().'/config/database.php';
 
         return $configs[$file] ??= is_file($file) ? (array) require $file : [];
+    }
+
+    /** @param array<string, mixed> $config */
+    private static function stringKey(array $config, string $key): ?string
+    {
+        $value = $config[$key] ?? null;
+
+        return is_string($value) && $value !== '' ? $value : null;
     }
 }

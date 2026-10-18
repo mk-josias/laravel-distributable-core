@@ -59,16 +59,6 @@ final class ModuleException extends RuntimeException
         return new self("[{$file}] makes {$from} code run in module [{$module}], on its database: go through its foundation contract or an event.");
     }
 
-    public static function sharedConnection(string $connection, string $first, string $second): self
-    {
-        return new self("Modules [{$first}] and [{$second}] both declare connection [{$connection}]: each name belongs to one module.");
-    }
-
-    public static function undeclaredConnection(string $module, string $connection, string $file): self
-    {
-        return new self("[{$file}] uses connection [{$connection}], which module [{$module}] does not declare: add it to the module's config/database.php, or go through the owning module's foundation contract.");
-    }
-
     /** A class the package needs to attach to a module lives outside every module namespace. */
     public static function outsideModule(string $class): self
     {

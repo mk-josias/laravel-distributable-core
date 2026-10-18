@@ -23,7 +23,7 @@ final class ListModules extends Command
                 $module->name,
                 $module->namespace,
                 $registry->isLocal($module->name) ? 'yes' : 'no',
-                $module->hasDatabase ? $module->connection() : '—',
+                $module->hasDatabase ? $module->defaultConnection() : '—',
                 ! $registry->isLocal($module->name) ? ($config->getHost($module->name) ?? '—') : '—',
             ], $registry->all()),
         );

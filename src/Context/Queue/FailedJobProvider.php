@@ -98,7 +98,7 @@ final class FailedJobProvider extends DatabaseUuidFailedJobProvider
         $module = $this->registry->forClass($class);
 
         return $module !== null && $module->hasDatabase
-            ? $module->connection()
+            ? $module->defaultConnection()
             : ($this->connections()[0] ?? $this->database);
     }
 

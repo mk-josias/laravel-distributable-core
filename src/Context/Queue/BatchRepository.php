@@ -34,7 +34,7 @@ final class BatchRepository extends DatabaseBatchRepository
         $module = $this->registry->forClass($class);
 
         if ($module !== null && $module->hasDatabase) {
-            $this->setConnection($this->db->connection($module->connection()));
+            $this->setConnection($this->db->connection($module->defaultConnection()));
         }
     }
 

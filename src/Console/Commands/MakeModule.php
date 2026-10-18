@@ -54,6 +54,7 @@ final class MakeModule extends Command
                 declare(strict_types=1);
 
                 return [
+                    'default' => '{$module->name}',
                     'owner' => '{$module->name}_owner',
                     'connections' => [
                         '{$module->name}' => [

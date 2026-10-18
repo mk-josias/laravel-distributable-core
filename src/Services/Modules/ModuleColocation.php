@@ -45,7 +45,7 @@ final readonly class ModuleColocation implements Colocation
     {
         $module = $this->registry->find($service);
 
-        return $module !== null && $module->hasDatabase ? $module->connection() : null;
+        return $module !== null && $module->hasDatabase ? $module->defaultConnection() : null;
     }
 
     public function classPath(string $service): string

@@ -209,20 +209,6 @@ it('fails on a cache, queue or session kept in a database no module owns', funct
         ->assertFailed();
 });
 
-it('fails on a module with migrations and no database to run them in', function () {
-    $migrations = dirname(__DIR__, 2).'/Fixtures/apps/Gateway/database/migrations';
-    mkdir($migrations, 0755, true);
-
-    try {
-        $this->artisan('modules:doctor')
-            ->expectsOutputToContain('[gateway] has migrations but no database')
-            ->assertFailed();
-    } finally {
-        rmdir($migrations);
-        rmdir(dirname($migrations));
-    }
-});
-
 it('fails on a module keeping two copies in one table', function () {
     config()->set('microservices.shadows.analytics', [UserShadow::class, IamUserShadow::class]);
 

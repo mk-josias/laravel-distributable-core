@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Apps\Analytics\Reports\UsesConnection;
-use Distributable\Exceptions\ModuleException;
 use Distributable\Services\Modules\ModuleRegistry;
 use Distributable\Tests\ModuleAppTestCase;
 use Illuminate\Support\Facades\DB;
@@ -20,9 +19,9 @@ it('lets a module open each connection it declares', function () {
         ->and((new UsesConnection)->open('warehouse'))->toBe('warehouse');
 });
 
-it('refuses a module a connection it does not declare, another module\'s included', function () {
-    (new UsesConnection)->open('iam');
-})->throws(ModuleException::class, 'uses connection [iam], which module [analytics] does not declare');
+it('lets a module open a connection it does not declare: the application decides', function () {
+    expect((new UsesConnection)->open('iam'))->toBe('iam');
+});
 
 it('leaves the connections alone for code outside every module', function () {
     expect(DB::connection('iam')->getName())->toBe('iam');

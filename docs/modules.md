@@ -146,7 +146,7 @@ folder and the namespace, so there is nothing to register.
 | Where the foundation lives | `foundation.path` (`foundation`), `foundation.namespace` (`Foundation`); a module's own folder there with `declared.{name}.foundation` | what module `iam` shares is `{foundation.path}/Iam`, under `Foundation\Iam\` |
 | A module's code | | `app/`, under `{modules.namespace}\{Name}\` |
 | A module's providers | | in `app/Providers/`, listed in the module's own `bootstrap/providers.php`: Laravel's layout, read by the package and only where the module runs |
-| A module's database | | it has one exactly when a connection named `{name}` exists, declared in the module's `config/database.php` or the root one; its code uses only that one, its owner one and the others of its `config/database.php` |
+| A module's database | `default` in the module's `config/database.php` | the connection its code runs on; without it, `no_module` |
 | A module's config, routes, translations, migrations | | `config/*.php`, `routes/{surface}.php` (served under `{name}/{surface}`), `lang/`, `database/migrations/` |
 | A module's commands | | every `Illuminate\Console\Command` under `app/` |
 | A module's factories and seeders | | `database/factories/` under `{modules.namespace}\{Name}\Database\Factories\`, `database/seeders/` under `…\Database\Seeders\` |
@@ -355,8 +355,6 @@ php artisan modules:doctor
 | a folder of `apps/` that `distributable.declared` doesn't list | `[apps/Notifications] is not declared in distributable.declared.` |
 | a local module without its `bootstrap/providers.php` | `[iam] …/apps/Iam/bootstrap/providers.php does not exist.` |
 | a module whose service provider class doesn't exist | `[notifications] provider Apps\Notifications\Providers\NotificationsServiceProvider does not exist.` |
-| a local module with a database but no declared connection | `[iam] connection [iam] is not declared.` |
-| a module with migrations but no database | `[iam] has migrations but no database: declare its connection in its config/database.php.` |
 | `composer.json` entries that no longer match where the module lives | `composer.json maps [Apps\Iam] to […], but the module lives in […].` |
 | two copies kept in one table | `[analytics] keeps two copies in table [users]: … Give each its own $table.` |
 | an RPC contract that isn't in the foundation of a declared module | `Foundation\Iam\Contracts\IamService is not in the foundation of a declared module.` |

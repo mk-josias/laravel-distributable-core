@@ -15,7 +15,7 @@ final class Databases
 
         foreach ($registry->local() as $module) {
             if ($module->hasDatabase) {
-                $connections[] = $module->connection();
+                $connections[] = $module->defaultConnection();
             }
         }
 

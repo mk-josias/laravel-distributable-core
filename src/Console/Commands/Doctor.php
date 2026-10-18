@@ -45,14 +45,6 @@ final class Doctor extends Command
                 }
             }
 
-            if ($module->hasDatabase && config("database.connections.{$module->connection()}") === null) {
-                $problems[] = "[{$module->name}] connection [{$module->connection()}] is not declared.";
-            }
-
-            if (! $module->hasDatabase && is_dir($module->path().'/database/migrations')) {
-                $problems[] = "[{$module->name}] has migrations but no database: declare its connection in its config/database.php.";
-            }
-
             foreach ($autoload->stale($module) as $namespace => $paths) {
                 $problems[] = "composer.json maps [{$namespace}] to [{$paths['declared']}], but the module lives in [{$paths['expected']}].";
             }

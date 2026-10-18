@@ -21,7 +21,6 @@ use Distributable\Console\ModuleOption;
 use Distributable\Console\ModuleSeedCommand;
 use Distributable\Context\ModuleConcurrencyDriver;
 use Distributable\Context\ModuleContext;
-use Distributable\Context\ModuleDatabaseManager;
 use Distributable\Context\ModuleDeferredCallbacks;
 use Distributable\Context\ModuleFactories;
 use Distributable\Context\ModuleTaskDispatcher;
@@ -79,7 +78,6 @@ final class DistributableServiceProvider extends BaseServiceProvider
         // Every database belongs to a module: until one runs, the default connection refuses every query.
         $this->app['config']->set('database.connections.'.ModuleContext::NO_MODULE, ['driver' => ModuleContext::NO_MODULE]);
         $this->app['config']->set('database.default', ModuleContext::NO_MODULE);
-        $this->app->singleton('db', static fn (Application $app): ModuleDatabaseManager => new ModuleDatabaseManager($app, $app['db.factory']));
         $this->app->afterResolving('db', static fn (DatabaseManager $db) => $db->extend(
             ModuleContext::NO_MODULE,
             static fn () => throw ModuleException::noModuleRunning(),

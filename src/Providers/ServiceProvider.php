@@ -7,7 +7,6 @@ namespace Distributable\Providers;
 use Distributable\Config\Modules;
 use Distributable\Context\ModuleContext;
 use Distributable\Context\ScheduledTasks;
-use Distributable\Exceptions\ModuleException;
 use Distributable\Http\Middleware\SetModuleContext;
 use Distributable\Models\ShadowModel;
 use Distributable\Services\Rpc\LocalServices;
@@ -154,16 +153,6 @@ abstract class ServiceProvider extends BaseServiceProvider
             self::$applicationConfig[$key] ??= (array) config($key, []);
             $values = require $configFile;
 
-            if ($key === 'database') {
-                foreach (array_keys((array) ($values['connections'] ?? [])) as $connection) {
-                    $owner = self::$declaredConnections[$connection] ??= $this->module->name;
-
-                    if ($owner !== $this->module->name) {
-                        throw ModuleException::sharedConnection((string) $connection, $owner, $this->module->name);
-                    }
-                }
-            }
-
             // A scalar the application already sets is the module's own value: applied while the module runs.
             foreach (Arr::dot($values) as $path => $value) {
                 if (! is_array($value) && $this->overridesApplicationScalar(self::$applicationConfig[$key], $path)) {
@@ -187,9 +176,6 @@ abstract class ServiceProvider extends BaseServiceProvider
 
         config()->set('microservices.events.listen', $listen);
     }
-
-    /** @var array<string, string> each connection a module's config/database.php declares, and that module */
-    private static array $declaredConnections = [];
 
     /** @var array<string, array<array-key, mixed>> each root config file as the application set it, before any module */
     private static array $applicationConfig = [];

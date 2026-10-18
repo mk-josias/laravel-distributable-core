@@ -11,12 +11,12 @@ application: `default` names the one it runs on.
 'connections' => ['main' => [...], 'warehouse' => [...]],
 ```
 
-Without `default`, the module runs on the connection named after it: module `iam` on `iam`. A
-connection name belongs to one module: two modules declaring the same one throw `ModuleException`
-at boot, rather than one overwriting the other.
+Without `default`, the module's code runs on `no_module`, like any code outside a module; its models
+can still name their own connection.
 
 ```php
 // apps/Iam/config/database.php
+'default' => 'iam',
 'owner' => 'iam_owner',
 'connections' => [
     // reads and writes rows
@@ -31,19 +31,19 @@ and can create and alter them. Only the `migrate` commands and the module's DDL 
 it, they run on `default`, which suits one role for everything. The root `config/database.php`
 sets `'owner' => null`, as it sets `default`, so that each module's value is its own.
 
-Declare the connection where you prefer; the module has a database as soon as it exists:
+Declare the connections where you prefer; the module runs on the one its `default` names:
 
 | Where | Result |
 |---|---|
 | the module's `config/database.php` | merged into `database.connections`; the module carries its own setup |
 | the root `config/database.php`, next to `sqlite` and `pgsql` | the same, with every connection in one file |
-| nowhere | the module has no database: its queries fail with `no_module`, and `modules:doctor` reports any migration it has |
 
 A module may need a second database, a warehouse next to its own for instance. It declares that
 connection in its `config/database.php`, and its code names it, on a model or a query:
 
 ```php
 // apps/Analytics/config/database.php
+'default' => 'analytics',
 'connections' => [
     'analytics' => ['driver' => 'pgsql', 'database' => 'analytics'],
     'warehouse' => ['driver' => 'pgsql', 'database' => 'warehouse'],
@@ -55,12 +55,8 @@ connection in its `config/database.php`, and its code names it, on a model or a 
 protected $connection = 'warehouse';
 ```
 
-A module's code uses only the connections its module declares: its own, the one `owner` names,
-and each connection of its `config/database.php`. Naming another one, another module's
-or one of the root `config/database.php` only, throws `ModuleException`. A migration that sets
-`$connection = 'warehouse'` runs on that connection; the others run on the owner connection. Laravel's
-and the packages' code (queues, sessions, failed jobs, events) opens the connections it needs and is
-not checked.
+A migration that sets `$connection = 'warehouse'` runs on that connection; the others run on the
+owner connection.
 
 The connections can point to separate databases on one server, separate schemas of one database,
 separate servers, or sqlite files in tests. The code is the same in every case. Several modules can

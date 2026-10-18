@@ -49,7 +49,7 @@ final class ModuleContext
         }
 
         $config->set('database.default', $module !== null && $module->hasDatabase
-            ? $module->connection()
+            ? $module->defaultConnection()
             : self::NO_MODULE);
 
         $this->swapServices($module, (array) $config->get('distributable.per_module', []));
