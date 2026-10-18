@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Distributable\Services\Modules;
 
-use Distributable\Contracts\PublishesMigrations;
+use Distributable\Contracts\Shadows\PublishesMigrations;
 use Distributable\Data\Module;
 use Distributable\Services\Shadows\ShadowRegistry;
 use Illuminate\Container\Container;

@@ -6,6 +6,7 @@ namespace Distributable\Services\Modules;
 
 use Closure;
 use Distributable\Config\Modules;
+use Distributable\Context\ModuleContext;
 use Distributable\Contracts\Colocation;
 use Distributable\Data\Module;
 

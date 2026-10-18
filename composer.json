@@ -21,21 +21,26 @@
     ],
     "require": {
         "php": "^8.4",
-        "laravel/framework": "^12.0 || ^13.0",
-        "mk-josias/laravel-microservices": "^0.2"
+        "laravel/framework": "^12.0 || ^13.0"
     },
     "suggest": {
         "laravel/octane": "High-throughput application server; the kernel also runs under plain FPM",
-        "mk-josias/laravel-microservices-rpc-http": "Calls to a module running in another process, over signed HTTP"
+        "mk-josias/laravel-microservices-rpc-http": "Calls to a module running in another process, over signed HTTP",
+        "mk-josias/laravel-microservices-stream-redis": "The redis events driver, on Redis Streams",
+        "mk-josias/laravel-microservices-stream-queue": "The queue events driver, for a stack without Redis"
     },
     "autoload": {
         "psr-4": {
             "Distributable\\": "src/"
-        }
+        },
+        "files": [
+            "src/helpers.php"
+        ]
     },
     "extra": {
         "laravel": {
             "providers": [
+                "Distributable\\Providers\\MicroservicesServiceProvider",
                 "Distributable\\Providers\\DistributableServiceProvider"
             ]
         }

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Distributable\Console\Commands;
 
 use Distributable\Config\Modules;
-use Distributable\Contracts\PublishesMigrations;
+use Distributable\Contracts\Shadows\PublishesMigrations;
 use Distributable\Services\Modules\ComposerAutoload;
 use Distributable\Services\Modules\ModuleRegistry;
 use Distributable\Services\Rpc\RpcServices;

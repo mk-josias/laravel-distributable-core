@@ -126,7 +126,7 @@ runs elsewhere:
 app(\Foundation\Iam\Contracts\IamService::class)->findUser($id);
 ```
 
-`Services\Modules\ModuleContext::current()` returns the current module (`Data\Module`) or null,
+`Context\ModuleContext::current()` returns the current module (`Data\Module`) or null,
 and `within($module, $callback)` runs a callback in a module's context. Only the package, tests and
 the module's own code may enter a module: when the code calling `within()` (directly, or through
 `Colocation::within()`) is another module's or the foundation's, it throws `ModuleException`,

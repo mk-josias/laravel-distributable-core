@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Distributable\Providers;
 
 use Distributable\Config\Modules;
+use Distributable\Context\ModuleContext;
+use Distributable\Context\ScheduledTasks;
 use Distributable\Exceptions\ModuleException;
 use Distributable\Http\Middleware\SetModuleContext;
 use Distributable\Models\ShadowModel;
-use Distributable\Services\Modules\ModuleContext;
 use Distributable\Services\Rpc\LocalServices;
-use Distributable\Support\ScheduledTasks;
 use Distributable\Traits\ResolvesModule;
 use Illuminate\Console\Command;
 use Illuminate\Console\Scheduling\Schedule;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Distributable\Console;
 
+use Distributable\Context\ModuleContext;
 use Distributable\Data\Module;
-use Distributable\Services\Modules\ModuleContext;
 use Illuminate\Database\Console\Seeds\SeedCommand;
 
 /** db:seed in a module (--module, or a migrate run of that module) runs the module's own seeders, from {module}/database/seeders. */

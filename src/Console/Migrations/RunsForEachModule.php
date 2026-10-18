@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Distributable\Console\Migrations;
 
+use Distributable\Context\ModuleContext;
 use Distributable\Migrations\ShadowMigration;
-use Distributable\Services\Modules\ModuleContext;
 use Distributable\Services\Modules\ModuleMigrations;
 use Distributable\Services\Modules\ModuleRegistry;
 use Symfony\Component\Console\Input\InputOption;

@@ -106,7 +106,7 @@ Keep in a module the tests that only need that module, and in `tests/` the ones 
 A model's factory is found without any code: `Preference::factory()` resolves
 `Apps\Notifications\Database\Factories\PreferenceFactory`, and that factory resolves its model. Laravel's
 `#[UseFactory]` on a model still wins, and so does a resolver of your own; yours can fall back on
-`Distributable\Support\ModuleFactories::factoryName()` and `modelName()`.
+`Distributable\Context\ModuleFactories::factoryName()` and `modelName()`.
 
 ## Running a command in a module
 

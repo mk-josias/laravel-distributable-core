@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Distributable\Testing;
 
 use Closure;
+use Distributable\Context\ModuleContext;
 use Distributable\Data\Envelope;
 use Distributable\Data\Module;
 use Distributable\Exceptions\ModuleException;
-use Distributable\Services\Modules\ModuleContext;
 use Distributable\Services\Modules\ModuleRegistry;
 use Distributable\Services\Stream\Dispatcher;
 use Illuminate\Foundation\Testing\WithConsoleEvents;

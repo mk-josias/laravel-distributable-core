@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Distributable\Http\Middleware;
 
 use Closure;
-use Distributable\Services\Modules\ModuleContext;
+use Distributable\Context\ModuleContext;
 use Distributable\Services\Modules\ModuleRegistry;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;

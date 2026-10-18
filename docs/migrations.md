@@ -65,7 +65,7 @@ php artisan make:migration add_archived_at_to_notifications_inbox --module=notif
 It lands in `apps/Notifications/database/migrations`.
 
 The migration of a copy is published by the module that owns the table. The copy names where its
-migrations are, by implementing `Distributable\Contracts\PublishesMigrations`: files or folders, as
+migrations are, by implementing `Distributable\Contracts\Shadows\PublishesMigrations`: files or folders, as
 Laravel's `loadMigrationsFrom()`. A folder brings every migration in it, whatever its file name.
 
 ```php

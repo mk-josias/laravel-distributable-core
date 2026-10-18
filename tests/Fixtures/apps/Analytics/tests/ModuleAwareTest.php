@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Distributable\Tests\Support\ModuleAppTestCase;
+use Distributable\Tests\ModuleAppTestCase;
 use Illuminate\Support\Facades\DB;
 
 uses(ModuleAppTestCase::class);

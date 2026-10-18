@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Apps\Iam\Listeners;
 
-use Distributable\Tests\Support\SomethingHappened;
+use Apps\Iam\Events\SomethingHappened;
 use Illuminate\Support\Facades\DB;
 
 final class RecordEventConnection
