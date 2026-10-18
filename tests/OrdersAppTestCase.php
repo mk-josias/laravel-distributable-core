@@ -52,6 +52,6 @@ abstract class OrdersAppTestCase extends Orchestra
 
     protected function defineDatabaseMigrations(): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/Fixtures/Orders/database/migrations');
+        $this->loadMigrationsFrom([__DIR__.'/Fixtures/Orders/database/migrations', ...CustomerShadow::migrations()]);
     }
 }

@@ -9,7 +9,6 @@ use Distributable\Services\Migrations\ModuleMigrations;
 use Distributable\Services\ModuleRegistry;
 use Distributable\Tests\ModuleAppTestCase;
 use Foundation\Iam\Shadows\MisplacedShadow;
-use Foundation\Iam\Shadows\UnpublishedShadow;
 use Foundation\Iam\Shadows\UserShadow as IamUserShadow;
 use Illuminate\Support\Facades\File;
 
@@ -217,11 +216,10 @@ it('fails on a module keeping two copies in one table', function () {
         ->assertFailed();
 });
 
-it('fails on a copy whose owner names no migration, and on one naming a folder without any', function () {
-    config()->set('microservices.shadows.analytics', [UserShadow::class, UnpublishedShadow::class, MisplacedShadow::class]);
+it('fails on a copy naming a folder without any migration', function () {
+    config()->set('microservices.shadows.analytics', [UserShadow::class, MisplacedShadow::class]);
 
     $this->artisan('modules:doctor')
-        ->expectsOutputToContain('[analytics] keeps '.UnpublishedShadow::class.', which names no migration')
         ->expectsOutputToContain('[analytics] keeps '.MisplacedShadow::class.', whose migrations [')
         ->doesntExpectOutputToContain('keeps '.UserShadow::class)
         ->assertFailed();

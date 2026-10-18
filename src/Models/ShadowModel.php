@@ -32,6 +32,15 @@ abstract class ShadowModel extends Model
     /** The source table this copy mirrors, e.g. `iam_users`. */
     abstract public static function sourceTable(): string;
 
+    /**
+     * Its migrations, published by the owner and run in the database of every module keeping the copy:
+     * files or folders, as Laravel's loadMigrationsFrom(); a folder brings every migration in it.
+     * A keeper's subclass with its own $table names its own.
+     *
+     * @return list<string>
+     */
+    abstract public static function migrations(): array;
+
     /** The source's own name; a keeper sharing its database with the owner, or keeping a second form of it, sets $table. */
     public function getTable(): string
     {

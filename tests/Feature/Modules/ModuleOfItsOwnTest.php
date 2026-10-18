@@ -7,7 +7,8 @@ use Distributable\Services\ModuleRegistry;
 use Distributable\Tests\TestCase;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Foundation\Application;
-use Shop\Providers\ShopServiceProvider;
+use Illuminate\Support\Facades\Route;
+use Shop\ShopServiceProvider;
 
 /** An application of one module: the module is the Testbench application itself. */
 abstract class ModuleOfItsOwnTestCase extends TestCase
@@ -29,6 +30,22 @@ it('is the project, and keeps the application\'s config as it is: nothing set as
 
     expect(realpath($module->path()))->toBe(realpath(base_path()))
         ->and(config('distributable.overlays.shop'))->toBeNull();
+});
+
+it('leaves the application\'s routes/ to bootstrap/app.php: none is loaded again under the module\'s prefix', function () {
+    $routes = base_path('routes');
+    $created = ! is_dir($routes) && mkdir($routes);
+    file_put_contents("{$routes}/web.php", "<?php\n\nIlluminate\\Support\\Facades\\Route::get('ping', fn () => 'pong');\n");
+
+    try {
+        require_once dirname(__DIR__, 2).'/Fixtures/shop/ShopServiceProvider.php';
+        app()->register(ShopServiceProvider::class);
+
+        expect(collect(Route::getRoutes()->getRoutes())->map->uri()->all())->not->toContain('shop/web/ping');
+    } finally {
+        unlink("{$routes}/web.php");
+        $created && rmdir($routes);
+    }
 });
 
 it('is never deleted: its folder is the application\'s', function () {

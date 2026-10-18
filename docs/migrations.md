@@ -65,12 +65,12 @@ php artisan make:migration add_archived_at_to_notifications_inbox --module=notif
 It lands in `apps/Notifications/database/migrations`.
 
 The migration of a copy is published by the module that owns the table. The copy names where its
-migrations are, by implementing `Distributable\Contracts\Shadows\PublishesMigrations`: files or folders, as
+migrations are in `migrations()`, next to `owner()` and `sourceTable()`: files or folders, as
 Laravel's `loadMigrationsFrom()`. A folder brings every migration in it, whatever its file name.
 
 ```php
 // foundation/Iam/Shadows/UserShadow.php
-class UserShadow extends ShadowModel implements PublishesMigrations
+class UserShadow extends ShadowModel
 {
     public static function owner(): string { return 'iam'; }
 
@@ -83,20 +83,15 @@ class UserShadow extends ShadowModel implements PublishesMigrations
 }
 ```
 
-The migration extends `ShadowMigration` and names the copy by its class:
+The migration is a plain Laravel migration of the copy's table:
 
 ```php
 // foundation/Iam/database/shadows/users/2026_01_01_000100_create_iam_users_shadow_table.php
-return new class extends ShadowMigration
+return new class extends Migration
 {
-    protected function shadow(): string
-    {
-        return UserShadow::class;
-    }
-
     public function up(): void
     {
-        Schema::create($this->table(), function (Blueprint $table): void {
+        Schema::create((new UserShadow)->getTable(), function (Blueprint $table): void {
             $table->unsignedBigInteger('id')->primary();
             $table->string('name');
             $table->string('email');
@@ -108,16 +103,15 @@ return new class extends ShadowMigration
 
     public function down(): void
     {
-        Schema::dropIfExists($this->table());
+        Schema::dropIfExists((new UserShadow)->getTable());
     }
 };
 ```
 
 The source table is written once, in the copy's `sourceTable()`: renaming it moves neither the
-folder nor the migration. `$this->table()` is the table the keeper's copy model reads, for the
-module being migrated: two modules can keep the copy under different names, and the same file
-creates each one. `modules:doctor` reports a kept copy that names no migration, and a path that
-holds none.
+folder nor the migration. A module whose subclass of the copy sets its own `$table` also overrides
+`migrations()`, and names a migration of its own `database/migrations`. `modules:doctor` reports
+a path a kept copy names that holds no migration.
 
 ## Limits
 

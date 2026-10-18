@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Distributable\Services\Migrations;
 
-use Distributable\Contracts\Shadows\PublishesMigrations;
 use Distributable\Data\Module;
 use Distributable\Services\Shadows\ShadowRegistry;
 use Illuminate\Container\Container;
@@ -52,9 +51,7 @@ final readonly class ModuleMigrations
         $paths = [];
 
         foreach ($this->shadows->localShadows($module->name) as $shadow) {
-            if (is_subclass_of($shadow, PublishesMigrations::class)) {
-                $paths = [...$paths, ...$shadow::migrations()];
-            }
+            $paths = [...$paths, ...$shadow::migrations()];
         }
 
         return array_values(array_unique($paths));

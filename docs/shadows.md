@@ -64,6 +64,11 @@ class UserShadow extends ShadowModel implements Principal
     {
         return 'iam_users';
     }
+
+    public static function migrations(): array
+    {
+        return [__DIR__.'/../database/shadows/users'];
+    }
 }
 ```
 
@@ -74,7 +79,7 @@ protected array $shadows = [UserShadow::class];
 
 A module lists the foundation's class as it is, or a subclass of its own that adds relations,
 casts or a `beforeSync()`. Each listed class is one table: two forms of one source need two
-`$table`s, and `modules:doctor` reports two copies in one table.
+`$table`s, each with its own `migrations()`, and `modules:doctor` reports two copies in one table.
 
 ## Where the copy lives
 
@@ -97,9 +102,8 @@ authenticated user of a request from its own copy.
 
 ## Creating its table
 
-iam publishes the migration of the copy's table, extending `Distributable\Migrations\ShadowMigration`,
-and `UserShadow::migrations()` names where it is: `foundation/Iam/database/shadows/users`. `migrate`
-runs it in the database of every module that keeps a copy. See [Migrations](./migrations#writing-a-migration).
+iam publishes the migration of the copy's table, and `UserShadow::migrations()` names where it is:
+`foundation/Iam/database/shadows/users`. `migrate` runs it in the database of every module that keeps a copy. See [Migrations](./migrations#writing-a-migration).
 
 ## Filling a copy that is created late
 

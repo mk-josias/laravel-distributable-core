@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace Foundation\Iam\Shadows;
 
-use Distributable\Contracts\Shadows\PublishesMigrations;
 use Distributable\Models\ShadowModel;
 
 /** A copy naming a migrations folder that does not exist: modules:doctor reports it. */
-final class MisplacedShadow extends ShadowModel implements PublishesMigrations
+final class MisplacedShadow extends ShadowModel
 {
     public static function owner(): string
     {

@@ -19,6 +19,11 @@ final class CustomerShadow extends ShadowModel
         return 'customers';
     }
 
+    public static function migrations(): array
+    {
+        return [__DIR__.'/../database/shadows/customers'];
+    }
+
     protected static function shouldBeShadowed(array $attributes): bool
     {
         return ($attributes['name'] ?? null) !== 'Hidden';
