@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Foundation\Iam\Services;
 
-use Distributable\Services\Rpc\RpcService;
+use Distributable\Services\Rpc\RpcClient;
 
-final class TokenRpcService extends RpcService
+final class TokenClient extends RpcClient
 {
     public int $calls = 0;
 

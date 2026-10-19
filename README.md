@@ -108,7 +108,7 @@ Modules communicate in two ways:
 | Mode | Used for | Same process | Different processes |
 |---|---|---|---|
 | Event stream (asynchronous) | announcing that something happened | through the stream | through the stream |
-| RPC (synchronous) | asking another module for an answer right away: reading its data, or having it perform an action whose result the caller needs | a direct method call on the module's own class, in its context: no HTTP | a signed HTTP call |
+| RPC (synchronous) | asking another module for an answer right away: reading its data, or having it perform an action whose result the caller needs | the module's handler, called in its context: no HTTP | a signed HTTP call |
 
 Shadows, the read-only copies described below, are built on events.
 
@@ -118,13 +118,13 @@ When the application boots, the package:
    under `Apps\{Module}\`;
 2. registers the service provider of every module this process runs. The provider merges the
    module's config files, loads its routes, translations and commands, and records the
-   implementation of each contract the module answers;
-3. registers the foundation's service provider, which binds every RPC contract to its
-   `RpcService`. The `RpcService` reaches the module in this process when it runs here, over the
-   network otherwise.
+   handler of each message the module answers;
+3. registers the foundation's service provider, which declares what the foundation shares.
+   A client sends a message to the module in this process when it runs here, over the network
+   otherwise.
 
 A module that runs in another process has no config, routes or handlers here. Only its RPC
-contracts are bound.
+messages and clients are used.
 
 Before any module's code runs, the package makes that module's connection, configuration and
 services the current ones, and puts the previous ones back afterwards. This is the module

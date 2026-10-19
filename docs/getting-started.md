@@ -18,10 +18,10 @@ apps/Iam/
 └── routes/api.php                    served under /iam/api/…
 
 foundation/
-├── FoundationServiceProvider.php     maps each contract to its RpcService
+├── FoundationServiceProvider.php     what the foundation declares for every module
 └── Iam/                              Foundation\Iam\, what iam shares with the other modules
-    ├── Contracts/IamService.php
-    ├── Services/IamRpcService.php    how another process calls iam
+    ├── Rpc/FindUser.php              a message iam answers
+    ├── Services/IamClient.php        how another process calls iam
     ├── Shadows/UserShadow.php
     └── database/shadows/users/       the migration of the copy of iam's users, named by UserShadow::migrations()
 ```
@@ -131,7 +131,7 @@ php artisan modules:doctor
 
 ```
 Boundary crossed: apps/Analytics/app/Models/Report.php: Apps\Iam\Models\User
-[iam] runs elsewhere and serves Foundation\Iam\Contracts\IamService, but distributable.declared.iam.host is not set.
+[iam] runs elsewhere and serves RPC messages, but distributable.declared.iam.host is not set.
 ```
 
 It reports a module that imports another module's class or names its tables, an undeclared module,

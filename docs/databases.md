@@ -94,14 +94,14 @@ final class RegisterUser
 | event handler | `Dispatcher`, around each handler | the module of the handler class |
 | Laravel event listener declared in a module's `$listen` | `ServiceProvider`, around each listener | the module that declares it |
 | scheduled task declared in a module's `schedule()` | `ScheduledTaskStarting` | the module that declares it |
-| RPC call, from this process or another | `LocalServices`, around the contract's method | the module that implements the contract |
+| RPC message, from this process or another | `Messages`, around the handler | the module that answers the message |
 | queued closure, or any job class outside a module | `Queue::before`, from the Context Laravel carries into the job | the module that queued it |
 | `defer(fn () => …)` | a `DeferredCallbackCollection` that wraps each callback | the module that deferred it |
 | `Concurrency::run()` (`process` driver) | a wrapper around the driver: the child process gets only the closure | the module that started it |
 | `Octane::concurrently()` | a `DispatchesTasks` bound by the package, for the task workers | the module that started it |
 
 The last line is why a module never switches databases itself: when analytics calls
-`IamService::findUser()` and iam runs in the same process, iam's implementation still runs in iam's
+`IamClient::findUser()` and iam runs in the same process, iam's handler still runs in iam's
 context and reads iam's database. The context is restored once the method returns.
 
 For your own deferred work, `ModuleContext::bind($task)` returns a closure that runs `$task` in the
@@ -114,12 +114,12 @@ Every database belongs to a module: there is no application database. Outside a 
 default connection is `ModuleContext::NO_MODULE`, and any query on it throws `ModuleException`
 ("No module runs here"). Code that isn't in a module (a route closure in `routes/web.php`, another
 package's route, Tinker without `--module`) therefore never uses a module's models. It goes
-through the module's contract, which runs in the module's context and still works when the module
+through the module's client, which runs the module's handler in its context and still works when the module
 runs elsewhere:
 
 ```php
 // never Apps\Iam\Models\User::find($id)
-app(\Foundation\Iam\Contracts\IamService::class)->findUser($id);
+app(\Foundation\Iam\Services\IamClient::class)->findUser($id);
 ```
 
 `Context\ModuleContext::current()` returns the current module (`Data\Module`) or null,

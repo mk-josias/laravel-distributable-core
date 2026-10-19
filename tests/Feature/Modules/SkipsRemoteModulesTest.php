@@ -5,8 +5,7 @@ declare(strict_types=1);
 use Distributable\Exceptions\ModuleException;
 use Distributable\Services\ModuleRegistry;
 use Distributable\Tests\WithoutIamTestCase;
-use Foundation\Iam\Contracts\IamService;
-use Foundation\Iam\Services\IamRpcService;
+use Foundation\Iam\Services\IamClient;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 
@@ -18,13 +17,12 @@ it('does not register a module this process does not boot', function () {
     expect(config('iam.flag'))->toBeNull();
 });
 
-it('binds the foundation RpcService of a module running elsewhere, and caches its reads', function () {
+it('reaches a module running elsewhere through its client, and caches its reads', function () {
     Http::fake(['iam.test/*' => Http::response(['id' => 1, 'name' => 'ada'])]);
 
-    $iam = app(IamService::class);
+    $iam = app(IamClient::class);
 
-    expect($iam)->toBeInstanceOf(IamRpcService::class)
-        ->and($iam->findUser(1))->toBe(['id' => 1, 'name' => 'ada'])
+    expect($iam->findUser(1))->toBe(['id' => 1, 'name' => 'ada'])
         ->and($iam->findUser(1))->toBe(['id' => 1, 'name' => 'ada']);
 
     Http::assertSentCount(1);

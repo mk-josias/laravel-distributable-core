@@ -8,14 +8,13 @@ use Distributable\Context\ModuleContext;
 use Distributable\Providers\DistributableServiceProvider;
 use Distributable\Services\ModuleRegistry;
 use Distributable\Testing\InteractsWithServices;
-use Distributable\Tests\Fixtures\Orders\Providers\OrdersFoundationProvider;
 use Distributable\Tests\Fixtures\Orders\Providers\OrdersServiceProvider;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Orchestra\Testbench\TestCase as Orchestra;
 
-/** The `orders` application, a module of its own: it answers OrdersService and calls `billing`, which runs elsewhere. */
+/** The `orders` application, a module of its own: it answers FindOrder and calls `billing`, which runs elsewhere. */
 abstract class OrdersAppTestCase extends Orchestra
 {
     use InteractsWithServices;
@@ -42,7 +41,7 @@ abstract class OrdersAppTestCase extends Orchestra
             'orders' => ['path' => __DIR__.'/Fixtures/Orders', 'namespace' => 'Distributable\Tests\Fixtures\Orders'],
             'billing' => ['host' => 'http://billing.test'],
         ]);
-        // Billing's contract and RpcService are its foundation's: Fixtures/Billing.
+        // Billing's messages and client are its foundation's: Fixtures/Billing.
         $config->set('distributable.foundation.namespace', 'Distributable\Tests\Fixtures');
         $config->set('distributable.foundation.path', __DIR__.'/Fixtures');
         $config->set('distributable.runs', 'orders');
@@ -50,7 +49,6 @@ abstract class OrdersAppTestCase extends Orchestra
         // As the package registers a module's providers: once the declaration is read.
         $app->booting(static function () use ($app): void {
             $app->register(OrdersServiceProvider::class);
-            $app->register(OrdersFoundationProvider::class);
         });
         $config->set('distributable.rpc.secret', 'test-secret');
         $config->set('distributable.events.streams.default.driver', 'array');

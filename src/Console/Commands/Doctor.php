@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Distributable\Console\Commands;
 
 use Distributable\Config\Modules;
+use Distributable\Contracts\Rpc\Message;
 use Distributable\RpcHttp\RpcHttp;
+use Distributable\Services\Discovery\ClassDiscovery;
 use Distributable\Services\ModuleRegistry;
-use Distributable\Services\Rpc\RpcServices;
+use Distributable\Services\Rpc\Messages;
 use Distributable\Services\Shadows\ShadowRegistry;
 use Distributable\Testing\Boundaries;
 use Illuminate\Console\Command;
@@ -18,7 +20,7 @@ final class Doctor extends Command
 
     protected $description = 'Check that every module can run: declaration, provider, connections, remote hosts, boundaries.';
 
-    public function handle(ModuleRegistry $registry, Modules $config, RpcServices $services, Boundaries $boundaries, ShadowRegistry $shadows): int
+    public function handle(ModuleRegistry $registry, Modules $config, Boundaries $boundaries, ShadowRegistry $shadows): int
     {
         $problems = [];
         $modulesPath = $config->getModulesPath();
@@ -62,16 +64,22 @@ final class Doctor extends Command
             }
         }
 
-        foreach ($services->all() as $contract => $service) {
-            if ($service['service'] === null) {
-                $problems[] = "{$contract} is not in the foundation of a declared module.";
-            } elseif (! $registry->isLocal($service['service']) && $config->getHost($service['service']) === null) {
-                $problems[] = "[{$service['service']}] runs elsewhere and serves {$contract}, but distributable.declared.{$service['service']}.host is not set.";
+        $served = [];
+
+        foreach (ClassDiscovery::with(Message::class, $config->getFoundationPath()) as $class) {
+            $served[Messages::describe($class)['module']][] = $class;
+        }
+
+        foreach ($served as $module => $classes) {
+            if ($registry->find($module) === null) {
+                $problems[] = "{$classes[0]} names module [{$module}], which is not declared in distributable.declared.";
+            } elseif (! $registry->isLocal($module) && $config->getHost($module) === null) {
+                $problems[] = "[{$module}] runs elsewhere and serves RPC messages, but distributable.declared.{$module}.host is not set.";
             }
         }
 
-        if ($services->all() !== [] && class_exists(RpcHttp::class) && app(RpcHttp::class)->getSecret() === '') {
-            $problems[] = 'Modules serve RPC contracts but distributable.rpc.secret is empty: set DISTRIBUTABLE_RPC_SECRET or APP_KEY.';
+        if ($served !== [] && class_exists(RpcHttp::class) && app(RpcHttp::class)->getSecret() === '') {
+            $problems[] = 'Modules serve RPC messages but distributable.rpc.secret is empty: set DISTRIBUTABLE_RPC_SECRET or APP_KEY.';
         }
 
         foreach ($boundaries->violations() as $violation) {

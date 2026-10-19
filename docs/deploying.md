@@ -24,7 +24,7 @@ exist. What a process that runs a module needs:
 |---|---|
 | the database of each module it runs | `migrate` makes one pass per module database it runs, so two processes never migrate the same one |
 | the event stream, shared by every process | events travel on it between processes (Redis in the starter) |
-| `distributable.declared.{module}.host` for each module it calls but doesn't run | its calls go to that host; `modules:doctor` reports a module that serves a contract without one |
+| `distributable.declared.{module}.host` for each module it calls but doesn't run | its calls go to that host; `modules:doctor` reports a module that serves messages without one |
 | the same `APP_KEY`, or the same `DISTRIBUTABLE_RPC_SECRET`, as the other processes | it signs the RPC calls, and the called process rejects any it can't verify |
 
 ## One image per module

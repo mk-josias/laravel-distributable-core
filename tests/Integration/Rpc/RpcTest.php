@@ -10,9 +10,8 @@ use Distributable\RpcHttp\RpcSignature;
 use Distributable\Services\ModuleRegistry;
 use Distributable\Services\Rpc\TransportManager as RpcTransportManager;
 use Distributable\Tests\ModuleAppTestCase;
-use Foundation\Iam\Contracts\IamService;
-use Foundation\Iam\Services\IamRpcService;
-use Foundation\Iam\Services\TokenRpcService;
+use Foundation\Iam\Services\IamClient;
+use Foundation\Iam\Services\TokenClient;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Facades\Cache;
@@ -20,6 +19,7 @@ use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 
 uses(ModuleAppTestCase::class);
 
@@ -33,10 +33,13 @@ function signedRpcHeaders(string $path, array $body, array $context = []): array
     return app(RpcSignature::class)->headers($path, json_encode($body), json_encode((object) $context));
 }
 
-/** @return array{contract: class-string, arguments: array<string, mixed>|object} */
-function rpcBody(string $contract, array $arguments = []): array
+/**
+ * @param  array<string, mixed>  $payload
+ * @return array{payload: object}
+ */
+function rpcBody(array $payload = []): array
 {
-    return ['contract' => $contract, 'arguments' => (object) $arguments];
+    return ['payload' => (object) $payload];
 }
 
 /** iam runs in another process from here on: its calls leave through its host. */
@@ -47,17 +50,16 @@ function iamRunsElsewhere(): void
     app()->forgetInstance(RpcTransportManager::class);
 }
 
-it('binds the contract to its RpcService, which reaches iam in this process when iam runs here', function () {
+it('reaches iam in this process when iam runs here', function () {
     Http::fake();
 
-    expect(app(IamService::class))->toBeInstanceOf(IamRpcService::class)
-        ->and(app(IamService::class)->findUser(1))->toBe(['id' => 1, 'name' => 'ada']);
+    expect(app(IamClient::class)->findUser(1))->toBe(['id' => 1, 'name' => 'ada']);
 
     Http::assertNothingSent();
 });
 
 it('runs the local call in iam context, whichever module calls it', function () {
-    $connection = $this->inModule('analytics', fn (): string => app(IamService::class)->defaultConnection());
+    $connection = $this->inModule('analytics', fn (): string => app(IamClient::class)->defaultConnection());
 
     expect($connection)->toBe('iam')
         ->and($this->inModule('analytics', fn (): string => DB::getDefaultConnection()))->toBe('analytics');
@@ -71,9 +73,9 @@ it('runs DB:: queries and a DB::transaction() of the local call on iam database,
     DB::connection('iam')->table('iam_users')->insert(['id' => 1, 'name' => 'ada']);
 
     $count = $this->inModule('analytics', function (): int {
-        app(IamService::class)->renameUser(1, 'grace');
+        app(IamClient::class)->renameUser(1, 'grace');
 
-        return app(IamService::class)->countUsers();
+        return app(IamClient::class)->countUsers();
     });
 
     expect($count)->toBe(1)
@@ -82,89 +84,110 @@ it('runs DB:: queries and a DB::transaction() of the local call on iam database,
         ->and(DB::connection('iam')->transactionLevel())->toBe(0);
 });
 
-it('only calls a method of a contract the module implements', function () {
-    app(RpcTransport::class)->invoke('iam', IamService::class, 'shutdown');
-})->throws(ServiceException::class, 'answers no [Foundation\Iam\Contracts\IamService::shutdown()]');
+it('only answers a message its module registers', function () {
+    app(RpcTransport::class)->invoke('iam', 'shutdown', 1, []);
+})->throws(ServiceException::class, 'answers no [shutdown] in version 1');
 
 it('rejects an unsigned call', function () {
-    $this->postJson('/iam/rpc/findUser', rpcBody(IamService::class, ['id' => 1]))->assertForbidden();
+    $this->postJson('/iam/rpc/1/find-user', rpcBody(['id' => 1]))->assertForbidden();
 });
 
 it('answers a signed call through the module implementation', function () {
-    $body = rpcBody(IamService::class, ['id' => 1]);
+    $body = rpcBody(['id' => 1]);
 
-    $this->postJson('/iam/rpc/findUser', $body, signedRpcHeaders('/iam/rpc/findUser', $body))
+    $this->postJson('/iam/rpc/1/find-user', $body, signedRpcHeaders('/iam/rpc/1/find-user', $body))
         ->assertOk()
         ->assertExactJson(['id' => 1, 'name' => 'ada']);
 });
 
 it('answers a missing record with a 404, read back as null', function () {
-    $body = rpcBody(IamService::class, ['id' => 9]);
+    $body = rpcBody(['id' => 9]);
 
-    $this->postJson('/iam/rpc/findUser', $body, signedRpcHeaders('/iam/rpc/findUser', $body))->assertNotFound();
+    $this->postJson('/iam/rpc/1/find-user', $body, signedRpcHeaders('/iam/rpc/1/find-user', $body))->assertNotFound();
 });
 
-it('answers a method or a contract the module does not serve with a 400, not a failure', function () {
-    foreach (['/iam/rpc/doesNotExist' => rpcBody(IamService::class), '/iam/rpc/findUser' => rpcBody('Foundation\Iam\Contracts\Unknown')] as $path => $body) {
+it('answers a message or a version the module does not serve with a 400, not a failure', function () {
+    foreach (['/iam/rpc/1/does-not-exist', '/iam/rpc/3/find-user'] as $path) {
+        $body = rpcBody(['id' => 1]);
+
         $this->postJson($path, $body, signedRpcHeaders($path, $body))
             ->assertStatus(400)
-            ->assertJsonPath('message', fn (string $message): bool => str_contains($message, 'Service [iam] answers no'));
+            ->assertJsonPath('message', fn (string $message): bool => str_contains($message, 'Module [iam] answers no'));
     }
+});
+
+it('answers a payload its rules refuse with a 422', function () {
+    $body = rpcBody(['id' => 'x']);
+
+    $this->postJson('/iam/rpc/1/find-user', $body, signedRpcHeaders('/iam/rpc/1/find-user', $body))
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('id');
+});
+
+it('serves two versions of a message while a transition lasts', function () {
+    $body = rpcBody(['id' => 1]);
+
+    $this->postJson('/iam/rpc/2/find-user', $body, signedRpcHeaders('/iam/rpc/2/find-user', $body))
+        ->assertOk()
+        ->assertExactJson(['id' => 1, 'name' => 'ada', 'email' => 'ada@example.test']);
+
+    $this->postJson('/iam/rpc/1/find-user', $body, signedRpcHeaders('/iam/rpc/1/find-user', $body))
+        ->assertOk()
+        ->assertExactJson(['id' => 1, 'name' => 'ada']);
 });
 
 it('rejects a stale signature', function () {
     $timestamp = (string) (time() - 3600);
-    $body = rpcBody(IamService::class, ['id' => 1]);
+    $body = rpcBody(['id' => 1]);
 
-    $this->postJson('/iam/rpc/findUser', $body, [
+    $this->postJson('/iam/rpc/1/find-user', $body, [
         RpcSignature::TIMESTAMP_HEADER => $timestamp,
         RpcSignature::NONCE_HEADER => 'n-1',
         RpcSignature::CONTEXT_HEADER => '{}',
-        RpcSignature::SIGNATURE_HEADER => app(RpcSignature::class)->sign($timestamp, 'n-1', '/iam/rpc/findUser', json_encode($body), '{}'),
+        RpcSignature::SIGNATURE_HEADER => app(RpcSignature::class)->sign($timestamp, 'n-1', '/iam/rpc/1/find-user', json_encode($body), '{}'),
     ])->assertForbidden();
 });
 
 it('rejects a signed call replayed', function () {
-    $body = rpcBody(IamService::class, ['id' => 1]);
-    $headers = signedRpcHeaders('/iam/rpc/findUser', $body);
+    $body = rpcBody(['id' => 1]);
+    $headers = signedRpcHeaders('/iam/rpc/1/find-user', $body);
 
-    $this->postJson('/iam/rpc/findUser', $body, $headers)->assertOk();
-    $this->postJson('/iam/rpc/findUser', $body, $headers)->assertForbidden();
+    $this->postJson('/iam/rpc/1/find-user', $body, $headers)->assertOk();
+    $this->postJson('/iam/rpc/1/find-user', $body, $headers)->assertForbidden();
 });
 
 it('restores the propagated context on the called side', function () {
-    $body = rpcBody(IamService::class);
+    $body = rpcBody();
 
-    $this->postJson('/iam/rpc/traceId', $body, signedRpcHeaders('/iam/rpc/traceId', $body, ['trace_id' => 'abc']))
+    $this->postJson('/iam/rpc/1/trace-id', $body, signedRpcHeaders('/iam/rpc/1/trace-id', $body, ['trace_id' => 'abc']))
         ->assertOk()->assertContent('"abc"');
 });
 
 it('rejects a context changed after signing', function () {
-    $body = rpcBody(IamService::class);
+    $body = rpcBody();
 
-    $this->postJson('/iam/rpc/traceId', $body, [
-        ...signedRpcHeaders('/iam/rpc/traceId', $body, ['trace_id' => 'abc']),
+    $this->postJson('/iam/rpc/1/trace-id', $body, [
+        ...signedRpcHeaders('/iam/rpc/1/trace-id', $body, ['trace_id' => 'abc']),
         RpcSignature::CONTEXT_HEADER => json_encode(['trace_id' => 'forged']),
     ])->assertForbidden();
 });
 
-it('sends a signed POST naming the contract and the method, and decodes the answer', function () {
+it('sends a signed POST naming the version and the message, and decodes the answer', function () {
     config()->set('distributable.events.propagate', ['trace_id']);
     Context::add('trace_id', 'abc');
     Http::fake(['iam.test/*' => Http::response(['id' => 1, 'name' => 'ada'])]);
 
-    $answer = app(HttpTransport::class)->invoke('iam', IamService::class, 'findUser', ['id' => 1]);
+    $answer = app(HttpTransport::class)->invoke('iam', 'find-user', 1, ['id' => 1]);
 
     expect($answer)->toBe(['id' => 1, 'name' => 'ada']);
 
-    Http::assertSent(fn (ClientRequest $request): bool => $request->url() === 'http://iam.test/iam/rpc/findUser'
-        && $request['contract'] === IamService::class
-        && $request['arguments'] === ['id' => 1]
+    Http::assertSent(fn (ClientRequest $request): bool => $request->url() === 'http://iam.test/iam/rpc/1/find-user'
+        && $request['payload'] === ['id' => 1]
         && $request->header(RpcSignature::CONTEXT_HEADER)[0] === '{"trace_id":"abc"}'
         && app(RpcSignature::class)->verify(
             $request->header(RpcSignature::TIMESTAMP_HEADER)[0],
             $request->header(RpcSignature::NONCE_HEADER)[0],
-            '/iam/rpc/findUser',
+            '/iam/rpc/1/find-user',
             $request->body(),
             $request->header(RpcSignature::CONTEXT_HEADER)[0],
             $request->header(RpcSignature::SIGNATURE_HEADER)[0],
@@ -173,23 +196,30 @@ it('sends a signed POST naming the contract and the method, and decodes the answ
 
 it('reaches iam over HTTP once iam runs elsewhere', function () {
     iamRunsElsewhere();
-    Http::fake(['iam.test/iam/rpc/findUser' => Http::response(['id' => 1, 'name' => 'ada'])]);
+    Http::fake(['iam.test/iam/rpc/1/find-user' => Http::response(['id' => 1, 'name' => 'ada'])]);
 
-    expect(app(RpcTransport::class)->invoke('iam', IamService::class, 'findUser', ['id' => 1]))
+    expect(app(RpcTransport::class)->invoke('iam', 'find-user', 1, ['id' => 1]))
         ->toBe(['id' => 1, 'name' => 'ada']);
 
     Http::assertSentCount(1);
 });
 
+it('reads a remote refusal of the payload as a validation error', function () {
+    iamRunsElsewhere();
+    Http::fake(['iam.test/*' => Http::response(['errors' => ['id' => ['bad']]], 422)]);
+
+    app(RpcTransport::class)->invoke('iam', 'find-user', 1, ['id' => 'x']);
+})->throws(ValidationException::class);
+
 it('reads a missing remote record as null', function () {
     iamRunsElsewhere();
     Http::fake(['iam.test/*' => Http::response(null, 404)]);
 
-    expect(app(RpcTransport::class)->invoke('iam', IamService::class, 'findUser', ['id' => 9]))->toBeNull();
+    expect(app(RpcTransport::class)->invoke('iam', 'find-user', 1, ['id' => 9]))->toBeNull();
 });
 
 it('caches a remote answer for as long as the answer says, and forgets it on demand', function () {
-    $service = app(TokenRpcService::class);
+    $service = app(TokenClient::class);
 
     expect($service->token(0))->toBeNull()
         ->and($service->token(60)['token'])->toBe('t2')
@@ -201,7 +231,7 @@ it('caches a remote answer for as long as the answer says, and forgets it on dem
 });
 
 it('keeps the raw answer and maps it on every read, dropping one that no longer maps', function () {
-    $service = app(TokenRpcService::class);
+    $service = app(TokenClient::class);
     $service->shaped(fn (): array => ['user_id' => 1]);
 
     expect(Cache::get('iam:shaped'))->toBeNull()
@@ -213,7 +243,7 @@ it('keeps the answers in the store distributable.rpc.cache names, shared by the 
     config()->set('cache.stores.rpc', ['driver' => 'array']);
     config()->set('distributable.rpc.cache', 'rpc');
 
-    app(IamRpcService::class)->findUser(1);
+    app(IamClient::class)->findUser(1);
 
     expect(Cache::store('rpc')->get('iam:user:1'))->toBe('{"id":1,"name":"ada"}')
         ->and(Cache::get('iam:user:1'))->toBeNull();
@@ -229,19 +259,19 @@ it('routes a call to the transport its module host names, registered with extend
         /** @param array<string, mixed> $config */
         public function __construct(private array $config) {}
 
-        public function invoke(string $service, string $contract, string $method, array $arguments = []): mixed
+        public function invoke(string $module, string $name, int $version, array $payload): mixed
         {
-            return ['via' => 'grpc', 'port' => $this->config['port'], 'call' => "{$service}/".class_basename($contract)."::{$method}"];
+            return ['via' => 'grpc', 'port' => $this->config['port'], 'call' => "{$module}/{$version}/{$name}"];
         }
     });
 
-    expect(app(RpcTransport::class)->invoke('iam', IamService::class, 'findUser'))
-        ->toBe(['via' => 'grpc', 'port' => 50051, 'call' => 'iam/IamService::findUser']);
+    expect(app(RpcTransport::class)->invoke('iam', 'find-user', 1, []))
+        ->toBe(['via' => 'grpc', 'port' => 50051, 'call' => 'iam/1/find-user']);
 });
 
 it('fails loudly on an RPC transport nobody declared', function () {
     iamRunsElsewhere();
     config()->set('distributable.declared.iam.host', ['url' => 'x', 'transport' => 'amqp']);
 
-    app(RpcTransport::class)->invoke('iam', IamService::class, 'findUser');
+    app(RpcTransport::class)->invoke('iam', 'find-user', 1, []);
 })->throws(ConfigurationException::class, 'RPC transport [amqp] is not declared');

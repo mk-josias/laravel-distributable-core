@@ -172,13 +172,13 @@ folder and the namespace, so there is nothing to register.
 | A module's factories and seeders | | `database/factories/` under `{modules.namespace}\{Name}\Database\Factories\`, `database/seeders/` under `…\Database\Seeders\` |
 | A module's views | | `resources/views/`, under the view namespace `{name}::` |
 | A module's tests | | `tests/`, under `{modules.namespace}\{Name}\Tests\` |
-| An RPC service | | under the module's foundation folder: `Foundation\Iam\` for `iam`, or `Foundation\Identity\` with `'iam' => ['foundation' => 'Identity']` |
+| An RPC message or client | | under the module's foundation folder: `Foundation\Iam\` for `iam`, or `Foundation\Identity\` with `'iam' => ['foundation' => 'Identity']` |
 | The migration of a copy | | where the copy's `migrations()` points; the starter keeps it in `{foundation.path}/{Owner}/database/shadows/{copy}/` |
 | The foundation's provider | | `{foundation.namespace}\FoundationServiceProvider` |
 
 These conventions are what the features are built on. Because the folder says everything, a module
 is found without being registered, `modules:purge` can delete a whole folder, `Boundaries` knows
-which module owns a file, and an RPC service knows which module it calls. With a setting for each,
+which module owns a file, and an RPC message knows which module it calls. With a setting for each,
 those guarantees would depend on configuration that every process must get right.
 
 ## A module of its own
@@ -220,12 +220,12 @@ class of any other module is never loaded, even if its file is on disk: using it
 `ModuleException`.
 
 ```
-[Apps\Iam\Services\IamService] belongs to module [iam], which this process does not run (RUN_MODULES): go through its foundation contract or an event.
+[Apps\Iam\Services\IamService] belongs to module [iam], which this process does not run (RUN_MODULES): go through its foundation messages or an event.
 ```
 
 This catches, at runtime, a call that `Boundaries` would have caught in your tests. A process still
 knows that the other modules exist, because `config/distributable.php` declares them: it listens to
-their events, and calls them through the RPC services of the foundation.
+their events, and calls them through the RPC clients of the foundation.
 
 When you build an image for some modules only, you can delete the folders of the others:
 
@@ -327,8 +327,8 @@ In a test, `Event::assertListening()` only sees a closure for them: use
 ## The foundation
 
 A module never uses another module's classes, because that import would break as soon as the
-modules are deployed separately. What a module shares with the others (its RPC contracts and
-services, the shape of its copies, its event names) goes in `foundation/{Module}/`, autoloaded as
+modules are deployed separately. What a module shares with the others (its RPC messages and
+clients, the shape of its copies, its event names) goes in `foundation/{Module}/`, autoloaded as
 `Foundation\{Module}\` (`distributable.foundation.path`, `distributable.foundation.namespace`). Any module can
 use the foundation, and the foundation uses no module.
 
@@ -345,8 +345,8 @@ It has two kinds of folders:
 
 | Folder | What it is | In the starter |
 |---|---|---|
-| `foundation/{Module}/` | what that module publishes to the others: its contracts, its `RpcService`, its events and their payloads, the shape of its copies, its permission enums | `Foundation\Iam\Contracts\IamService`, `Foundation\Iam\Services\IamRpcService`, `Foundation\Iam\Events\UserRegisteredPayload`, `Foundation\Iam\Shadows\UserShadow`, `Foundation\Analytics\Enums\AnalyticsPermission` |
-| `foundation/Common/` | not a module: it isn't in `distributable.declared`. The base classes every module uses, grouped by technical concern (`Auth`, `Http`, `Database`, `Exceptions`, `Validation`…), not by domain | `Foundation\Common\Http\Controller`, `Foundation\Common\Http\Middleware\Authenticate` |
+| `foundation/{Module}/` | what that module publishes to the others: its RPC messages, its clients, its events and their payloads, the shape of its copies, its permission enums | `Foundation\Iam\Rpc\FindUser`, `Foundation\Iam\Services\IamClient`, `Foundation\Iam\Events\UserRegisteredPayload`, `Foundation\Iam\Shadows\UserShadow`, `Foundation\Analytics\Enums\AnalyticsPermission` |
+| `foundation/Common/` | not a module: it isn't in `distributable.declared`. The base classes every module uses, grouped by technical concern (`Auth`, `Http`, `Database`, `Exceptions`, `Validation`…), not by domain | `Foundation\Common\Http\Controllers\Controller`, `Foundation\Common\Http\Middleware\Authenticate` |
 
 `Foundation\Common\Http\Middleware\Authenticate` reads from left to right: `Foundation` is the root
 namespace of the foundation (`distributable.foundation.namespace`), `Common` is shared by every module
@@ -376,9 +376,9 @@ php artisan modules:doctor
 | a local module without its `bootstrap/providers.php` | `[iam] …/apps/Iam/bootstrap/providers.php does not exist.` |
 | a module whose service provider class doesn't exist | `[notifications] provider Apps\Notifications\Providers\NotificationsServiceProvider does not exist.` |
 | two copies kept in one table | `[analytics] keeps two copies in table [users]: … Give each its own $table.` |
-| an RPC contract that isn't in the foundation of a declared module | `Foundation\Iam\Contracts\IamService is not in the foundation of a declared module.` |
-| a module running elsewhere that serves a contract, with no host | `[iam] runs elsewhere and serves Foundation\Iam\Contracts\IamService, but distributable.declared.iam.host is not set.` |
-| RPC contracts declared while the secret is empty | `Modules serve RPC contracts but distributable.rpc.secret is empty: set DISTRIBUTABLE_RPC_SECRET or APP_KEY.` |
+| an RPC message that names an undeclared module | `Foundation\Iam\Rpc\FindUser names module [iam], which is not declared in distributable.declared.` |
+| a module running elsewhere that serves messages, with no host | `[iam] runs elsewhere and serves RPC messages, but distributable.declared.iam.host is not set.` |
+| RPC messages declared while the secret is empty | `Modules serve RPC messages but distributable.rpc.secret is empty: set DISTRIBUTABLE_RPC_SECRET or APP_KEY.` |
 | a module using another module's classes, or the foundation or the application (`app/`, `routes/`, `config/`) using a module | `Boundary crossed: apps/Analytics/app/Models/Report.php: Apps\Iam\Models\User` |
 | a module naming another module's connection, or a table that module's migrations create | `Boundary crossed: apps/Analytics/app/Models/Report.php: 'iam_users'` |
 | two local modules setting one config key to different values | `Modules [analytics, iam] set config [iam.flag] to different values: in one process, the module registered last wins.` |

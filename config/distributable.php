@@ -71,7 +71,7 @@ return [
         // Signs every call; the caller and the called process must share it, so it falls back to APP_KEY.
         'secret' => env('DISTRIBUTABLE_RPC_SECRET', env('APP_KEY', '')),
 
-        // The cache store of the RpcService answers, shared by every process: the caller keeps an
+        // The cache store of the RpcClient answers, shared by every process: the caller keeps an
         // answer, the owner forgets it when it writes. Null is the default store.
         'cache' => env('DISTRIBUTABLE_RPC_CACHE_STORE'),
     ],

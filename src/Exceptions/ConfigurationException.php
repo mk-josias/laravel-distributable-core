@@ -60,6 +60,16 @@ final class ConfigurationException extends RuntimeException
         return new self("Archive store [{$name}] is not supported: register it with Services\\Stream\\ArchiveStores::extend().");
     }
 
+    public static function messageWithoutRpc(string $class): self
+    {
+        return new self("[{$class}] is a message without #[Rpc]: it names no module.");
+    }
+
+    public static function messageOfAnotherModule(string $message, string $owner, string $module): self
+    {
+        return new self("[{$message}] belongs to module [{$owner}]: module [{$module}] cannot answer it in \$rpc.");
+    }
+
     public static function missingRpcHost(string $service): self
     {
         return new self("No RPC host configured for service [{$service}]: set distributable.declared.{$service}.host.");

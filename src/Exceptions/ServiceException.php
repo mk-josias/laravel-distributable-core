@@ -14,14 +14,9 @@ final class ServiceException extends RuntimeException
         return new self("Cannot resolve the service of [{$class}]: it belongs to no service this process knows.");
     }
 
-    public static function unknownRpcMethod(string $service, string $contract, string $method): self
+    public static function unknownRpcMessage(string $module, string $name, int $version): self
     {
-        return new self("Service [{$service}] answers no [{$contract}::{$method}()]: only a method of a contract it declares in \$services can be called.");
-    }
-
-    public static function unmappedRpcService(string $class): self
-    {
-        return new self("[{$class}] is in no \$rpc map: its contract is unknown.");
+        return new self("Module [{$module}] answers no [{$name}] in version {$version}: only a message it registers in \$rpc can be sent.");
     }
 
     public static function eventVersionAhead(string $name, int $version, int $known): self

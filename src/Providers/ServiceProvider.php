@@ -7,10 +7,11 @@ namespace Distributable\Providers;
 use Distributable\Config\Modules;
 use Distributable\Context\ModuleContext;
 use Distributable\Context\ScheduledTasks;
+use Distributable\Contracts\Rpc\Message;
 use Distributable\Http\Middleware\SetModuleContext;
 use Distributable\Models\ShadowModel;
 use Distributable\Services\Discovery\ClassDiscovery;
-use Distributable\Services\Rpc\LocalServices;
+use Distributable\Services\Rpc\Messages;
 use Distributable\Traits\ResolvesModule;
 use Illuminate\Console\Command;
 use Illuminate\Console\Scheduling\Schedule;
@@ -37,8 +38,8 @@ abstract class ServiceProvider extends BaseServiceProvider
 {
     use ResolvesModule;
 
-    /** @var array<class-string, class-string> each foundation contract this module implements, with its implementation */
-    protected array $services = [];
+    /** @var array<class-string<Message>, class-string> each foundation message this module answers, with its handler */
+    protected array $rpc = [];
 
     /** @var array<class-string, list<string>> as EventServiceProvider::$listen: event => listener classes, or Class@method */
     protected array $listen = [];
@@ -58,14 +59,7 @@ abstract class ServiceProvider extends BaseServiceProvider
             config()->set("distributable.shadows.{$this->module->name}", $this->shadows);
         }
 
-        $local = $this->app->make(LocalServices::class);
-
-        // A contract with an RpcService is rebound to it by the foundation provider: every call
-        // then takes the same path, in this process or not. One without stays bound here.
-        foreach ($this->services as $contract => $implementation) {
-            $local->add($this->module->name, $contract, $implementation);
-            $this->app->bind($contract, $implementation);
-        }
+        $this->app->make(Messages::class)->add($this->module->name, $this->rpc);
     }
 
     public function boot(): void

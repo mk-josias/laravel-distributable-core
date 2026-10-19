@@ -45,4 +45,4 @@ src/
 
 `ModuleRegistry` tells which modules this process runs, which module a class belongs to
 (`ownerOf()`), and which connection each one uses (`connectionOf()`).
-`ModuleRpcTransport` turns a call to a module this process runs into a direct method call.
+`ModuleRpcTransport` hands a message for a module this process runs to its handler.

@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace Distributable\Services\Rpc;
 
 use Closure;
-use Distributable\Config\Rpc;
-use Distributable\Contracts\Rpc\Transport;
-use Distributable\Exceptions\ServiceException;
-use Distributable\Services\ModuleRegistry;
+use Distributable\Config\Rpc as RpcConfig;
+use Distributable\Contracts\Rpc\Message;
 use Illuminate\Cache\RedisStore;
 use Illuminate\Cache\TaggableStore;
 use Illuminate\Cache\TaggedCache;
@@ -18,34 +16,18 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Base of the implementation a contract is bound to on the caller's side. It lives next to the
- * contract, in the namespace of the service it calls, so every caller has it.
+ * Base of the client a foundation gives the modules that call another: it sends the messages of
+ * that module, and keeps the answers it reads in the cache.
  */
-abstract class RpcService
+abstract class RpcClient
 {
     /** Long by design: the owner forgets a key when it writes; expiry only catches a missed forget. */
     protected const int DEFAULT_TTL = 604800;
 
-    /** The service this one calls, read from its namespace. */
-    public string $service {
-        get => app(ModuleRegistry::class)->ownerOf(static::class)->name
-            ?? throw ServiceException::outsideService(static::class);
-    }
-
-    public function __construct(protected readonly Transport $transport) {}
-
-    /**
-     * Calls $method of the contract this service is mapped to, on the service that implements it:
-     * in this process when it runs here, over its transport otherwise.
-     *
-     * @param  array<string, mixed>  $arguments  by name, as the contract's method declares them
-     */
-    protected function call(string $method, array $arguments = []): mixed
+    /** Sends $message to the module that answers it: in this process when it runs here, over its transport otherwise. */
+    protected function send(Message $message): mixed
     {
-        $contract = app(RpcServices::class)->contractOf(static::class)
-            ?? throw ServiceException::unmappedRpcService(static::class);
-
-        return $this->transport->invoke($this->service, $contract, $method, $arguments);
+        return app(Rpc::class)->send($message);
     }
 
     /**
@@ -165,7 +147,7 @@ abstract class RpcService
      */
     protected function cache(?array $tags = null): Repository
     {
-        $store = Cache::store(app(Rpc::class)->getCacheStore());
+        $store = Cache::store(app(RpcConfig::class)->getCacheStore());
 
         return $tags !== null && $store->getStore() instanceof TaggableStore ? $store->tags($tags) : $store;
     }

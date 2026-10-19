@@ -5,7 +5,7 @@ connection or setting named anywhere. What makes that possible is the module con
 module's code runs, the package puts in place everything that belongs to that module, and puts the
 previous context back afterwards.
 
-![Every way into a module's code goes through ModuleContext::switchTo, which sets the module's config, connection, services and Context; analytics calls iam through its contract, the same DB::transaction() lands in iam's database, then analytics' context is restored; outside any module the connection is no_module and any query throws](./images/module-context.png)
+![Every way into a module's code goes through ModuleContext::switchTo, which sets the module's config, connection, services and Context; analytics calls iam through its client, the same DB::transaction() lands in iam's database, then analytics' context is restored; outside any module the connection is no_module and any query throws](./images/module-context.png)
 
 ## What the context sets
 
@@ -39,12 +39,12 @@ entry points, with the hook that sets each one and the module it picks, is in
 | `bind($task)` | returns a closure that runs `$task` in the current module wherever it runs later; it captures only the module's name, so it can be serialized |
 | `current()` | the module running now, or `null` outside any module |
 
-The calls nest. When analytics calls `IamService::findUser()` in the same process, iam's
-implementation runs in iam's context and analytics' context is restored when the method returns.
+The calls nest. When analytics calls `IamClient::findUser()` in the same process, iam's
+handler runs in iam's context and analytics' context is restored when the method returns.
 
 ## What a module can't do
 
 A module can't put itself in another's context. `within()`, called from another module's code or
 from the foundation, throws a `ModuleException`. Only the package, a test, or the module's own code
-may enter a module: the way into another module is its contract, see
+may enter a module: the way into another module is its messages, see
 [the rules of RPC between modules](./rpc#rules-of-rpc-between-modules).

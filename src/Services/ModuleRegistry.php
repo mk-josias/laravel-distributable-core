@@ -113,7 +113,7 @@ final class ModuleRegistry
         return array_map(static fn (Module $module): string => $module->name, $this->local());
     }
 
-    /** The module a class belongs to: its own code, or its foundation's (its contracts, its RpcService). */
+    /** The module a class belongs to: its own code, or its foundation's (its messages, its clients). */
     public function ownerOf(string $class): ?Module
     {
         return $this->forClass($class) ?? $this->forFoundationClass($class, $this->foundationNamespace);

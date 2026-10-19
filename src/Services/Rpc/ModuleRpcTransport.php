@@ -8,21 +8,21 @@ use Distributable\Contracts\Rpc\Transport;
 use Distributable\Services\ModuleRegistry;
 use Illuminate\Container\Container;
 
-/** A call to a module this process runs is a direct method call; any other goes out on the module's transport. */
+/** A message to a module this process runs is answered directly; any other goes out on the module's transport. */
 final readonly class ModuleRpcTransport implements Transport
 {
     public function __construct(
-        private LocalServices $services,
+        private Messages $messages,
         private TransportManager $remote,
     ) {}
 
-    public function invoke(string $service, string $contract, string $method, array $arguments = []): mixed
+    public function invoke(string $module, string $name, int $version, array $payload): mixed
     {
         // From the running application: Octane serves each request from its own copy.
         $registry = Container::getInstance()->make(ModuleRegistry::class);
 
-        return $registry->find($service) !== null && $registry->isLocal($service)
-            ? $this->services->call($service, $contract, $method, $arguments)
-            : $this->remote->invoke($service, $contract, $method, $arguments);
+        return $registry->find($module) !== null && $registry->isLocal($module)
+            ? $this->messages->answer($module, $name, $version, $payload)
+            : $this->remote->invoke($module, $name, $version, $payload);
     }
 }

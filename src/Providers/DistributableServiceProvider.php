@@ -44,9 +44,9 @@ use Distributable\Exceptions\ModuleException;
 use Distributable\Http\Controllers\StatusController;
 use Distributable\Services\Discovery\DiscoveryCache;
 use Distributable\Services\ModuleRegistry;
-use Distributable\Services\Rpc\LocalServices;
+use Distributable\Services\Rpc\Messages;
 use Distributable\Services\Rpc\ModuleRpcTransport;
-use Distributable\Services\Rpc\RpcServices;
+use Distributable\Services\Rpc\Rpc as RpcSender;
 use Distributable\Services\Rpc\TransportManager as RpcTransportManager;
 use Distributable\Services\Shadows\CachedShadowRegistry;
 use Distributable\Services\Shadows\ShadowRegistry;
@@ -102,11 +102,11 @@ final class DistributableServiceProvider extends BaseServiceProvider
 
         $this->carryTheModuleIntoDeferredWork();
 
-        // A call to a module this process runs is a method call; any other goes out on the module's transport.
+        // A message to a module this process runs is answered directly; any other goes out on the module's transport.
         $this->app->bind(RpcTransport::class, ModuleRpcTransport::class);
         $this->app->singleton(RpcTransportManager::class);
-        $this->app->singleton(RpcServices::class);
-        $this->app->singleton(LocalServices::class);
+        $this->app->singleton(Messages::class);
+        $this->app->singleton(RpcSender::class);
 
         $this->app->singleton(TransportManager::class);
         $this->app->singleton(ArchiveStores::class);
@@ -269,7 +269,6 @@ final class DistributableServiceProvider extends BaseServiceProvider
             }
         }
 
-        // After the modules: it binds a contract to its RpcService only where no local module answered.
         $foundation = $this->app->make(Modules::class)->getFoundationNamespace().'\\FoundationServiceProvider';
 
         if (class_exists($foundation)) {

@@ -11,7 +11,7 @@ use Distributable\Exceptions\ConfigurationException;
 use Illuminate\Contracts\Container\Container;
 
 /**
- * Routes each call to the named transport of distributable.rpc.transports its service's host
+ * Routes each call to the named transport of distributable.rpc.transports its module's host
  * names. extend('grpc', fn ($app, array $config, string $name) => …) registers any driver.
  */
 final class TransportManager implements Transport
@@ -24,9 +24,9 @@ final class TransportManager implements Transport
 
     public function __construct(private readonly Container $container) {}
 
-    public function invoke(string $service, string $contract, string $method, array $arguments = []): mixed
+    public function invoke(string $module, string $name, int $version, array $payload): mixed
     {
-        return $this->transport($this->config()->getTransportOf($service))->invoke($service, $contract, $method, $arguments);
+        return $this->transport($this->config()->getTransportOf($module))->invoke($module, $name, $version, $payload);
     }
 
     public function transport(?string $name = null): Transport

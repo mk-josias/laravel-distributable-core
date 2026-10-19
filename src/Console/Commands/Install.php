@@ -38,7 +38,7 @@ final class Install extends Command
 
                 final class FoundationServiceProvider extends BaseServiceProvider
                 {
-                    protected array \$rpc = [];
+                    protected array \$payloads = [];
                 }
 
                 PHP);
