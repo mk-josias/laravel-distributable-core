@@ -20,6 +20,7 @@ use Distributable\Console\Commands\MakeModule;
 use Distributable\Console\Commands\PruneConsumptions;
 use Distributable\Console\Commands\PurgeModules;
 use Distributable\Console\Commands\RepublishEvents;
+use Distributable\Console\Commands\ServeRpc;
 use Distributable\Console\Commands\SkipEntries;
 use Distributable\Console\Commands\TrimEvents;
 use Distributable\Console\Commands\UnusedPackages;
@@ -360,7 +361,7 @@ final class DistributableServiceProvider extends BaseServiceProvider
             $this->commands([
                 Install::class, MakeModule::class, DeleteModule::class, ListModules::class, Doctor::class, PurgeModules::class, UnusedPackages::class,
                 CacheModules::class, ClearModules::class,
-                RepublishEvents::class, ConsumeEvents::class, SkipEntries::class, TrimEvents::class, PruneConsumptions::class,
+                RepublishEvents::class, ConsumeEvents::class, SkipEntries::class, TrimEvents::class, PruneConsumptions::class, ServeRpc::class,
                 ExportEvents::class, ImportEvents::class, AnnounceShadows::class, WantShadows::class,
             ]);
         }

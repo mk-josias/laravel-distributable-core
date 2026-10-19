@@ -50,6 +50,7 @@ the `http` role is on:
 | Role | Variable | Default | Run at most |
 |---|---|---|---|
 | `http` (Octane) | `WITH_HTTP` | `true` | as many as you need |
+| `rpc` (`rpc:serve`, port `DISTRIBUTABLE_RPC_PORT`) | `WITH_RPC` | `false` | as many as you need: the calls between modules, kept off the API's workers |
 | `worker` (`queue:work`) | `WITH_WORKER` | `false` | as many as you need |
 | `scheduler` (`schedule:run` every minute) | `WITH_SCHEDULER` | `false` | one per set of modules: two would run each task twice |
 | `consumers` (`stream:consume`) | `WITH_CONSUMERS` | `false` | one per set of modules: it serves every module of `RUN_MODULES`, each with its own cursor, and two would break the order a module reads in |
