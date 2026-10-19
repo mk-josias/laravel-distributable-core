@@ -9,8 +9,8 @@ use Distributable\Services\Shadows\ShadowRegistry;
 use Illuminate\Container\Container;
 
 /**
- * The migrations of a module database: the application's (laravel-microservices' outbox tables
- * among them), the module's and its copies'.
+ * The migrations of a module database: the application's (the package's outbox tables among
+ * them), the module's and its copies'.
  */
 final readonly class ModuleMigrations
 {

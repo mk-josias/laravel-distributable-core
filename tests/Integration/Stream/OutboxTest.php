@@ -36,7 +36,7 @@ beforeEach(function () {
 
     $this->app->singleton(Recorder::class);
 
-    // laravel-microservices' publication migrations, on the iam module's database.
+    // The package's publication migrations, on the iam module's database.
     Config::set('database.default', 'iam');
     foreach (glob(dirname((string) (new ReflectionClass(DistributableServiceProvider::class))->getFileName(), 3).'/database/migrations/*.php') as $file) {
         (require $file)->up();

@@ -26,7 +26,7 @@ it('registers every provider a module lists in its bootstrap/providers.php', fun
 
 it('answers which modules this process runs on the status route', function () {
     $this->get('/')->assertOk()->assertExactJson([
-        'message' => 'Hello from laravel-distributable-modules',
+        'message' => 'Hello from laravel-distributable',
         'modules' => ['analytics', 'gateway', 'iam'],
         'status' => 'ok',
     ]);

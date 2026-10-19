@@ -270,7 +270,7 @@ A package the root `composer.json` or a module this process runs also requires i
 With `MODULES_STATUS_ROUTE=/`, the process returns the modules it runs:
 
 ```json
-{ "message": "Hello from laravel-distributable-modules", "modules": ["iam", "analytics"], "status": "ok" }
+{ "message": "Hello from laravel-distributable", "modules": ["iam", "analytics"], "status": "ok" }
 ```
 
 ## The module service provider
