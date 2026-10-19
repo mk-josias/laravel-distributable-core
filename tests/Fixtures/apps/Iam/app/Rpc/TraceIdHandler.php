@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Apps\Iam\Rpc;
 
+use Distributable\Contracts\Rpc\Handler;
 use Foundation\Iam\Rpc\TraceId;
 use Illuminate\Support\Facades\Context;
 
-final class TraceIdHandler
+/** @implements Handler<TraceId> */
+final class TraceIdHandler implements Handler
 {
     public function handle(TraceId $message): ?string
     {

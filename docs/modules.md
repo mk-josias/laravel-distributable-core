@@ -220,7 +220,7 @@ class of any other module is never loaded, even if its file is on disk: using it
 `ModuleException`.
 
 ```
-[Apps\Iam\Services\IamService] belongs to module [iam], which this process does not run (RUN_MODULES): go through its foundation messages or an event.
+[Apps\Iam\Repositories\UserRepository] belongs to module [iam], which this process does not run (RUN_MODULES): go through its foundation messages or an event.
 ```
 
 This catches, at runtime, a call that `Boundaries` would have caught in your tests. A process still

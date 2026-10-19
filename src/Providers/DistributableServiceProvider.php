@@ -44,7 +44,7 @@ use Distributable\Exceptions\ModuleException;
 use Distributable\Http\Controllers\StatusController;
 use Distributable\Services\Discovery\DiscoveryCache;
 use Distributable\Services\ModuleRegistry;
-use Distributable\Services\Rpc\Messages;
+use Distributable\Services\Rpc\MessageRegistry;
 use Distributable\Services\Rpc\ModuleRpcTransport;
 use Distributable\Services\Rpc\Rpc as RpcSender;
 use Distributable\Services\Rpc\TransportManager as RpcTransportManager;
@@ -105,7 +105,7 @@ final class DistributableServiceProvider extends BaseServiceProvider
         // A message to a module this process runs is answered directly; any other goes out on the module's transport.
         $this->app->bind(RpcTransport::class, ModuleRpcTransport::class);
         $this->app->singleton(RpcTransportManager::class);
-        $this->app->singleton(Messages::class);
+        $this->app->singleton(MessageRegistry::class);
         $this->app->singleton(RpcSender::class);
 
         $this->app->singleton(TransportManager::class);

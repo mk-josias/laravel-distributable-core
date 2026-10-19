@@ -27,13 +27,15 @@ module's `database/migrations` when only that module uses the package.
 It belongs to one module. Laravel Sanctum is the usual case: `PersonalAccessToken::findToken()`
 reads the default connection, so a token issued in `iam` is not in `analytics`' database, and its
 `tokenable` is iam's own model, a class the other processes don't load. Install it in `iam` only,
-and let the other modules validate tokens through iam's contract:
+and let the other modules validate tokens through a message iam answers:
 
 ```php
-// apps/Iam/app/Services/IamService.php: the User model uses HasApiTokens
-public function findUserByToken(string $token): ?array
+// apps/Iam/app/Rpc/FindUserByTokenHandler.php: the User model uses HasApiTokens
+public function handle(FindUserByToken $message): ?array
 {
-    return $this->present(PersonalAccessToken::findToken($token)?->tokenable);
+    $user = $this->users->byAccessToken($message->token);
+
+    return $user === null ? null : ['id' => (int) $user->getKey(), 'name' => (string) $user->name];
 }
 ```
 

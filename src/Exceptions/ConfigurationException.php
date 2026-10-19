@@ -70,6 +70,16 @@ final class ConfigurationException extends RuntimeException
         return new self("[{$message}] belongs to module [{$owner}]: module [{$module}] cannot answer it in \$rpc.");
     }
 
+    public static function handlerWithoutContract(string $handler): self
+    {
+        return new self("[{$handler}] answers a message in \$rpc but does not implement Contracts\\Rpc\\Handler.");
+    }
+
+    public static function handlerOfAnotherMessage(string $handler, string $message): self
+    {
+        return new self("[{$handler}] must declare handle({$message} \$message): it has no handle(), or its first parameter is another type.");
+    }
+
     public static function missingRpcHost(string $service): self
     {
         return new self("No RPC host configured for service [{$service}]: set distributable.declared.{$service}.host.");

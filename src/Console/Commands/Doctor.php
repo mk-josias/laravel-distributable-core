@@ -9,7 +9,7 @@ use Distributable\Contracts\Rpc\Message;
 use Distributable\RpcHttp\RpcHttp;
 use Distributable\Services\Discovery\ClassDiscovery;
 use Distributable\Services\ModuleRegistry;
-use Distributable\Services\Rpc\Messages;
+use Distributable\Services\Rpc\MessageRegistry;
 use Distributable\Services\Shadows\ShadowRegistry;
 use Distributable\Testing\Boundaries;
 use Illuminate\Console\Command;
@@ -67,7 +67,7 @@ final class Doctor extends Command
         $served = [];
 
         foreach (ClassDiscovery::with(Message::class, $config->getFoundationPath()) as $class) {
-            $served[Messages::describe($class)['module']][] = $class;
+            $served[MessageRegistry::describe($class)['module']][] = $class;
         }
 
         foreach ($served as $module => $classes) {

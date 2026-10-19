@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Distributable\Tests\Fixtures\Orders\Rpc;
 
+use Distributable\Contracts\Rpc\Handler;
 use Illuminate\Support\Facades\Context;
 
-final class OrdersTraceIdHandler
+/** @implements Handler<OrdersTraceId> */
+final class OrdersTraceIdHandler implements Handler
 {
     public function handle(OrdersTraceId $message): ?string
     {

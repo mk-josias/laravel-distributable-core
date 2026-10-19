@@ -41,7 +41,7 @@ final class ModuleException extends RuntimeException
 
     public static function notLocal(string $class, string $module): self
     {
-        return new self("[{$class}] belongs to module [{$module}], which this process does not run (RUN_MODULES): go through its foundation contract or an event.");
+        return new self("[{$class}] belongs to module [{$module}], which this process does not run (RUN_MODULES): go through its foundation messages or an event.");
     }
 
     public static function missingFolder(string $module, string $path): self
@@ -56,7 +56,7 @@ final class ModuleException extends RuntimeException
 
     public static function entersAnotherModule(string $from, string $module, string $file): self
     {
-        return new self("[{$file}] makes {$from} code run in module [{$module}], on its database: go through its foundation contract or an event.");
+        return new self("[{$file}] makes {$from} code run in module [{$module}], on its database: go through its foundation messages or an event.");
     }
 
     /** A class the package needs to attach to a module lives outside every module namespace. */

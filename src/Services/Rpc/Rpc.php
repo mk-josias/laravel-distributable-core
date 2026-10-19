@@ -14,8 +14,8 @@ final readonly class Rpc
 
     public function send(Message $message): mixed
     {
-        ['module' => $module, 'name' => $name, 'version' => $version] = Messages::describe($message::class);
+        ['module' => $module, 'name' => $name, 'version' => $version] = MessageRegistry::describe($message::class);
 
-        return $this->transport->invoke($module, $name, $version, Messages::payloadOf($message));
+        return $this->transport->invoke($module, $name, $version, MessageRegistry::payloadOf($message));
     }
 }

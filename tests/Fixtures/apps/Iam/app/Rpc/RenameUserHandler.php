@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Apps\Iam\Rpc;
 
+use Distributable\Contracts\Rpc\Handler;
 use Foundation\Iam\Rpc\RenameUser;
 use Illuminate\Support\Facades\DB;
 use LogicException;
 
-final class RenameUserHandler
+/** @implements Handler<RenameUser> */
+final class RenameUserHandler implements Handler
 {
     public function handle(RenameUser $message): void
     {

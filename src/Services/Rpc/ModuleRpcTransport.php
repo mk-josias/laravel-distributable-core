@@ -12,7 +12,7 @@ use Illuminate\Container\Container;
 final readonly class ModuleRpcTransport implements Transport
 {
     public function __construct(
-        private Messages $messages,
+        private MessageRegistry $messages,
         private TransportManager $remote,
     ) {}
 

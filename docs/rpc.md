@@ -29,7 +29,8 @@ final readonly class FindUser implements Message
 }
 
 // apps/Iam/app/Rpc/FindUserHandler.php
-final class FindUserHandler
+/** @implements Handler<FindUser> */
+final class FindUserHandler implements Handler
 {
     public function handle(FindUser $message): ?array
     {

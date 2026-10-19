@@ -94,7 +94,7 @@ final class RegisterUser
 | event handler | `Dispatcher`, around each handler | the module of the handler class |
 | Laravel event listener declared in a module's `$listen` | `ServiceProvider`, around each listener | the module that declares it |
 | scheduled task declared in a module's `schedule()` | `ScheduledTaskStarting` | the module that declares it |
-| RPC message, from this process or another | `Messages`, around the handler | the module that answers the message |
+| RPC message, from this process or another | `MessageRegistry`, around the handler | the module that answers the message |
 | queued closure, or any job class outside a module | `Queue::before`, from the Context Laravel carries into the job | the module that queued it |
 | `defer(fn () => …)` | a `DeferredCallbackCollection` that wraps each callback | the module that deferred it |
 | `Concurrency::run()` (`process` driver) | a wrapper around the driver: the child process gets only the closure | the module that started it |

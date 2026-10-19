@@ -7,11 +7,12 @@ namespace Distributable\Providers;
 use Distributable\Config\Modules;
 use Distributable\Context\ModuleContext;
 use Distributable\Context\ScheduledTasks;
+use Distributable\Contracts\Rpc\Handler;
 use Distributable\Contracts\Rpc\Message;
 use Distributable\Http\Middleware\SetModuleContext;
 use Distributable\Models\ShadowModel;
 use Distributable\Services\Discovery\ClassDiscovery;
-use Distributable\Services\Rpc\Messages;
+use Distributable\Services\Rpc\MessageRegistry;
 use Distributable\Traits\ResolvesModule;
 use Illuminate\Console\Command;
 use Illuminate\Console\Scheduling\Schedule;
@@ -38,7 +39,7 @@ abstract class ServiceProvider extends BaseServiceProvider
 {
     use ResolvesModule;
 
-    /** @var array<class-string<Message>, class-string> each foundation message this module answers, with its handler */
+    /** @var array<class-string<Message>, class-string<Handler<*>>> each foundation message this module answers, with its handler */
     protected array $rpc = [];
 
     /** @var array<class-string, list<string>> as EventServiceProvider::$listen: event => listener classes, or Class@method */
@@ -59,7 +60,7 @@ abstract class ServiceProvider extends BaseServiceProvider
             config()->set("distributable.shadows.{$this->module->name}", $this->shadows);
         }
 
-        $this->app->make(Messages::class)->add($this->module->name, $this->rpc);
+        $this->app->make(MessageRegistry::class)->add($this->module->name, $this->rpc);
     }
 
     public function boot(): void

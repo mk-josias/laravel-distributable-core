@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Apps\Iam\Rpc;
 
+use Distributable\Contracts\Rpc\Handler;
 use Foundation\Iam\Rpc\FindUserV2;
 
-final class FindUserV2Handler
+/** @implements Handler<FindUserV2> */
+final class FindUserV2Handler implements Handler
 {
     /** @return array{id: int, name: string, email: string}|null */
     public function handle(FindUserV2 $message): ?array
