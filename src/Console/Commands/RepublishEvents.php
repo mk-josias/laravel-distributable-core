@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Distributable\Console\Commands;
 
 use Distributable\Config\Streamer;
-use Distributable\Console\LocalServicesOption;
+use Distributable\Context\ModuleContext;
+use Distributable\Services\ModuleRegistry;
 use Distributable\Services\Stream\Outbox\Relay;
 use Illuminate\Console\Command;
 
@@ -16,14 +17,11 @@ use Illuminate\Console\Command;
  */
 final class RepublishEvents extends Command
 {
-    use LocalServicesOption;
-
-    protected $signature = 'stream:republish
-        {--service=* : Limit to these services}';
+    protected $signature = 'stream:republish';
 
     protected $description = 'Send the events stored in the database that could not be sent after their commit.';
 
-    public function handle(Relay $relay, Streamer $config): int
+    public function handle(Relay $relay, Streamer $config, ModuleRegistry $registry, ModuleContext $context): int
     {
         if (! $config->publishesReliably()) {
             $this->error('Events are not published reliably: set DISTRIBUTABLE_EVENTS_RELIABLE_PUBLISH=true first.');
@@ -31,8 +29,10 @@ final class RepublishEvents extends Command
             return self::FAILURE;
         }
 
-        foreach ($this->selectedServices() as $service) {
-            $this->line("→ {$service}: {$relay->drain($service)} sent");
+        $current = $context->current()?->name;
+
+        foreach ($current !== null ? [$current] : $registry->localNames() as $module) {
+            $this->line("→ {$module}: {$relay->drain($module)} sent");
         }
 
         return self::SUCCESS;

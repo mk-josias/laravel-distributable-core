@@ -33,10 +33,10 @@ it('stamps an event with this service as its emitter, and the propagated context
         ->and($envelope->headers)->toBe(['trace_id' => 'abc']);
 });
 
-it('runs the handlers listening to an event another service emitted', function () {
+it('runs the handlers listening to an event another module emitted', function () {
     config()->set('distributable.events.listen', ['billing.invoice.paid' => [OnInvoicePaid::class]]);
 
-    $this->receive('billing.invoice.paid', ['order_id' => 7]);
+    $this->receive('orders', 'billing.invoice.paid', ['order_id' => 7]);
 
     expect(DB::table('paid_orders')->pluck('order_id')->all())->toBe([7]);
 });

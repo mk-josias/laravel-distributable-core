@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Distributable\Contracts\Rpc\Serves;
+use Distributable\Contracts\Rpc\ServesRpc;
 use Distributable\Contracts\Rpc\Transport;
 use Distributable\Services\Rpc\TransportManager;
 use Distributable\Tests\OrdersAppTestCase;
@@ -10,7 +10,7 @@ use Distributable\Tests\OrdersAppTestCase;
 uses(OrdersAppTestCase::class);
 
 it('starts the process of a transport that has one', function () {
-    app(TransportManager::class)->extend('listening', fn () => new class implements Serves, Transport
+    app(TransportManager::class)->extend('listening', fn () => new class implements ServesRpc, Transport
     {
         public function invoke(string $module, string $name, int $version, array $payload): mixed
         {

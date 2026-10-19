@@ -12,29 +12,31 @@ final readonly class Rpc
 {
     public function __construct(private Repository $config) {}
 
-    public function hasHost(string $service): bool
+    public function hasHost(string $module): bool
     {
-        return $this->config->get("distributable.declared.{$service}.host") !== null;
+        return $this->config->get("distributable.declared.{$module}.host") !== null;
     }
 
-    public function getHost(string $service): string
+    public function getHost(string $module): string
     {
-        $host = $this->host($service);
+        $host = $this->host($module);
 
         return (string) (is_array($host) ? ($host['url'] ?? '') : $host);
     }
 
-    /** The transport a service's calls travel on: its host's `transport`, or distributable.rpc.transport. */
-    public function getTransportOf(string $service): string
+    /** The transport a module's calls travel on: its host's `transport`, or distributable.rpc.transport. */
+    public function getTransportOf(string $module): string
     {
-        $host = $this->host($service);
+        $host = $this->host($module);
 
         return (string) (is_array($host) && isset($host['transport']) ? $host['transport'] : $this->getDefaultTransport());
     }
 
     public function getDefaultTransport(): string
     {
-        return (string) $this->config->get('distributable.rpc.transport', 'http');
+        $name = $this->config->get('distributable.rpc.transport');
+
+        return is_string($name) && $name !== '' ? $name : throw ConfigurationException::noRpcTransport();
     }
 
     /** @return array<string, mixed> */
@@ -47,12 +49,12 @@ final readonly class Rpc
     }
 
     /** @return string|array<string, mixed> */
-    private function host(string $service): string|array
+    private function host(string $module): string|array
     {
         /** @var string|array<string, mixed>|null $host */
-        $host = $this->config->get("distributable.declared.{$service}.host");
+        $host = $this->config->get("distributable.declared.{$module}.host");
 
-        return $host ?? throw ConfigurationException::missingRpcHost($service);
+        return $host ?? throw ConfigurationException::missingRpcHost($module);
     }
 
     /** Null is the application's default cache store. */

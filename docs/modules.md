@@ -1,69 +1,68 @@
 # Modules
 
-## Declaring a module
-
-A module is a name in `distributable.declared`. Its folder is `apps/` followed by the name in
-StudlyCase, and everything else is derived from that folder. The configuration only holds what the
-folder can't tell, such as the URL of a module that runs elsewhere:
-
-```php
-// config/distributable.php (php artisan vendor:publish --tag=distributable-config)
-'declared' => [
-    'iam'       => ['host' => env('IAM_HOST')],
-    'analytics' => [],
-],
-'modules'    => ['path' => 'apps', 'namespace' => 'Apps'],
-'foundation' => ['path' => 'foundation', 'namespace' => 'Foundation'],
-```
-
-| Key | What it says |
-|---|---|
-| `declared` | every module of the application, by name. A module's array holds only what its folder can't tell: it can be empty (`'analytics' => []`) |
-| `declared.iam.host` | the URL of `iam` when it runs in another process: calls to it go there, as `IAM_HOST=http://iam.internal:8000` does. It can also be `['url' => …, 'transport' => …]` to name another transport. `modules:doctor` reports a module that runs elsewhere and serves a contract without one |
-| `declared.{name}.path`, `declared.{name}.namespace` | its own folder and the namespace of its `app/`, when it isn't `apps/{Name}` under `Apps\{Name}`: `'iam' => ['path' => 'apps/Identity', 'namespace' => 'Apps\Identity']`. See [A module of its own](#a-module-of-its-own) |
-| `declared.{name}.foundation` | its folder under `foundation/` when it isn't the name in StudlyCase: `'iam' => ['foundation' => 'Identity']` |
-| `modules`, `foundation` | the directory of the modules and of the foundation (`path`), and their root namespace (`namespace`) |
-
-`RUN_MODULES` is not a key of `declared`: it says which of these modules a process runs (see below).
-For example, in a `docker-compose.yml` where `analytics` calls `iam` in another container:
-
-```yaml
-  analytics:
-    environment:
-      RUN_MODULES: analytics
-      # read by declared.iam.host
-      IAM_HOST: "http://iam.svc:8000"
-  iam:
-    environment:
-      RUN_MODULES: iam
-    networks:
-      default:
-        # the name analytics calls
-        aliases: [iam.svc]
-```
-
-| | Module `Iam`, with the defaults |
-|---|---|
-| name | `iam`, the directory name in snake_case (`^[a-z][a-z0-9_]*$`) |
-| namespace | `Apps\Iam`, autoloaded from `apps/Iam/app` by the package: the application needs no `composer.json` entry |
-| provider | `Apps\Iam\Providers\IamServiceProvider` |
-| database | yes, because `apps/Iam/config/database.php` exists |
+## Create a module
 
 ```bash
-# creates apps/{Module} and foundation/{Module}, and declares it
-php artisan modules:make <module> [--database]
-# deletes its folders and its declaration; its database is left as it is
-php artisan modules:delete <module> [--force]
-# lists the modules, where they run, their database and host
-php artisan modules:list
-# deletes the folder of the modules this process doesn't run
-php artisan modules:purge
-# checks that the modules can run, see "Checking the application"
-php artisan modules:doctor
+php artisan modules:make billing
 ```
 
-The package autoloads the foundation and the modules itself: the application needs no
-`composer.json` entry, and the package writes none. Your IDE reads `composer.json` without booting
+This creates the module in `apps/Billing` and declares it in `config/distributable.php`:
+
+```
+apps/Billing/
+├── app/
+│   ├── Models/
+│   └── Providers/BillingServiceProvider.php
+├── bootstrap/providers.php
+├── config/database.php
+├── database/migrations/
+├── routes/api.php
+└── tests/Feature/
+```
+
+Everything in it is plain Laravel, laid out like an application. Put a model in `app/Models`, a
+route in `routes/api.php`, a migration in `database/migrations`: the package finds them from the
+folder, so there is nothing to register.
+
+### Its routes
+
+`routes/api.php` is served under `/billing/api/…`. A file named `routes/web.php` would be served
+under `/billing/web/…`.
+
+### Its database
+
+`config/database.php` gives the module a connection named `billing`, on its own database. Edit it
+to point to yours:
+
+```php
+// apps/Billing/config/database.php
+return [
+    'default' => 'billing',
+    'connections' => [
+        'billing' => ['driver' => 'pgsql', 'database' => 'billing', 'username' => 'billing_app'],
+    ],
+];
+```
+
+A model in `app/Models` needs no connection: while billing's code runs, Laravel's default
+connection is `billing`. `php artisan migrate` creates the tables in each module's database.
+
+### Generating code in it
+
+Laravel's `make:*` commands take `--module`:
+
+```bash
+php artisan make:model Invoice -mf --module=billing
+```
+
+This writes `apps/Billing/app/Models/Invoice.php`, its migration and its factory. The other
+generators are listed in [Generating code in a module](#generating-code-in-a-module).
+
+## Letting your IDE find the classes
+
+The package autoloads the modules itself: the application needs no `composer.json` entry for them,
+and the package writes none. The foundation is the application's: map `Foundation\` in
+`composer.json` and list its provider in `bootstrap/providers.php`. Your IDE reads `composer.json` without booting
 Laravel; to let it resolve the classes, map the foundation in the root file, and each module in its
 own, merged by `wikimedia/composer-merge-plugin` (see
 [The dependencies of a module](#the-dependencies-of-a-module)):
@@ -156,14 +155,15 @@ module's model then throws `ModuleException`, since no database belongs to it.
 ## Conventions
 
 A module is laid out like a Laravel application, by convention, the way Laravel itself expects
-`app/Models` or `routes/web.php`. You choose the four roots in the configuration, and the folder of a
-module under them when it isn't its name; inside a module, the package reads everything from the
+`app/Models` or `routes/web.php`. You choose the four roots in the configuration; a module that
+lives elsewhere declares its own `path` and `namespace`, and its route `prefix`;
+inside a module, the package reads everything from the
 folder and the namespace, so there is nothing to register.
 
 | | Configurable | Fixed by convention |
 |---|---|---|
 | Where the modules live | `modules.path` (`apps`), `modules.namespace` (`Apps`); a module's own folder and namespace with `declared.{name}.path` and `.namespace` | a module is `{modules.path}/{Name}`, its name is `{Name}` in snake_case |
-| Where the foundation lives | `foundation.path` (`foundation`), `foundation.namespace` (`Foundation`); a module's own folder there with `declared.{name}.foundation` | what module `iam` shares is `{foundation.path}/Iam`, under `Foundation\Iam\` |
+| Where the foundation lives | `foundation.path` (`foundation`): where `modules:doctor` and `Boundaries` look | in the starter, what module `iam` shares is `foundation/Iam`, under `Foundation\Iam\` |
 | A module's code | | `app/`, under `{modules.namespace}\{Name}\` |
 | A module's providers | | in `app/Providers/`, listed in the module's own `bootstrap/providers.php`: Laravel's layout, read by the package and only where the module runs |
 | A module's database | `default` in the module's `config/database.php` | the connection its code runs on; without it, `no_module` |
@@ -172,15 +172,9 @@ folder and the namespace, so there is nothing to register.
 | A module's factories and seeders | | `database/factories/` under `{modules.namespace}\{Name}\Database\Factories\`, `database/seeders/` under `…\Database\Seeders\` |
 | A module's views | | `resources/views/`, under the view namespace `{name}::` |
 | A module's tests | | `tests/`, under `{modules.namespace}\{Name}\Tests\` |
-| An RPC message or client | | under the module's foundation folder: `Foundation\Iam\` for `iam`, or `Foundation\Identity\` with `'iam' => ['foundation' => 'Identity']` |
-| The migration of a copy | | where the copy's `migrations()` points; the starter keeps it in `{foundation.path}/{Owner}/database/shadows/{copy}/` |
-| The foundation's provider | | `{foundation.namespace}\FoundationServiceProvider` |
-
-These conventions are what the features are built on. Because the folder says everything, a module
-is found without being registered, `modules:purge` can delete a whole folder, `Boundaries` knows
-which module owns a file, and an RPC message knows which module it calls. With a setting for each,
-those guarantees would depend on configuration that every process must get right.
-
+| An RPC message or client | | in the foundation: `Foundation\Iam\` for `iam` in the starter |
+| The migration of a copy | | where the `migrations:` of the copy's `#[Shadow]` point; the starter keeps it in `{foundation.path}/{Owner}/database/shadows/{copy}/` |
+| The foundation's provider | | the application's own, listed in its `bootstrap/providers.php` (`Foundation\FoundationServiceProvider` in the starter) |
 ## A module of its own
 
 A module can declare where it lives instead of following `modules.path` and `modules.namespace`:
@@ -215,12 +209,13 @@ it. The cache never decides which modules exist: `distributable.declared` does.
 
 ## Modules this process doesn't run
 
-The package only autoloads the classes of the modules in `RUN_MODULES`, plus the foundation. A
+The package only autoloads the classes of the modules in `RUN_MODULES`. A
 class of any other module is never loaded, even if its file is on disk: using it throws a
 `ModuleException`.
 
 ```
-[Apps\Iam\Repositories\UserRepository] belongs to module [iam], which this process does not run (RUN_MODULES): go through its foundation messages or an event.
+[Apps\Iam\Repositories\UserRepository] belongs to module [iam], which this process does not run
+(RUN_MODULES): go through its foundation messages or an event.
 ```
 
 This catches, at runtime, a call that `Boundaries` would have caught in your tests. A process still
@@ -261,7 +256,10 @@ version:
 # spatie/laravel-permission
 UNUSED="$(RUN_MODULES=analytics php artisan modules:unused-packages)"
 RUN_MODULES=analytics php artisan modules:purge --force
-[ -z "$UNUSED" ] || { composer update $UNUSED --no-dev --no-scripts; rm -f bootstrap/cache/packages.php bootstrap/cache/services.php; }
+[ -z "$UNUSED" ] || {
+  composer update $UNUSED --no-dev --no-scripts
+  rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
+}
 composer dump-autoload --optimize --no-dev
 ```
 
@@ -303,7 +301,7 @@ How the config merge works, and what it can't do:
 |---|---|
 | a list (`['a', 'b']`) | gains the items it lacks; a module can't remove or replace an item, so set the whole list in the root config |
 | any other array, integer keys included (`[404 => …]`) | merged key by key |
-| a scalar the root config already sets (`cache.prefix`, a mailer, a disk root) | the module's own value: applied while its code runs, the root one back outside it. Two modules in one process each keep theirs. A service built once and kept (a resolved cache store, a mailer) holds the value it was built with, unless it is listed in `distributable.per_module` (`['cache', 'cache.store', 'mail.manager', 'mailer', 'filesystem']`, or a package's service): each module then gets its own instance, built once with its config and swapped in as it runs. An object that received the service in its constructor keeps the instance it was given. |
+| a scalar the root config already sets (`cache.prefix`, a mailer, a disk root) | the module's own value: applied while its code runs, the root one back outside it. Two modules in one process each keep theirs. For the cache, the mailer, the disks and any service built from settings, see [Its settings and services](./module-context). |
 | a scalar the root config doesn't set, that two local modules set differently | the module registered last wins in one process, while each keeps its own once they run apart: `modules:doctor` reports it |
 | when it runs | as the module's provider registers, after every package provider: a package reading its config in its own `register()` doesn't see the module's values |
 | its scope | the whole process: a module overriding a package's config changes it for every module running there |
@@ -328,9 +326,10 @@ In a test, `Event::assertListening()` only sees a closure for them: use
 
 A module never uses another module's classes, because that import would break as soon as the
 modules are deployed separately. What a module shares with the others (its RPC messages and
-clients, the shape of its copies, its event names) goes in `foundation/{Module}/`, autoloaded as
-`Foundation\{Module}\` (`distributable.foundation.path`, `distributable.foundation.namespace`). Any module can
-use the foundation, and the foundation uses no module.
+clients, the shape of its copies, its event names) goes in the foundation. The starter keeps it in
+`foundation/{Module}/`, autoloaded as `Foundation\{Module}\` by the application's `composer.json`;
+the package only reads `distributable.foundation.path` to check it. Any module can use the
+foundation, and the foundation uses no module.
 
 ```
 apps/Analytics ──► foundation/Iam ◄── apps/Iam
@@ -349,10 +348,10 @@ It has two kinds of folders:
 | `foundation/Common/` | not a module: it isn't in `distributable.declared`. The base classes every module uses, grouped by technical concern (`Auth`, `Http`, `Database`, `Exceptions`, `Validation`…), not by domain | `Foundation\Common\Http\Controllers\Controller`, `Foundation\Common\Http\Middleware\Authenticate` |
 
 `Foundation\Common\Http\Middleware\Authenticate` reads from left to right: `Foundation` is the root
-namespace of the foundation (`distributable.foundation.namespace`), `Common` is shared by every module
+namespace of the foundation in the starter, `Common` is shared by every module
 and owned by none, `Http\Middleware` is the concern, `Authenticate` is the class. The package doesn't depend on
 `Common`: these classes are yours, to change or delete. The starter labels how firmly each piece
-is meant, see [`foundation/Common`](https://github.com/mk-josias/laravel-distributable-modules-starter#foundationcommon) in its README.
+is meant, see [`foundation/Common`](https://github.com/mk-josias/laravel-distributable-starter/blob/main/docs/skeleton.md#foundationcommon) in its documentation.
 
 Where the code of a concern sits follows who needs it: the code that every module uses goes in
 `Common`; what only one module's neighbours need to know about it (here, how `iam`'s tokens and
@@ -378,7 +377,7 @@ php artisan modules:doctor
 | two copies kept in one table | `[analytics] keeps two copies in table [users]: … Give each its own $table.` |
 | an RPC message that names an undeclared module | `Foundation\Iam\Rpc\FindUser names module [iam], which is not declared in distributable.declared.` |
 | a module running elsewhere that serves messages, with no host | `[iam] runs elsewhere and serves RPC messages, but distributable.declared.iam.host is not set.` |
-| RPC messages declared while the secret is empty | `Modules serve RPC messages but distributable.rpc.secret is empty: set DISTRIBUTABLE_RPC_SECRET or APP_KEY.` |
+| RPC messages declared while the secret is empty | `rpc-http.secret is empty: set DISTRIBUTABLE_RPC_SECRET or APP_KEY.` |
 | a module using another module's classes, or the foundation or the application (`app/`, `routes/`, `config/`) using a module | `Boundary crossed: apps/Analytics/app/Models/Report.php: Apps\Iam\Models\User` |
 | a module naming another module's connection, or a table that module's migrations create | `Boundary crossed: apps/Analytics/app/Models/Report.php: 'iam_users'` |
 | two local modules setting one config key to different values | `Modules [analytics, iam] set config [iam.flag] to different values: in one process, the module registered last wins.` |

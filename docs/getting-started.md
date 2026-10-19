@@ -2,7 +2,7 @@
 
 `app/` is still your Laravel application. Each module lives in `apps/`. If you would rather start
 from a working application, use the
-[starter](https://github.com/mk-josias/laravel-distributable-modules-starter).
+[starter](https://github.com/mk-josias/laravel-distributable-starter).
 
 ```
 config/distributable.php                   declares the modules: 'declared' => ['iam' => [], …]
@@ -13,7 +13,7 @@ apps/Iam/
 │   ├── Models/User.php
 │   └── Events/UserRegistered.php
 ├── config/
-│   └── database.php                  its connections; if the file exists, the module has a database
+│   └── database.php                  its connections: `modules:make` always writes it
 ├── database/migrations/
 └── routes/api.php                    served under /iam/api/…
 
@@ -23,8 +23,11 @@ foundation/
     ├── Rpc/FindUser.php              a message iam answers
     ├── Services/IamClient.php        how another process calls iam
     ├── Shadows/UserShadow.php
-    └── database/shadows/users/       the migration of the copy of iam's users, named by UserShadow::migrations()
+    └── database/shadows/users/       the copy's migration, named by UserShadow's #[Shadow]
 ```
+
+The package loads the modules, not the foundation: map `Foundation\` in `composer.json` and list
+`Foundation\FoundationServiceProvider` in `bootstrap/providers.php`.
 
 ## Declare the modules
 
@@ -51,7 +54,9 @@ final class User extends \Illuminate\Database\Eloquent\Model {}
 ```php
 // apps/Iam/config/database.php, merged into config/database.php when iam boots
 return [
-    // creates and alters tables; optional, `default` (here `iam`) otherwise
+    // the connection the module's code runs on
+    'default' => 'iam',
+    // creates and alters tables; optional, `default` otherwise
     'owner' => 'iam_owner',
     'connections' => [
         // reads and writes
@@ -121,7 +126,7 @@ php artisan stream:consume
 
 This event is version 1. When the shape of a payload changes, the event declares a new version and
 how to read the old ones, so events already in the stream stay readable: see
-[Versioning a payload](https://mk-josias.github.io/laravel-microservices/docs/events#versioning-a-payload).
+[Change the shape of a payload](./events#change-the-shape-of-a-payload).
 
 ## Check that every module could run apart
 

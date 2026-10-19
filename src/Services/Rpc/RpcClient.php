@@ -90,7 +90,7 @@ abstract class RpcClient
     }
 
     /**
-     * An answer is kept as JSON, so a service in another language reads the same key. On Redis it is
+     * An answer is kept as JSON, so a program in another language reads the same key. On Redis it is
      * written as is, under the key Laravel uses: its own put() would serialize it in PHP. With tags,
      * Laravel's put() still files the key under them, so flushing a tag drops it.
      *

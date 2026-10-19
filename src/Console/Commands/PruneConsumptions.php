@@ -18,7 +18,7 @@ final class PruneConsumptions extends Command
     protected $signature = 'stream:prune-consumptions
         {--days=7 : Keep the marks of the last N days; must outlast how long an event can stay in the stream}';
 
-    protected $description = 'Delete the consumption marks older than the given number of days, in every local service.';
+    protected $description = 'Delete the consumption marks older than the given number of days, in every local module.';
 
     public function handle(ModuleRegistry $registry, ModuleContext $context, Streamer $config): int
     {
@@ -35,12 +35,12 @@ final class PruneConsumptions extends Command
 
         $current = $context->current()?->name;
 
-        foreach ($current !== null ? [$current] : $registry->localNames() as $service) {
+        foreach ($current !== null ? [$current] : $registry->localNames() as $module) {
             try {
-                $deleted = $context->within($registry->get($service), static fn (): int => DB::table($table)->where('consumed_at', '<', $before)->delete());
-                $this->line("→ {$service}: {$deleted} deleted");
+                $deleted = $context->within($registry->get($module), static fn (): int => DB::table($table)->where('consumed_at', '<', $before)->delete());
+                $this->line("→ {$module}: {$deleted} deleted");
             } catch (Throwable $e) {
-                $this->warn("→ {$service}: skipped ({$e->getMessage()})");
+                $this->warn("→ {$module}: skipped ({$e->getMessage()})");
             }
         }
 

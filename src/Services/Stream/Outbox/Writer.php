@@ -10,7 +10,7 @@ use Distributable\Services\ModuleRegistry;
 use Illuminate\Database\DatabaseManager;
 
 /**
- * Writes a publication row on the emitting service's own connection, so it lands inside the
+ * Writes a publication row on the emitting module's own connection, so it lands inside the
  * caller's business transaction — one transactional write, no dual write. Putting it on the wire
  * is the Relay's job, right after the commit.
  */

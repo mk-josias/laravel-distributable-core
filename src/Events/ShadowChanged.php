@@ -4,18 +4,17 @@ declare(strict_types=1);
 
 namespace Distributable\Events;
 
-/** A source row as it now stands, announced to the services keeping a copy of it. */
+/** A source row as it now stands, announced to the modules keeping a copy of it. */
 final class ShadowChanged extends Event
 {
     public const string NAME = 'distributable.shadow.changed';
 
     /**
      * @param  array<string, mixed>  $attributes
-     * @param  list<string>  $keepers  the only services to update their copy; empty for all of them
+     * @param  list<string>  $keepers  the only modules to update their copy; empty for all of them
      * @param  string|null  $stream  the stream the source model names; null for the default one
      */
     public function __construct(
-        private readonly string $sourceService,
         private readonly string $source,
         private readonly int|string $key,
         private readonly array $attributes,
@@ -43,10 +42,5 @@ final class ShadowChanged extends Event
     public function payload(): array
     {
         return ['source' => $this->source, 'key' => $this->key, 'attributes' => $this->attributes];
-    }
-
-    public function emitter(): string
-    {
-        return $this->sourceService;
     }
 }

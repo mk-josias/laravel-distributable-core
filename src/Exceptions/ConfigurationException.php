@@ -9,6 +9,11 @@ use RuntimeException;
 /** A setting or a declared class the package cannot work with. */
 final class ConfigurationException extends RuntimeException
 {
+    public static function missingAttribute(string $class, string $attribute): self
+    {
+        return new self("[{$class}] must carry #[{$attribute}].");
+    }
+
     public static function invalidHandler(string $class, string $contract): self
     {
         return new self("Event handler [{$class}] must implement {$contract}.");
@@ -40,9 +45,12 @@ final class ConfigurationException extends RuntimeException
 
     public static function unknownRpcDriver(string $driver, string $transport): self
     {
-        return new self($driver === 'http'
-            ? "RPC driver [http] of transport [{$transport}] comes with its own package: composer require mk-josias/laravel-distributable-rpc-http."
-            : "RPC driver [{$driver}] of transport [{$transport}] is not supported: register it with Services\\Rpc\\TransportManager::extend().");
+        return new self("RPC driver [{$driver}] of transport [{$transport}] is not supported: register it with Services\\Rpc\\TransportManager::extend(), or install the package that does.");
+    }
+
+    public static function noRpcTransport(): self
+    {
+        return new self('No RPC transport is configured: install the package of one (composer require mk-josias/laravel-distributable-rpc-http for HTTP) or set distributable.rpc.transport.');
     }
 
     public static function unarchivableStream(string $stream): self
@@ -80,8 +88,8 @@ final class ConfigurationException extends RuntimeException
         return new self("[{$handler}] must declare handle({$message} \$message): it has no handle(), or its first parameter is another type.");
     }
 
-    public static function missingRpcHost(string $service): self
+    public static function missingRpcHost(string $module): self
     {
-        return new self("No RPC host configured for service [{$service}]: set distributable.declared.{$service}.host.");
+        return new self("No RPC host configured for module [{$module}]: set distributable.declared.{$module}.host.");
     }
 }

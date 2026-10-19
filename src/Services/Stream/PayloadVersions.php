@@ -7,7 +7,7 @@ namespace Distributable\Services\Stream;
 use Distributable\Contracts\Stream\Versioned;
 use Distributable\Data\Envelope;
 use Distributable\Exceptions\ConfigurationException;
-use Distributable\Exceptions\ServiceException;
+use Distributable\Exceptions\ModuleException;
 
 /** Lifts the payload of an envelope to the version this process reads, so a handler only ever sees the current shape. */
 final class PayloadVersions
@@ -36,14 +36,14 @@ final class PayloadVersions
     /**
      * @return array<string, mixed>
      *
-     * @throws ServiceException when the envelope is newer than this process: its consumer has to be deployed first
+     * @throws ModuleException when the envelope is newer than this process: its consumer has to be deployed first
      */
     public function lift(Envelope $envelope): array
     {
         $current = $this->current($envelope->name);
 
         if ($envelope->version > $current) {
-            throw ServiceException::eventVersionAhead($envelope->name, $envelope->version, $current);
+            throw ModuleException::eventVersionAhead($envelope->name, $envelope->version, $current);
         }
 
         $payload = $envelope->payload;

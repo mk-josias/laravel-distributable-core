@@ -42,16 +42,47 @@ php artisan stream:skip --module=analytics
 |---|---|
 | `stream:trim` | `--stream` |
 | `stream:prune-consumptions` | `--days` (7 by default): it must outlast how long an event can stay in the stream |
-| `stream:export` | `--store`, `--service`, `--stream`, `--since`, `--until`, `--where`, `--acknowledged`, `--batch` |
-| `stream:import` | `--store`, `--service`, `--stream`, `--since`, `--until`, `--where` |
-| `stream:republish` | `--service` |
+| `stream:export` | `--store`, `--emitter`, `--stream`, `--since`, `--until`, `--where`, `--acknowledged`, `--batch` |
+| `stream:import` | `--store`, `--emitter`, `--stream`, `--since`, `--until`, `--where` |
+| `stream:republish` | `--module` |
 | `stream:skip` | `--module`, `--stream`, `--until` (a date: every entry up to it, entries not read yet included) |
 
 `export` and `import` read and write the stream itself, so they need no setting; the transport has
 to be able to give its entries back (`redis` does). `republish` works on the rows of
 `event_publications`, so it has something to send only with `DISTRIBUTABLE_EVENTS_RELIABLE_PUBLISH`
-on (see [Events](./events#reliable-publishing)). The archive formats and the filters are in
-[laravel-microservices' events](https://mk-josias.github.io/laravel-microservices/docs/events#archiving-the-stream).
+on (see [Events](./events#don-t-lose-an-event)).
+
+## Archiving the stream
+
+`stream:export` and `stream:import` work on the stream itself, not on the table: the transport
+keeps what was published, so they need no setting.
+
+```bash
+# copy what the stream keeps to an archive
+php artisan stream:export storage/events.jsonl [--store=file] [--emitter=*] [--stream=default] \
+    [--since=2026-08-01] [--until=2026-09-01] \
+    [--where=name=iam.user.registered] [--where=payload.status=paid] \
+    [--acknowledged] [--batch=1000]
+# publish the entries of an archive back on a stream, for example one that was emptied
+php artisan stream:import storage/events.jsonl [--store=file] [--emitter=*] [--stream=default] \
+    [--since=2026-08-01] [--until=2026-09-01] [--where=payload.status=paid]
+```
+
+Every module writes to the same stream, so an export takes all of them; `--emitter` keeps the
+entries one module emitted. Nothing is deleted: `stream:trim` drops what every consumer has read.
+`--acknowledged` stops below what every consumer group has acknowledged. The transport has to
+implement `ArchivesStreams` (`redis` does). `import` publishes the entries again: the consumption
+guard turns what a consumer already applied into a no-op, unless `guard_cleanup` is `acknowledge`,
+which deletes the marks, so an imported event is applied again.
+
+The archive is a store: `file` (JSON lines, one envelope per line) ships, and
+`distributable.events.archive` names the default. Another one implements
+`Contracts\Stream\ArchiveStore` (`write($target, $rows)`, `read($source)`) and is registered by name:
+
+```php
+app(\Distributable\Services\Stream\ArchiveStores::class)
+    ->extend('s3', fn ($app) => new S3ArchiveStore($app->make('filesystem')->disk('s3')));
+```
 
 ## The consumption marks
 

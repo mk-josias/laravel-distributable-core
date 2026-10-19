@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Distributable\Events;
 
-/** A service keeping a copy asks the owner of the source table to announce every row, to it alone. */
+/** A module keeping a copy asks the owner of the source table to announce every row, to it alone. */
 final class ShadowWanted extends Event
 {
     public const string NAME = 'distributable.shadow.wanted';
@@ -24,11 +24,6 @@ final class ShadowWanted extends Event
     public function payload(): array
     {
         return ['source' => $this->source, 'keeper' => $this->keeper];
-    }
-
-    public function emitter(): string
-    {
-        return $this->keeper;
     }
 
     /** @return list<string> */

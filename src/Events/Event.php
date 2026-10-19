@@ -8,7 +8,7 @@ use Distributable\Contracts\Stream\Event as EventContract;
 
 /**
  * Base for events: a concrete event returns its name and its typed payload as an array. Nothing
- * else — identity, emitting service, propagated context and timestamp are the Envelope's
+ * else — identity, emitting module, propagated context and timestamp are the Envelope's
  * business, so the payload stays business only.
  */
 abstract class Event implements EventContract
@@ -18,13 +18,7 @@ abstract class Event implements EventContract
     /** @return array<string, mixed> */
     abstract public function payload(): array;
 
-    /** The emitting service, when it is not the one the event class belongs to. */
-    public function emitter(): ?string
-    {
-        return null;
-    }
-
-    /** @return list<string> the only services that handle it; empty for every service */
+    /** @return list<string> the only modules that handle it; empty for every module */
     public function recipients(): array
     {
         return [];

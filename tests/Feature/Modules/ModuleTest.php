@@ -20,18 +20,17 @@ it('derives every convention from the module name', function () {
         ->and($module->hasDatabase)->toBeFalse();
 });
 
-it('takes its own path, namespace and foundation folder from the declaration, when set', function () {
-    $module = Module::fromName('iam', 'Apps', 'apps', 'Accounts', 'apps/Identity', 'Apps\Identity');
+it('takes its own path and namespace from the declaration, when set', function () {
+    $module = Module::fromName('iam', 'Apps', 'apps', 'apps/Identity', 'Apps\Identity');
 
     expect($module->name)->toBe('iam')
         ->and($module->namespace)->toBe('Apps\Identity')
         ->and($module->provider)->toBe('Apps\Identity\Providers\IdentityServiceProvider')
-        ->and($module->path())->toBe(base_path('apps/Identity'))
-        ->and($module->foundation)->toBe('Accounts');
+        ->and($module->path())->toBe(base_path('apps/Identity'));
 });
 
 it('can be the project itself: its path is the project, its classes app/ under its namespace', function () {
-    $module = Module::fromName('shop', 'Apps', 'apps', null, '.', 'App');
+    $module = Module::fromName('shop', 'Apps', 'apps', '.', 'App');
 
     expect($module->namespace)->toBe('App')
         ->and($module->provider)->toBe('App\Providers\AppServiceProvider')

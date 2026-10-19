@@ -57,7 +57,7 @@ it('imports only the entries matching its filters, back on the stream', function
     $path = tempnam(sys_get_temp_dir(), 'archive');
     $this->artisan("stream:export {$path}")->assertSuccessful();
 
-    $this->artisan("stream:import {$path} --service=orders --where=payload.id=2")->assertSuccessful();
+    $this->artisan("stream:import {$path} --emitter=orders --where=payload.id=2")->assertSuccessful();
 
     expect($transport->published)->toHaveCount(4)
         ->and($transport->published[3]->payload)->toBe(['id' => 2]);

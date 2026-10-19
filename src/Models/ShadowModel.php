@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace Distributable\Models;
 
+use Distributable\Attributes\Shadow;
+use Distributable\Exceptions\ConfigurationException;
+use Distributable\Services\Discovery\ClassAttribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * A local, read-only copy of another service's rows: same key as the source row, soft-deleted
- * when the source is, written only through sync(). A service keeping it lists it in distributable.shadows;
- * like any model it reads the running service's database, under its source's name unless $table says otherwise.
+ * A local, read-only copy of another module's rows: same key as the source row, soft-deleted
+ * when the source is, written only through sync(). A module keeping it lists it in its provider's $shadows;
+ * like any model it reads the running module's database, under its source's name unless $table says otherwise.
+ * It says what it copies with #[Shadow(module:, table:, migrations:)].
  *
  * @phpstan-consistent-constructor
  */
@@ -26,20 +30,35 @@ abstract class ShadowModel extends Model
 
     private bool $syncing = false;
 
-    /** The service owning the source table, e.g. `iam`. */
-    abstract public static function owner(): string;
+    /** The module owning the source table, e.g. `iam`. */
+    public static function owner(): string
+    {
+        return self::declared()->module;
+    }
 
     /** The source table this copy mirrors, e.g. `iam_users`. */
-    abstract public static function sourceTable(): string;
+    public static function sourceTable(): string
+    {
+        return self::declared()->table;
+    }
 
     /**
      * Its migrations, published by the owner and run in the database of every module keeping the copy:
      * files or folders, as Laravel's loadMigrationsFrom(); a folder brings every migration in it.
-     * A keeper's subclass with its own $table names its own.
+     * A keeper's subclass with its own $table carries its own #[Shadow].
      *
      * @return list<string>
      */
-    abstract public static function migrations(): array;
+    public static function migrations(): array
+    {
+        return self::declared()->migrations;
+    }
+
+    private static function declared(): Shadow
+    {
+        return ClassAttribute::of(static::class, Shadow::class)
+            ?? throw ConfigurationException::missingAttribute(static::class, Shadow::class);
+    }
 
     /** The source's own name; a keeper sharing its database with the owner, or keeping a second form of it, sets $table. */
     public function getTable(): string

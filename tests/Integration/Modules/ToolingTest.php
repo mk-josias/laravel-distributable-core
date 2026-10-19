@@ -3,8 +3,11 @@
 declare(strict_types=1);
 
 use Apps\Analytics\Models\UserShadow;
+use Distributable\Contracts\Rpc\ReportsRpcProblems;
+use Distributable\Contracts\Rpc\Transport;
 use Distributable\Services\Migrations\ModuleMigrations;
 use Distributable\Services\ModuleRegistry;
+use Distributable\Services\Rpc\TransportManager;
 use Distributable\Tests\ModuleAppTestCase;
 use Foundation\Iam\Shadows\MisplacedShadow;
 use Foundation\Iam\Shadows\UserShadow as IamUserShadow;
@@ -12,7 +15,7 @@ use Illuminate\Support\Facades\File;
 
 uses(ModuleAppTestCase::class);
 
-it('installs the config, the modules directory and the foundation provider, then a module declares itself in that config', function () {
+it('installs the config and the modules directory, then a module declares itself in that config', function () {
     $root = sys_get_temp_dir().'/distributable-install-'.uniqid();
     File::ensureDirectoryExists($root.'/config');
     $this->app->useConfigPath($root.'/config');
@@ -24,9 +27,7 @@ it('installs the config, the modules directory and the foundation provider, then
 
         expect(is_file($root.'/config/distributable.php'))->toBeTrue()
             ->and(is_dir($root.'/apps'))->toBeTrue()
-            ->and(file_get_contents($root.'/foundation/FoundationServiceProvider.php'))
-            ->toContain('namespace Foundation;')
-            ->toContain('final class FoundationServiceProvider extends BaseServiceProvider');
+            ->and(is_dir($root.'/foundation'))->toBeFalse();
 
         $this->artisan('modules:make billing')->assertSuccessful();
 
@@ -36,7 +37,7 @@ it('installs the config, the modules directory and the foundation provider, then
     }
 });
 
-it('creates a module, its provider and its foundation directory, and declares it', function () {
+it('creates a module and its provider, and declares it', function () {
     $root = sys_get_temp_dir().'/distributable-make-'.uniqid();
     File::ensureDirectoryExists($root.'/config');
     File::copy(dirname(__DIR__, 3).'/config/distributable.php', $root.'/config/distributable.php');
@@ -45,7 +46,7 @@ it('creates a module, its provider and its foundation directory, and declares it
     config()->set('distributable.foundation.path', $root.'/foundation');
 
     try {
-        $this->artisan('modules:make point_of_sale --database')->assertSuccessful();
+        $this->artisan('modules:make point_of_sale')->assertSuccessful();
 
         expect(file_get_contents($root.'/apps/PointOfSale/app/Providers/PointOfSaleServiceProvider.php'))
             ->toContain('namespace Apps\PointOfSale\Providers;')
@@ -53,7 +54,10 @@ it('creates a module, its provider and its foundation directory, and declares it
             ->and(file_get_contents($root.'/apps/PointOfSale/bootstrap/providers.php'))->toContain('Apps\PointOfSale\Providers\PointOfSaleServiceProvider::class')
             ->and(is_file($root.'/apps/PointOfSale/routes/api.php'))->toBeTrue()
             ->and(file_get_contents($root.'/apps/PointOfSale/config/database.php'))->toContain("'point_of_sale_owner'")
-            ->and(is_dir($root.'/foundation/PointOfSale/Contracts'))->toBeTrue()
+            ->and(is_dir($root.'/apps/PointOfSale/app/Models'))->toBeTrue()
+            ->and(is_dir($root.'/apps/PointOfSale/database/migrations'))->toBeTrue()
+            ->and(is_dir($root.'/apps/PointOfSale/tests/Feature'))->toBeTrue()
+            ->and(is_dir($root.'/foundation'))->toBeFalse()
             ->and((require $root.'/config/distributable.php')['declared'])->toBe(['point_of_sale' => []]);
 
         $this->artisan('modules:make point_of_sale')->assertFailed();
@@ -82,7 +86,7 @@ it('leaves composer.json to the application: a new module writes none', function
     }
 });
 
-it('deletes a module: its folder, its foundation folder and its declaration', function () {
+it('deletes a module: its folder and its declaration', function () {
     $root = sys_get_temp_dir().'/distributable-delete-'.uniqid();
     File::ensureDirectoryExists($root.'/config');
     File::copy(dirname(__DIR__, 3).'/config/distributable.php', $root.'/config/distributable.php');
@@ -101,7 +105,6 @@ it('deletes a module: its folder, its foundation folder and its declaration', fu
         $this->artisan('modules:delete billing --force')->assertSuccessful();
 
         expect(is_dir($root.'/apps/Billing'))->toBeFalse()
-            ->and(is_dir($root.'/foundation/Billing'))->toBeFalse()
             ->and(is_dir($root.'/apps/Shipping'))->toBeTrue()
             ->and((require $root.'/config/distributable.php')['declared'])->toBe(['shipping' => []]);
     } finally {
@@ -155,11 +158,23 @@ it('fails on a module folder that distributable.declared does not declare', func
         ->assertFailed();
 });
 
-it('fails when modules serve RPC contracts and no secret signs the calls', function () {
-    config()->set('distributable.rpc.secret', '');
+it('reports the problems a transport names', function () {
+    app(TransportManager::class)->extend('ailing', fn () => new class implements ReportsRpcProblems, Transport
+    {
+        public function invoke(string $module, string $name, int $version, array $payload): mixed
+        {
+            return null;
+        }
+
+        public function problems(): array
+        {
+            return ['its calls cannot be signed'];
+        }
+    });
+    config()->set('distributable.rpc.transports.ailing', ['driver' => 'ailing']);
 
     $this->artisan('modules:doctor')
-        ->expectsOutputToContain('distributable.rpc.secret is empty')
+        ->expectsOutputToContain('its calls cannot be signed')
         ->assertFailed();
 });
 

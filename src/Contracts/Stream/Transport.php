@@ -8,7 +8,7 @@ use Distributable\Data\Envelope;
 
 /**
  * How an envelope leaves this process and how it comes back. THE extension point: the package
- * ships `redis`, `queue`, `array` and `null`, anything else (kafka, amqp, an existing streamer package) plugs in
+ * ships `array` and `null`, `redis` comes in a package of its own, anything else (kafka, amqp, an existing streamer package) plugs in
  * through the transport manager's extend() without touching the package.
  *
  * The acknowledgement contract is the smallest common denominator of every broker: the callback
@@ -22,8 +22,8 @@ interface Transport
     /**
      * Blocking read loop, until stop() is called.
      *
-     * @param  list<string>  $consumers  the consuming services — each has its own cursor (group / queue)
-     * @param  list<string>  $channels  the emitting services to subscribe to
+     * @param  list<string>  $consumers  the consuming modules — each has its own cursor (group / queue)
+     * @param  list<string>  $channels  the emitting modules to subscribe to
      * @param  callable(Envelope, string): void  $handle  the envelope and the consumer it was read for
      */
     public function consume(array $consumers, array $channels, callable $handle): void;

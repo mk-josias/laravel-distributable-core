@@ -13,7 +13,7 @@ use Distributable\Services\Stream\Outbox\Writer;
 use Illuminate\Database\DatabaseManager;
 
 /**
- * The single emission path: an event becomes an envelope stamped with its emitting service, then
+ * The single emission path: an event becomes an envelope stamped with its emitting module, then
  * goes onto its stream right after the commit of the transaction it was emitted in. With
  * reliable_publish, its row is first written in that transaction and stays pending if the sending fails.
  */
@@ -29,9 +29,9 @@ final class Emitter implements Bus
         private readonly Streamer $config,
     ) {}
 
-    public function emit(Event $event): void
+    public function emit(Event $event, ?string $emitter = null): void
     {
-        $envelope = $this->envelopes->for($event);
+        $envelope = $this->envelopes->for($event, $emitter);
 
         $connection = $this->db->connection($this->registry->connectionOf($envelope->emitter));
 

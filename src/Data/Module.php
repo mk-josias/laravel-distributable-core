@@ -19,17 +19,15 @@ final readonly class Module
         public string $provider,
         private string $path,
         public bool $hasDatabase,
-        public string $foundation,
     ) {}
 
     /**
      * Every convention derives from the name; a module has a database once its config/database.php names its `default`.
      *
-     * @param  string|null  $foundationFolder  its folder and namespace segment under the foundation root, when not its studly name
      * @param  string|null  $path  its own folder (the one holding app/, config/, routes/), when not {modulesPath}/{Name}; '.' is the project
      * @param  string|null  $namespace  the namespace of its app/, when not {modulesNamespace}\{Name}
      */
-    public static function fromName(string $name, string $modulesNamespace, string $modulesPath = 'apps', ?string $foundationFolder = null, ?string $path = null, ?string $namespace = null): self
+    public static function fromName(string $name, string $modulesNamespace, string $modulesPath = 'apps', ?string $path = null, ?string $namespace = null): self
     {
         if (preg_match('/^[a-z][a-z0-9_]*$/', $name) !== 1) {
             throw ModuleException::invalidName($name);
@@ -46,11 +44,10 @@ final readonly class Module
             provider: $namespace.'\\Providers\\'.class_basename($namespace).'ServiceProvider',
             path: $path,
             hasDatabase: self::stringKey(self::databaseConfigAt($absolute.'/config/database.php'), 'default') !== null,
-            foundation: $foundationFolder ?? $studly,
         );
     }
 
-    /** @return array{name: string, namespace: string, provider: string, path: string, hasDatabase: bool, foundation: string} */
+    /** @return array{name: string, namespace: string, provider: string, path: string, hasDatabase: bool} */
     public function toArray(): array
     {
         return [
@@ -59,14 +56,13 @@ final readonly class Module
             'provider' => $this->provider,
             'path' => $this->path,
             'hasDatabase' => $this->hasDatabase,
-            'foundation' => $this->foundation,
         ];
     }
 
-    /** @param array{name: string, namespace: string, provider: string, path: string, hasDatabase: bool, foundation: string} $data */
+    /** @param array{name: string, namespace: string, provider: string, path: string, hasDatabase: bool} $data */
     public static function fromArray(array $data): self
     {
-        return new self(...$data);
+        return new self($data['name'], $data['namespace'], $data['provider'], $data['path'], $data['hasDatabase']);
     }
 
     /** Stored relative to the project root so a compiled registry stays portable across hosts. */

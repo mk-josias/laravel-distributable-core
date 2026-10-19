@@ -9,7 +9,7 @@ use Distributable\Context\ModuleContext;
 use Distributable\Contracts\Rpc\Handler;
 use Distributable\Contracts\Rpc\Message;
 use Distributable\Exceptions\ConfigurationException;
-use Distributable\Exceptions\ServiceException;
+use Distributable\Exceptions\ModuleException;
 use Distributable\Services\ModuleRegistry;
 use Illuminate\Container\Container;
 use Illuminate\Support\Facades\Validator;
@@ -62,7 +62,7 @@ final class MessageRegistry
     public function answer(string $module, string $name, int $version, array $payload): mixed
     {
         $entry = $this->handlers[self::key($module, $name, $version)]
-            ?? throw ServiceException::unknownRpcMessage($module, $name, $version);
+            ?? throw ModuleException::unknownRpcMessage($module, $name, $version);
 
         $message = self::build($entry['message'], $payload);
         $container = Container::getInstance();

@@ -2,7 +2,7 @@
 
 The same code runs in every process: the modules a process runs are a setting. This page covers
 placing modules in processes and containers. The package ships no Dockerfile; the
-[starter](https://github.com/mk-josias/laravel-distributable-modules-starter) ships the ones used here.
+[starter](https://github.com/mk-josias/laravel-distributable-starter) ships the ones used here.
 
 ## Placing a module
 

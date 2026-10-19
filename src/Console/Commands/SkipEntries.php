@@ -13,7 +13,6 @@ use Illuminate\Console\Command;
 final class SkipEntries extends Command
 {
     protected $signature = 'stream:skip
-        {--service= : The consuming service (default: the one running)}
         {--stream= : The stream to read (default: distributable.events.stream)}
         {--until= : Drop every entry up to this date, read or not (default: only the oldest failing one)}';
 
@@ -22,23 +21,23 @@ final class SkipEntries extends Command
     public function handle(ModuleContext $context, TransportManager $transports): int
     {
         $transport = $transports->stream($this->option('stream') !== null ? (string) $this->option('stream') : null);
-        $service = (string) ($this->option('service') ?: $context->current()?->name);
+        $module = (string) $context->current()?->name;
 
-        if (! $transport instanceof SkipsEntries || $service === '') {
-            $this->error('Name the consuming service with --service, on a transport that can skip entries.');
+        if (! $transport instanceof SkipsEntries || $module === '') {
+            $this->error('Name the consuming module with --module, on a transport that can skip entries.');
 
             return self::FAILURE;
         }
 
         if ($this->option('until') !== null) {
-            $this->line('→ skipped '.$transport->skipUntil($service, CarbonImmutable::parse((string) $this->option('until'))).' entries for ['.$service.']');
+            $this->line('→ skipped '.$transport->skipUntil($module, CarbonImmutable::parse((string) $this->option('until'))).' entries for ['.$module.']');
 
             return self::SUCCESS;
         }
 
-        $envelope = $transport->skipOldest($service);
+        $envelope = $transport->skipOldest($module);
 
-        $this->line($envelope === null ? 'Nothing pending for ['.$service.'].' : '→ skipped ['.$envelope->name.'] '.$envelope->id.' for ['.$service.']');
+        $this->line($envelope === null ? 'Nothing pending for ['.$module.'].' : '→ skipped ['.$envelope->name.'] '.$envelope->id.' for ['.$module.']');
 
         return self::SUCCESS;
     }

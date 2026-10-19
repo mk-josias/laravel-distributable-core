@@ -12,10 +12,7 @@ interface Event
     /** @return array<string, mixed> */
     public function payload(): array;
 
-    /** The emitting service, when it is not the one the event class belongs to. */
-    public function emitter(): ?string;
-
-    /** @return list<string> the only services that handle it; empty for every service */
+    /** @return list<string> the only modules that handle it; empty for every module */
     public function recipients(): array;
 
     /** The stream of distributable.events.streams it travels on; null for the default one. */

@@ -17,7 +17,7 @@ return [
 
     'declared' => [
         // 'iam' => ['host' => env('IAM_HOST')],
-        // 'iam' => ['path' => 'apps/Identity', 'namespace' => 'Apps\Identity', 'foundation' => 'Identity'],
+        // 'iam' => ['path' => 'apps/Identity', 'namespace' => 'Apps\Identity'],
         // 'iam' => ['path' => '.', 'namespace' => 'App'],                 // the project itself: an application of one module
         // 'iam' => ['prefix' => 'identity/{name}'],                       // /identity/api/…, in place of routes.prefix
     ],
@@ -38,10 +38,10 @@ return [
         'namespace' => 'Apps',
     ],
 
-    // What module iam shares is {path}/Iam, under {namespace}\Iam\.
+    // Where what the modules share lives. The package checks it (no module's code in it, none of it
+    // entering a module) and never loads it: map it in composer.json like your own code.
     'foundation' => [
         'path' => 'foundation',
-        'namespace' => 'Foundation',
     ],
 
     // Path answering which modules this process runs (e.g. '/'), or null to register nothing.
@@ -56,20 +56,16 @@ return [
     | Calls between modules
     |--------------------------------------------------------------------------
     | Named transports, like queue connections; every driver comes from
-    | Services\Rpc\TransportManager::extend(), `http` from mk-josias/laravel-distributable-rpc-http,
-    | which has its own config/rpc-http.php and reads the secret below. A module's
-    | host may name the one its calls travel on.
+    | Services\Rpc\TransportManager::extend(), from the package of the transport (`http` from
+    | mk-josias/laravel-distributable-rpc-http, with its own config/rpc-http.php), which declares
+    | its transport and takes it as the default. A module's host may name another.
     */
 
     'rpc' => [
-        'transport' => env('DISTRIBUTABLE_RPC_TRANSPORT', 'http'),
+        // The transport calls travel on unless a module's host names another; null: the one a package sets.
+        'transport' => env('DISTRIBUTABLE_RPC_TRANSPORT'),
 
-        'transports' => [
-            'http' => ['driver' => 'http'],
-        ],
-
-        // Signs every call; the caller and the called process must share it, so it falls back to APP_KEY.
-        'secret' => env('DISTRIBUTABLE_RPC_SECRET', env('APP_KEY', '')),
+        'transports' => [],
 
         // The cache store of the RpcClient answers, shared by every process: the caller keeps an
         // answer, the owner forgets it when it writes. Null is the default store.

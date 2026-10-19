@@ -6,10 +6,12 @@ namespace Distributable\Console\Commands;
 
 use Distributable\Config\Modules;
 use Distributable\Contracts\Rpc\Message;
-use Distributable\RpcHttp\RpcHttp;
+use Distributable\Contracts\Rpc\ReportsRpcProblems;
+use Distributable\Exceptions\ConfigurationException;
 use Distributable\Services\Discovery\ClassDiscovery;
 use Distributable\Services\ModuleRegistry;
 use Distributable\Services\Rpc\MessageRegistry;
+use Distributable\Services\Rpc\TransportManager;
 use Distributable\Services\Shadows\ShadowRegistry;
 use Distributable\Testing\Boundaries;
 use Illuminate\Console\Command;
@@ -78,8 +80,20 @@ final class Doctor extends Command
             }
         }
 
-        if ($served !== [] && class_exists(RpcHttp::class) && app(RpcHttp::class)->getSecret() === '') {
-            $problems[] = 'Modules serve RPC messages but distributable.rpc.secret is empty: set DISTRIBUTABLE_RPC_SECRET or APP_KEY.';
+        if ($served !== []) {
+            foreach (array_keys((array) config('distributable.rpc.transports', [])) as $name) {
+                try {
+                    $transport = app(TransportManager::class)->transport((string) $name);
+                } catch (ConfigurationException $exception) {
+                    $problems[] = $exception->getMessage();
+
+                    continue;
+                }
+
+                if ($transport instanceof ReportsRpcProblems) {
+                    array_push($problems, ...$transport->problems());
+                }
+            }
         }
 
         foreach ($boundaries->violations() as $violation) {

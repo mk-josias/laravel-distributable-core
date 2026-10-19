@@ -40,20 +40,16 @@ it('fails loudly on an unknown module name', function () {
     registryLoading(['analytics', 'transactions'])->local();
 })->throws(ModuleException::class, 'Unknown module [transactions]');
 
-it('resolves the module of a foundation class from its foundation folder, its studly name unless declared', function () {
-    $registry = new ModuleRegistry([
-        Module::fromName('iam', 'Apps', 'apps', 'Identity'),
-        Module::fromName('point_of_sale', 'Apps', 'apps'),
-    ]);
+it('knows no module for a class outside the namespaces of the modules', function () {
+    $registry = new ModuleRegistry([Module::fromName('iam', 'Apps', 'apps')]);
 
-    expect($registry->forFoundationClass('Foundation\Identity\Contracts\IamService', 'Foundation')->name)->toBe('iam')
-        ->and($registry->forFoundationClass('Foundation\PointOfSale\Contracts\Till', 'Foundation')->name)->toBe('point_of_sale')
-        ->and($registry->forFoundationClass('Foundation\Iam\Contracts\IamService', 'Foundation'))->toBeNull();
+    expect($registry->ownerOf('Apps\Iam\Models\User')->name)->toBe('iam')
+        ->and($registry->ownerOf('Foundation\Iam\Events\UserRegistered'))->toBeNull();
 });
 
 it('refuses a module whose folder is inside the folder of another', function () {
     new ModuleRegistry([
-        Module::fromName('shop', 'Apps', 'apps', null, '.', 'App'),
+        Module::fromName('shop', 'Apps', 'apps', '.', 'App'),
         Module::fromName('billing', 'Apps', 'apps'),
     ]);
 })->throws(ModuleException::class, 'is inside the folder of module [shop]');

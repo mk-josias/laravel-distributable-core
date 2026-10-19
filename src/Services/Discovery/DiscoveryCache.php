@@ -10,7 +10,7 @@ use Illuminate\Contracts\Foundation\Application;
  * What discovery found, written by modules:cache to bootstrap/cache/distributable.php, like config:cache.
  *
  * @phpstan-type Cached array{
- *     modules: list<array{name: string, namespace: string, provider: string, path: string, hasDatabase: bool, foundation?: string}>,
+ *     modules: list<array{name: string, namespace: string, provider: string, path: string, hasDatabase: bool}>,
  *     sources: array<string, list<class-string>>,
  * }
  */

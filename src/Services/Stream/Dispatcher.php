@@ -13,7 +13,7 @@ use Distributable\Data\Envelope;
 use Distributable\Events\ShadowChanged;
 use Distributable\Events\ShadowWanted;
 use Distributable\Exceptions\ConfigurationException;
-use Distributable\Exceptions\ServiceException;
+use Distributable\Exceptions\ModuleException;
 use Distributable\Handlers\AnnounceShadowSource;
 use Distributable\Handlers\SyncShadows;
 use Distributable\Services\ModuleRegistry;
@@ -27,7 +27,7 @@ use Illuminate\Support\Facades\Date;
  * broker consumer take exactly the same path, so a handler behaves the same wherever its emitter runs.
  *
  * When delivery is at-least-once, each run is guarded: the mark in `event_consumptions` and the
- * handler's own writes share one transaction on the consuming service's database, so a replay is
+ * handler's own writes share one transaction on the consuming module's database, so a replay is
  * a no-op and a failed handler leaves no mark behind. Handlers become idempotent by
  * construction — their author writes nothing. The guard covers what a handler writes to its
  * database; effects outside it (mail, third-party calls) stay at-least-once.
@@ -44,7 +44,7 @@ final class Dispatcher
         private readonly PayloadVersions $versions,
     ) {}
 
-    /** With a $consumer, only its handlers run: a process running several services has one consumer per service. */
+    /** With a $consumer, only its handlers run: a process running several modules has one consumer per module. */
     public function dispatch(Envelope $envelope, ?string $consumer = null): void
     {
         $guarded = $this->guarded($envelope->stream);
@@ -97,12 +97,12 @@ final class Dispatcher
     /** @param class-string $class */
     private function runGuarded(string $class, Envelope $envelope): void
     {
-        $service = $this->registry->ownerOf($class)->name
-            ?? throw ServiceException::outsideService($class);
+        $module = $this->registry->ownerOf($class)->name
+            ?? throw ModuleException::outsideModule($class);
 
-        $connection = $this->db->connection($this->registry->connectionOf($service));
+        $connection = $this->db->connection($this->registry->connectionOf($module));
 
-        $connection->transaction(function () use ($connection, $class, $envelope, $service): void {
+        $connection->transaction(function () use ($connection, $class, $envelope, $module): void {
             $claimed = $connection->table($this->config->getConsumptionsTable())->insertOrIgnore([
                 'event_id' => $envelope->id,
                 'handler' => $class,
@@ -113,15 +113,15 @@ final class Dispatcher
                 return; // already handled — the replay stops here
             }
 
-            $this->run($class, $envelope, $service);
+            $this->run($class, $envelope, $module);
         });
     }
 
     /**
      * @param  class-string  $class
-     * @param  string|null  $service  the handler's own service, or the consumer's for one of the package
+     * @param  string|null  $module  the handler's own module, or the consumer's for one of the package
      */
-    private function run(string $class, Envelope $envelope, ?string $service): void
+    private function run(string $class, Envelope $envelope, ?string $module): void
     {
         $handler = $this->container->make($class);
 
@@ -132,7 +132,7 @@ final class Dispatcher
         $payload = $this->versions->lift($envelope);
 
         $this->context->within(
-            $service === null ? null : $this->registry->get($service),
+            $module === null ? null : $this->registry->get($module),
             fn () => $this->withContext($envelope->headers, static fn () => $handler->handle($envelope->name, $payload)),
         );
     }

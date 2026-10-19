@@ -18,10 +18,10 @@ final readonly class Modules
         return array_map(strval(...), array_keys((array) $this->config->get('distributable.declared', [])));
     }
 
-    /** The module declared under $name: its own path, namespace and foundation folder when distributable.declared.{name} gives them. */
+    /** The module declared under $name: its own path and namespace when distributable.declared.{name} gives them. */
     public function module(string $name): Module
     {
-        return Module::fromName($name, $this->getModulesNamespace(), $this->getModulesPath(), $this->declared($name, 'foundation'), $this->declared($name, 'path'), $this->declared($name, 'namespace'));
+        return Module::fromName($name, $this->getModulesNamespace(), $this->getModulesPath(), $this->declared($name, 'path'), $this->declared($name, 'namespace'));
     }
 
     private function declared(string $name, string $key): ?string
@@ -65,18 +65,12 @@ final readonly class Modules
         return (string) $this->config->get('distributable.modules.namespace', 'Apps');
     }
 
-    /** Absolute; the foundation directory, or the one of a module (foundation/Iam) when given. */
-    public function getFoundationPath(?Module $module = null): string
+    /** Absolute; where what the modules share lives, which the package checks and never loads. */
+    public function getFoundationPath(): string
     {
         $path = (string) $this->config->get('distributable.foundation.path', 'foundation');
-        $root = str_starts_with($path, DIRECTORY_SEPARATOR) ? $path : base_path($path);
 
-        return $module === null ? $root : $root.'/'.$module->foundation;
-    }
-
-    public function getFoundationNamespace(): string
-    {
-        return (string) $this->config->get('distributable.foundation.namespace', 'Foundation');
+        return str_starts_with($path, DIRECTORY_SEPARATOR) ? $path : base_path($path);
     }
 
     public function getStatusRoute(): ?string

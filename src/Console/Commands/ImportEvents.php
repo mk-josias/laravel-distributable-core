@@ -16,7 +16,7 @@ final class ImportEvents extends Command
     protected $signature = 'stream:import
         {source : What stream:export wrote, e.g. its JSON-lines file for `file`}
         {--store= : The archive store (default: distributable.events.archive)}
-        {--service=* : Only entries these services emitted}
+        {--emitter=* : Only entries these modules emitted}
         {--stream= : The stream to publish on (default: distributable.events.stream)}
         {--since= : Only entries emitted on or after this date}
         {--until= : Only entries emitted before this date}
@@ -30,7 +30,7 @@ final class ImportEvents extends Command
             store: $this->archiveStore(),
             source: (string) $this->argument('source'),
             stream: $this->stringOption('stream'),
-            services: array_values(array_map(strval(...), (array) $this->option('service'))),
+            emitters: array_values(array_map(strval(...), (array) $this->option('emitter'))),
             since: $this->stringOption('since'),
             until: $this->stringOption('until'),
             where: $this->whereOption(),

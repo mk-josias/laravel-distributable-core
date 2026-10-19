@@ -8,7 +8,7 @@ use Distributable\Contracts\Stream\Bus;
 use Distributable\Contracts\Stream\Transport;
 use Distributable\Data\Envelope;
 use Distributable\Exceptions\ConfigurationException;
-use Distributable\Exceptions\ServiceException;
+use Distributable\Exceptions\ModuleException;
 use Distributable\Providers\DistributableServiceProvider;
 use Distributable\Services\Stream\Dispatcher;
 use Distributable\Services\Stream\Outbox\Relay;
@@ -56,7 +56,7 @@ it('lifts an old payload one version at a time, so the handler only sees the cur
 it('refuses an envelope newer than this process reads, and runs no handler', function () {
     try {
         $this->app->make(Dispatcher::class)->dispatch(renamed(4, ['id' => 5]));
-    } catch (ServiceException $exception) {
+    } catch (ModuleException $exception) {
         expect($exception->getMessage())->toBe('Event [iam.user.renamed] arrived in version 4, and this process reads it up to version 3: deploy its consumer before it is handled.')
             ->and($this->app->make(Recorder::class)->records)->toBe([]);
 
@@ -75,7 +75,7 @@ it('reads an event nobody declared a version for as version 1 only', function ()
     $this->app->make(Dispatcher::class)->dispatch(
         new Envelope('00000000-0000-0000-0000-000000000009', 'iam', 'iam.user.registered', ['id' => 5], [], now()->toImmutable(), version: 2),
     );
-})->throws(ServiceException::class, 'arrived in version 2, and this process reads it up to version 1');
+})->throws(ModuleException::class, 'arrived in version 2, and this process reads it up to version 1');
 
 it('refuses a payload class that declares no version', function () {
     $this->app->make(PayloadVersions::class)->add(['iam.user.registered' => Recorder::class]);

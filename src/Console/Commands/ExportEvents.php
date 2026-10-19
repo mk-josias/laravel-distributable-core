@@ -16,7 +16,7 @@ final class ExportEvents extends Command
     protected $signature = 'stream:export
         {target : Where the store appends the entries, e.g. a JSON-lines file for `file`}
         {--store= : The archive store (default: distributable.events.archive)}
-        {--service=* : Only entries these services emitted}
+        {--emitter=* : Only entries these modules emitted}
         {--stream= : The stream to read (default: distributable.events.stream)}
         {--since= : Only entries on or after this date}
         {--until= : Only entries before this date}
@@ -32,7 +32,7 @@ final class ExportEvents extends Command
             store: $this->archiveStore(),
             target: (string) $this->argument('target'),
             stream: $this->stringOption('stream'),
-            services: array_values(array_map(strval(...), (array) $this->option('service'))),
+            emitters: array_values(array_map(strval(...), (array) $this->option('emitter'))),
             since: $this->stringOption('since'),
             until: $this->stringOption('until'),
             where: $this->whereOption(),

@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace Distributable\Services\Stream;
 
+use Distributable\Attributes\Emitter as EmitterAttribute;
 use Distributable\Config\Streamer;
 use Distributable\Contracts\Stream\Event;
 use Distributable\Data\Envelope;
-use Distributable\Exceptions\ServiceException;
+use Distributable\Exceptions\ModuleException;
+use Distributable\Services\Discovery\ClassAttribute;
 use Distributable\Services\ModuleRegistry;
 use Illuminate\Support\Facades\Context;
 
-/** Stamps an event with its emitting service and the propagated context — the only place that does. */
+/** Stamps an event with its emitting module and the propagated context — the only place that does. */
 final class EnvelopeFactory
 {
     public function __construct(
@@ -19,11 +21,11 @@ final class EnvelopeFactory
         private readonly Streamer $config,
     ) {}
 
-    public function for(Event $event): Envelope
+    public function for(Event $event, ?string $emitter = null): Envelope
     {
-        $emitter = $event->emitter()
+        $emitter ??= ClassAttribute::of($event::class, EmitterAttribute::class)->module
             ?? $this->registry->ownerOf($event::class)->name
-            ?? throw ServiceException::outsideService($event::class);
+            ?? throw ModuleException::outsideModule($event::class);
 
         return Envelope::for(
             event: $event,

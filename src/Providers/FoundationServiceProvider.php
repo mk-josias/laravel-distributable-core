@@ -9,8 +9,9 @@ use Distributable\Services\Stream\PayloadVersions;
 use Illuminate\Support\ServiceProvider;
 
 /**
- * Base of the application's {Foundation}\FoundationServiceProvider: what the foundation declares
- * for every module. A module answers its own messages in its provider's $rpc.
+ * Base of the provider of a foundation: what it declares for every module. The application lists it
+ * in bootstrap/providers.php, or a foundation package in extra.laravel.providers.
+ * A module answers its own messages in its provider's $rpc.
  */
 abstract class FoundationServiceProvider extends ServiceProvider
 {

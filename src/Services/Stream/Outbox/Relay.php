@@ -15,7 +15,7 @@ use stdClass;
 use Throwable;
 
 /**
- * Puts a service's stored events on the wire: the row just committed, or every row still there.
+ * Puts a module's stored events on the wire: the row just committed, or every row still there.
  * A row is deleted once it is sent; one that fails to go out stays, with its attempts and last error.
  *
  * Delivery is at-least-once — a crash between sending and deleting sends again. That is why
@@ -31,13 +31,13 @@ final class Relay
     ) {}
 
     /** Sends the row just committed; a failure leaves it stored, and never reaches the caller. */
-    public function publishNow(string $service, string $id): void
+    public function publishNow(string $module, string $id): void
     {
         try {
-            $row = $this->table($service)->where('id', $id)->first();
+            $row = $this->table($module)->where('id', $id)->first();
 
             if ($row !== null) {
-                $this->publish($service, $row);
+                $this->publish($module, $row);
             }
         } catch (Throwable $e) {
             report($e);
@@ -45,19 +45,19 @@ final class Relay
     }
 
     /**
-     * Sends every row of the service, in batches. A row that fails stays and the pass goes on.
-     * Only the service's own rows: services sharing a database share the table.
+     * Sends every row of the module, in batches. A row that fails stays and the pass goes on.
+     * Only the module's own rows: modules sharing a database share the table.
      *
      * @return int the number of rows sent
      */
-    public function drain(string $service, int $batch = 100): int
+    public function drain(string $module, int $batch = 100): int
     {
         $sent = 0;
         $after = 0;
 
         do {
-            $rows = $this->table($service)
-                ->where('emitter', $service)
+            $rows = $this->table($module)
+                ->where('emitter', $module)
                 ->where('sequence', '>', $after)
                 ->orderBy('sequence')
                 ->limit($batch)
@@ -66,7 +66,7 @@ final class Relay
             foreach ($rows as $row) {
                 $after = (int) $row->sequence;
 
-                if ($this->publish($service, $row)) {
+                if ($this->publish($module, $row)) {
                     $sent++;
                 }
             }
@@ -75,14 +75,14 @@ final class Relay
         return $sent;
     }
 
-    private function publish(string $service, stdClass $row): bool
+    private function publish(string $module, stdClass $row): bool
     {
         try {
             $envelope = $this->envelope($row);
 
             $this->transports->stream($envelope->stream)->publish($envelope);
         } catch (Throwable $e) {
-            $this->table($service)->where('sequence', $row->sequence)->update([
+            $this->table($module)->where('sequence', $row->sequence)->update([
                 'attempts' => (int) $row->attempts + 1,
                 'last_error' => Str::limit($e->getMessage(), 1000),
             ]);
@@ -90,7 +90,7 @@ final class Relay
             return false;
         }
 
-        $this->table($service)->where('sequence', $row->sequence)->delete();
+        $this->table($module)->where('sequence', $row->sequence)->delete();
 
         return true;
     }
@@ -110,8 +110,8 @@ final class Relay
         ]);
     }
 
-    private function table(string $service): Builder
+    private function table(string $module): Builder
     {
-        return $this->db->connection($this->registry->connectionOf($service))->table($this->config->getPublicationsTable());
+        return $this->db->connection($this->registry->connectionOf($module))->table($this->config->getPublicationsTable());
     }
 }

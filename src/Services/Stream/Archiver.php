@@ -18,14 +18,14 @@ final class Archiver
     /**
      * Writes the matching entries of the stream to $target, in batches.
      *
-     * @param  list<string>  $services  the emitters to take; empty for all of them
+     * @param  list<string>  $emitters  the modules whose events to take; empty for all of them
      * @param  array<string, string>  $where  name, emitter, or payload.{field}, => value
      */
     public function export(
         ArchiveStore $store,
         string $target,
         ?string $stream = null,
-        array $services = [],
+        array $emitters = [],
         ?string $since = null,
         ?string $until = null,
         array $where = [],
@@ -44,7 +44,7 @@ final class Archiver
         $rows = [];
 
         foreach ($transport->entries($this->date($since), $this->date($until), $acknowledged) as $envelope) {
-            if (! $this->matches($envelope, $services, $where)) {
+            if (! $this->matches($envelope, $emitters, $where)) {
                 continue;
             }
 
@@ -68,14 +68,14 @@ final class Archiver
     /**
      * Publishes the matching entries of $source on the stream, in the order they were written.
      *
-     * @param  list<string>  $services  the emitters to take; empty for all of them
+     * @param  list<string>  $emitters  the modules whose events to take; empty for all of them
      * @param  array<string, string>  $where  name, emitter, or payload.{field}, => value
      */
     public function import(
         ArchiveStore $store,
         string $source,
         ?string $stream = null,
-        array $services = [],
+        array $emitters = [],
         ?string $since = null,
         ?string $until = null,
         array $where = [],
@@ -92,7 +92,7 @@ final class Archiver
 
             if (($from !== null && $envelope->emittedAt < $from)
                 || ($to !== null && $envelope->emittedAt >= $to)
-                || ! $this->matches($envelope, $services, $where)) {
+                || ! $this->matches($envelope, $emitters, $where)) {
                 continue;
             }
 
@@ -104,12 +104,12 @@ final class Archiver
     }
 
     /**
-     * @param  list<string>  $services
+     * @param  list<string>  $emitters
      * @param  array<string, string>  $where
      */
-    private function matches(Envelope $envelope, array $services, array $where): bool
+    private function matches(Envelope $envelope, array $emitters, array $where): bool
     {
-        if ($services !== [] && ! in_array($envelope->emitter, $services, true)) {
+        if ($emitters !== [] && ! in_array($envelope->emitter, $emitters, true)) {
             return false;
         }
 

@@ -12,16 +12,16 @@ final class AnnounceShadows extends Command
 {
     protected $signature = 'shadows:announce
         {source : The source table, e.g. iam_users}
-        {--keepers=* : Only these services update their copy (default: every one keeping it)}';
+        {--keepers=* : Only these modules update their copy (default: every one keeping it)}';
 
-    protected $description = 'Announce every row of a source table to the services keeping a copy of it.';
+    protected $description = 'Announce every row of a source table to the modules keeping a copy of it.';
 
     public function handle(ShadowRegistry $catalog): int
     {
         $source = $catalog->sourceOf((string) $this->argument('source'));
 
         if ($source === null) {
-            $this->error('No service running here owns that table as a shadow source.');
+            $this->error('No module running here owns that table as a shadow source.');
 
             return self::FAILURE;
         }

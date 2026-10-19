@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Distributable\Tests\Fixtures\Orders\Models;
 
+use Distributable\Attributes\ShadowFields;
 use Distributable\Contracts\Shadows\Shadowed;
 use Distributable\Traits\ShadowSource;
 use Illuminate\Database\Eloquent\Model;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $total
  * @property string $note
  */
+#[ShadowFields('total')]
 final class Order extends Model implements Shadowed
 {
     use ShadowSource;
@@ -20,7 +22,4 @@ final class Order extends Model implements Shadowed
     public $timestamps = false;
 
     protected $guarded = [];
-
-    /** @var list<string> */
-    protected array $shadowed = ['total'];
 }

@@ -9,7 +9,7 @@ use Distributable\Contracts\Stream\Handler;
 use Distributable\Contracts\Stream\Idempotent;
 use Distributable\Services\Shadows\ShadowRegistry;
 
-/** Answers a copy that asks again: every row is re-announced to the asking service alone. */
+/** Answers a copy that asks again: every row is re-announced to the asking module alone. */
 final readonly class AnnounceShadowSource implements Handler, Idempotent
 {
     public function __construct(

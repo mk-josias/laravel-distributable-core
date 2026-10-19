@@ -23,7 +23,6 @@ final class ModuleRegistry
     public function __construct(
         array $modules,
         private readonly array $loadedModules = ['*'],
-        private readonly string $foundationNamespace = 'Foundation',
     ) {
         $keyed = [];
 
@@ -90,33 +89,16 @@ final class ModuleRegistry
         return $best;
     }
 
-    /** The module a foundation class belongs to, by its foundation folder: Foundation\Iam\… is iam's; null outside the foundation. */
-    public function forFoundationClass(string $class, string $foundationNamespace): ?Module
-    {
-        $best = null;
-
-        foreach ($this->modules() as $module) {
-            $namespace = $foundationNamespace.'\\'.$module->foundation;
-
-            if (str_starts_with($class, $namespace.'\\')
-                && ($best === null || strlen($module->foundation) > strlen($best->foundation))) {
-                $best = $module;
-            }
-        }
-
-        return $best;
-    }
-
     /** @return list<string> the names of the modules this process loads */
     public function localNames(): array
     {
         return array_map(static fn (Module $module): string => $module->name, $this->local());
     }
 
-    /** The module a class belongs to: its own code, or its foundation's (its messages, its clients). */
+    /** The module a class belongs to: the one whose namespace it is in; a class of the foundation says its module with an attribute. */
     public function ownerOf(string $class): ?Module
     {
-        return $this->forClass($class) ?? $this->forFoundationClass($class, $this->foundationNamespace);
+        return $this->forClass($class);
     }
 
     /** The connection of a module's database; null for a module without one, or an unknown name. */

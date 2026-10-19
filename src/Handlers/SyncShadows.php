@@ -10,7 +10,7 @@ use Distributable\Contracts\Stream\Idempotent;
 use Distributable\Services\ModuleRegistry;
 use Distributable\Services\Shadows\ShadowRegistry;
 
-/** Writes an announced source row into the copies of the consuming service, or of every local keeper, each in its own context. */
+/** Writes an announced source row into the copies of the consuming module, or of every local keeper, each in its own context. */
 final readonly class SyncShadows implements Handler, Idempotent
 {
     public function __construct(

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Distributable\Tests;
 
 use Distributable\Testing\ModuleAware;
+use Foundation\FoundationServiceProvider;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Foundation\Application;
 
@@ -12,6 +13,12 @@ use Illuminate\Foundation\Application;
 abstract class ModuleAppTestCase extends TestCase
 {
     use ModuleAware;
+
+    /** @return list<class-string> */
+    protected function getPackageProviders($app): array
+    {
+        return [...parent::getPackageProviders($app), FoundationServiceProvider::class];
+    }
 
     /** @param Application $app */
     protected function defineEnvironment($app): void
@@ -31,7 +38,6 @@ abstract class ModuleAppTestCase extends TestCase
         $app->make('router')->middlewareGroup('admin', []);
 
         $config->set('distributable.events.streams.default.driver', 'array');
-        $config->set('distributable.rpc.secret', 'test-secret');
 
         // Root config the iam module's config/iam.php fragment merges over.
         $config->set('iam', [

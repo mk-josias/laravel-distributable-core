@@ -11,7 +11,7 @@ final class Install extends Command
 {
     protected $signature = 'modules:install';
 
-    protected $description = 'Publish config/distributable.php and create the modules and foundation directories.';
+    protected $description = 'Publish config/distributable.php and create the modules directory.';
 
     public function handle(Modules $config): int
     {
@@ -23,28 +23,7 @@ final class Install extends Command
         $modules = str_starts_with($modules, DIRECTORY_SEPARATOR) ? $modules : base_path($modules);
         is_dir($modules) || mkdir($modules, 0755, true);
 
-        $provider = $config->getFoundationPath().'/FoundationServiceProvider.php';
-
-        if (! is_file($provider)) {
-            is_dir(dirname($provider)) || mkdir(dirname($provider), 0755, true);
-            file_put_contents($provider, <<<PHP
-                <?php
-
-                declare(strict_types=1);
-
-                namespace {$config->getFoundationNamespace()};
-
-                use Distributable\\Providers\\FoundationServiceProvider as BaseServiceProvider;
-
-                final class FoundationServiceProvider extends BaseServiceProvider
-                {
-                    protected array \$payloads = [];
-                }
-
-                PHP);
-        }
-
-        $this->components->info('Laravel Distributable is installed. Next: php artisan modules:make <name> [--database]');
+        $this->components->info('Laravel Distributable is installed. Next: php artisan modules:make <name>');
 
         return self::SUCCESS;
     }

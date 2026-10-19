@@ -16,8 +16,8 @@ final class CachedShadowRegistry extends ShadowRegistry
     }
 
     /** @return list<class-string> */
-    protected function sources(string $service): array
+    protected function sources(string $module): array
     {
-        return $this->cache->load()['sources'][$service] ?? parent::sources($service);
+        return $this->cache->load()['sources'][$module] ?? parent::sources($module);
     }
 }

@@ -26,19 +26,19 @@ final readonly class Streamer
         return $streams[$name] ?? throw ConfigurationException::unknownStream($name);
     }
 
-    /** The outbox table, in each emitting service's database. */
+    /** The outbox table, in each emitting module's database. */
     public function getPublicationsTable(): string
     {
         return (string) $this->config->get('distributable.events.tables.publications', 'event_publications');
     }
 
-    /** The consumption marks of the guard, in each consuming service's database. */
+    /** The consumption marks of the guard, in each consuming module's database. */
     public function getConsumptionsTable(): string
     {
         return (string) $this->config->get('distributable.events.tables.consumptions', 'event_consumptions');
     }
 
-    /** Whether each event is stored in the emitting service's database, in the transaction, until it is sent. */
+    /** Whether each event is stored in the emitting module's database, in the transaction, until it is sent. */
     public function publishesReliably(): bool
     {
         return (bool) $this->config->get('distributable.events.reliable_publish', false);

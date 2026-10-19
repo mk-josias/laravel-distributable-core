@@ -6,7 +6,7 @@ namespace Distributable\Exceptions;
 
 use RuntimeException;
 
-/** A module that cannot be found, named, declared or resolved. */
+/** A module that cannot be found, named, declared or resolved, or a call or an event it cannot take. */
 final class ModuleException extends RuntimeException
 {
     /** @param list<string> $known */
@@ -63,5 +63,15 @@ final class ModuleException extends RuntimeException
     public static function outsideModule(string $class): self
     {
         return new self("Cannot resolve the module of [{$class}]: it is not inside a module namespace.");
+    }
+
+    public static function unknownRpcMessage(string $module, string $name, int $version): self
+    {
+        return new self("Module [{$module}] answers no [{$name}] in version {$version}: only a message it registers in \$rpc can be sent.");
+    }
+
+    public static function eventVersionAhead(string $name, int $version, int $known): self
+    {
+        return new self("Event [{$name}] arrived in version {$version}, and this process reads it up to version {$known}: deploy its consumer before it is handled.");
     }
 }

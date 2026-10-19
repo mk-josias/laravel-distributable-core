@@ -18,8 +18,8 @@ final readonly class Envelope
 {
     /**
      * @param  array<string, mixed>  $payload
-     * @param  array<string, mixed>  $headers  context carried across services (distributable.events.propagate)
-     * @param  list<string>  $recipients  the only services that handle it; empty for every service
+     * @param  array<string, mixed>  $headers  context carried across modules (distributable.events.propagate)
+     * @param  list<string>  $recipients  the only modules that handle it; empty for every module
      */
     public function __construct(
         public string $id,
@@ -50,9 +50,9 @@ final readonly class Envelope
         );
     }
 
-    public function isFor(string $service): bool
+    public function isFor(string $module): bool
     {
-        return $this->recipients === [] || in_array($service, $this->recipients, true);
+        return $this->recipients === [] || in_array($module, $this->recipients, true);
     }
 
     /** @return array<string, mixed> */

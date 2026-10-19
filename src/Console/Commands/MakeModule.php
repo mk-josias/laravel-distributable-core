@@ -10,11 +10,9 @@ use Illuminate\Console\Command;
 
 final class MakeModule extends Command
 {
-    protected $signature = 'modules:make
-        {name : The module name, snake_case (e.g. point_of_sale)}
-        {--database : Give the module its own database connections}';
+    protected $signature = 'modules:make {name : The module name, snake_case (e.g. point_of_sale)}';
 
-    protected $description = 'Create a module and its foundation directory.';
+    protected $description = 'Create a module.';
 
     public function handle(Modules $config): int
     {
@@ -44,10 +42,7 @@ final class MakeModule extends Command
                 PHP,
             'bootstrap/providers.php' => "<?php\n\nreturn [\n    {$module->provider}::class,\n];\n",
             'routes/api.php' => "<?php\n\ndeclare(strict_types=1);\n\nuse Illuminate\\Support\\Facades\\Route;\n",
-        ];
-
-        if ($this->option('database')) {
-            $files['config/database.php'] = <<<PHP
+            'config/database.php' => <<<PHP
                 <?php
 
                 declare(strict_types=1);
@@ -69,15 +64,16 @@ final class MakeModule extends Command
                     ],
                 ];
 
-                PHP;
-        }
+                PHP,
+        ];
 
         foreach ($files as $path => $contents) {
             $this->write($module->path().'/'.$path, $contents);
         }
 
-        $foundation = $config->getFoundationPath($module).'/Contracts';
-        is_dir($foundation) || mkdir($foundation, 0755, true);
+        foreach (['app/Models', 'database/migrations', 'tests/Feature'] as $directory) {
+            $this->write($module->path().'/'.$directory.'/.gitkeep', '');
+        }
 
         $this->components->info("Module [{$module->name}] created at {$module->path()}.");
         $this->declare($module);

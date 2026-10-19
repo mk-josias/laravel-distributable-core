@@ -10,11 +10,11 @@ use Distributable\Services\ModuleRegistry;
 use Distributable\Services\Shadows\ShadowRegistry;
 use Illuminate\Console\Command;
 
-/** Run by a service keeping copies: asks the owner of each source table to announce what it holds. */
+/** Run by a module keeping copies: asks the owner of each source table to announce what it holds. */
 final class WantShadows extends Command
 {
     protected $signature = 'shadows:want
-        {--keepers=* : Only these services ask for their copies (default: every local keeper)}
+        {--keepers=* : Only these modules ask for their copies (default: every local keeper)}
         {--sources=* : Only these source tables (default: every one they copy)}';
 
     protected $description = 'Ask the owners of the source tables copied here to announce their rows.';
@@ -35,7 +35,7 @@ final class WantShadows extends Command
                 }
 
                 $owner = $catalog->shadowsOf($source, $keeper)[0]::owner();
-                $bus->emit(new ShadowWanted($keeper, $owner, $source));
+                $bus->emit(new ShadowWanted($keeper, $owner, $source), emitter: $keeper);
                 $this->line("→ {$keeper} wants {$source}");
             }
         }

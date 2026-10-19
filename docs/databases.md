@@ -1,18 +1,9 @@
-# Each module's data
+# Its database
 
-## Connections
+## Its connection
 
-A module declares its connections in its `config/database.php`, as the root one does for the
-application: `default` names the one it runs on.
-
-```php
-// apps/Analytics/config/database.php
-'default' => 'main',
-'connections' => ['main' => [...], 'warehouse' => [...]],
-```
-
-Without `default`, the module's code runs on `no_module`, like any code outside a module; its models
-can still name their own connection.
+A module declares its connections in its own `config/database.php`, and `default` names the one its
+code runs on:
 
 ```php
 // apps/Iam/config/database.php
@@ -20,26 +11,31 @@ can still name their own connection.
 'owner' => 'iam_owner',
 'connections' => [
     // reads and writes rows
-    'iam' => ['driver' => 'pgsql', 'database' => 'iam', 'username' => env('IAM_USERNAME'), 'password' => env('IAM_PASSWORD')],
+    'iam' => [
+        'driver' => 'pgsql', 'database' => 'iam',
+        'username' => env('IAM_USERNAME'), 'password' => env('IAM_PASSWORD'),
+    ],
     // creates and alters tables
-    'iam_owner' => ['driver' => 'pgsql', 'database' => 'iam', 'username' => env('IAM_OWNER'), 'password' => env('IAM_OWNER_PASSWORD')],
+    'iam_owner' => [
+        'driver' => 'pgsql', 'database' => 'iam',
+        'username' => env('IAM_OWNER'), 'password' => env('IAM_OWNER_PASSWORD'),
+    ],
 ],
 ```
 
-`owner` names, as `default` does, a connection the file declares: the role that owns the tables
-and can create and alter them. Only the `migrate` commands and the module's DDL use it. Without
-it, they run on `default`, which suits one role for everything. The root `config/database.php`
-sets `'owner' => null`, as it sets `default`, so that each module's value is its own.
+`owner` is optional: the role that owns the tables. Only `migrate` uses it; without it, migrations
+run on `default`. The connections can also sit in the root `config/database.php`, next to the
+others: the module runs on the one its `default` names.
 
-Declare the connections where you prefer; the module runs on the one its `default` names:
+The connections can point to separate databases on one server, separate schemas of one database,
+separate servers, or sqlite files in tests: the code is the same. Several modules can share one
+database; give their tables distinct names then (`protected $table = 'iam_users'`).
 
-| Where | Result |
-|---|---|
-| the module's `config/database.php` | merged into `database.connections`; the module carries its own setup |
-| the root `config/database.php`, next to `sqlite` and `pgsql` | the same, with every connection in one file |
+Without `default`, the module has no database: its models must name their connection.
 
-A module may need a second database, a warehouse next to its own for instance. It declares that
-connection in its `config/database.php`, and its code names it, on a model or a query:
+## A second database
+
+A module that needs a warehouse next to its own database declares it, and names it where it uses it:
 
 ```php
 // apps/Analytics/config/database.php
@@ -55,108 +51,69 @@ connection in its `config/database.php`, and its code names it, on a model or a 
 protected $connection = 'warehouse';
 ```
 
-A migration that sets `$connection = 'warehouse'` runs on that connection; the others run on the
-owner connection.
-
-The connections can point to separate databases on one server, separate schemas of one database,
-separate servers, or sqlite files in tests. The code is the same in every case. Several modules can
-also share one database; the stored events filter their rows by emitting module.
-
-There are no foreign keys between modules. Reference another module's rows by id, or keep a
-[shadow](shadows.md) of them.
+A migration that sets `$connection = 'warehouse'` runs there.
 
 ## Models and transactions
 
-Models are plain Eloquent models, including `User extends Authenticatable`. Requests to a module's
-routes, and jobs, commands and event handlers whose class belongs to a module, run in that module's
-context: its connection becomes the default one. Models, `DB::`, `DB::transaction()` and `Schema::`
-then use the module's database without any extra code. If several modules share a database, give
-their tables distinct names (`protected $table = 'iam_users'`).
+Models are plain Eloquent models, `User extends Authenticatable` included. `DB::`,
+`DB::transaction()` and `Schema::` use the module's database, with nothing to name:
 
 ```php
-// apps/Iam/app/Actions/RegisterUser.php, called from an iam route, job or command
+// apps/Iam/app/Actions/RegisterUser.php
 final class RegisterUser
 {
     public function execute(string $name): User
     {
-        // iam database
+        // iam's database
         return DB::transaction(fn () => User::query()->create(['name' => $name]));
     }
 }
 ```
 
-| Entry point | Hook | Module |
-|---|---|---|
-| request on `/{module}/…` | `Http\Middleware\SetModuleContext` on the module's routes | the route's module |
-| any route whose controller is a module's class, wherever the route is declared | `RouteMatched` | the module of the controller class |
-| job | `Queue::before` | the module of the job class |
-| command | `CommandStarting` | the module of the command class |
-| event handler | `Dispatcher`, around each handler | the module of the handler class |
-| Laravel event listener declared in a module's `$listen` | `ServiceProvider`, around each listener | the module that declares it |
-| scheduled task declared in a module's `schedule()` | `ScheduledTaskStarting` | the module that declares it |
-| RPC message, from this process or another | `MessageRegistry`, around the handler | the module that answers the message |
-| queued closure, or any job class outside a module | `Queue::before`, from the Context Laravel carries into the job | the module that queued it |
-| `defer(fn () => …)` | a `DeferredCallbackCollection` that wraps each callback | the module that deferred it |
-| `Concurrency::run()` (`process` driver) | a wrapper around the driver: the child process gets only the closure | the module that started it |
-| `Octane::concurrently()` | a `DispatchesTasks` bound by the package, for the task workers | the module that started it |
+This holds wherever the code starts:
 
-The last line is why a module never switches databases itself: when analytics calls
-`IamClient::findUser()` and iam runs in the same process, iam's handler still runs in iam's
-context and reads iam's database. The context is restored once the method returns.
+- a request on the module's routes, or on any route whose controller is a module's class;
+- a job, a command, an event handler of the module;
+- a Laravel listener the module declares in `$listen`, a task it schedules in `schedule()`;
+- a call another module sends it, from this process or another;
+- a queued closure, `defer()`, `Concurrency::run()` or `Octane::concurrently()` started in the
+  module.
 
-For your own deferred work, `ModuleContext::bind($task)` returns a closure that runs `$task` in the
-current module wherever it runs later. It captures only the module's name, so it can be serialized.
-A closure sent to another process (Octane tasks, `Concurrency`, queued closures) is rebuilt by
-`laravel/serializable-closure` from its line in the file: keep one closure per line, or the worker
-may rebuild the wrong one.
+A closure sent to another process (Octane tasks, `Concurrency`, queued closures) is rebuilt from its
+line in the file: keep one closure per line, or the worker may rebuild the wrong one.
 
-Every database belongs to a module: there is no application database. Outside a module, the
-default connection is `ModuleContext::NO_MODULE`, and any query on it throws `ModuleException`
-("No module runs here"). Code that isn't in a module (a route closure in `routes/web.php`, another
-package's route, Tinker without `--module`) therefore never uses a module's models. It goes
-through the module's client, which runs the module's handler in its context and still works when the module
-runs elsewhere:
+## Code outside a module
+
+Outside a module there is no database: a route closure in `routes/web.php`, another package's
+route, or Tinker without `--module` throws `ModuleException` ("No module runs here") on its first
+query. It goes through the module's client instead, which still works when the module runs
+elsewhere:
 
 ```php
 // never Apps\Iam\Models\User::find($id)
 app(\Foundation\Iam\Services\IamClient::class)->findUser($id);
 ```
 
-`Context\ModuleContext::current()` returns the current module (`Data\Module`) or null,
-and `within($module, $callback)` runs a callback in a module's context. Only the package, tests and
-the module's own code may enter a module: when the code calling `within()` is another module's or
-the foundation's, it throws `ModuleException`,
-whatever names the module, a string, a variable or an enum. The check reads the caller's file
-from the call stack, so code that never runs is not checked, and `modules:doctor` cannot see it.
+There are no foreign keys between modules. Reference another module's rows by id, or keep a
+[copy](./shadows) of them.
 
-In tests, use `Distributable\Testing\ModuleAware`:
+## In tests
+
+Use `Distributable\Testing\ModuleAware`:
 
 ```php
-// iam database
+// iam's database
 $user = $this->inModule('iam', fn () => User::query()->create(['name' => 'ada']));
-```
 
-The trait also turns on Laravel's console events in tests, so `$this->artisan('iam:sync')` runs
-the command in its module's context, as the real console does.
-
-To test a module without the module that emits its events, hand it the event directly. Its handlers
-run in its context, with no stream and no consumer:
-
-```php
-// emitter: iam, read from the name
+// analytics' handlers receive the event, with no stream and no iam
 $this->receive('analytics', 'iam.user.registered', ['id' => 42]);
 ```
 
-## Migrations
+`$this->artisan('iam:sync')` runs the command with its module's database, as the real console does.
 
-`migrate` runs once per module database, on its owner connection, with the application's, the
-packages', the module's and the copies' migrations. See [Migrations](./migrations).
+## Failed jobs and batches
 
-## Queued jobs
-
-Failed jobs and job batches are stored in the database of the module the job class belongs to.
-`queue:failed`, `queue:retry` and `Bus::findBatch()` read from the databases of the modules this
-process runs. This works when Laravel stores them in a database (the `database-uuids` failer and
-database batches). The tables come from the application's `database/migrations`, which run in every
-module database.
-
+A failed job or a batch is stored in the database of the module its job class belongs to.
+`queue:failed`, `queue:retry` and `Bus::findBatch()` read the databases of the modules this process
+runs. This needs Laravel's database storage (the `database-uuids` failer and database batches); the
+tables come from the application's `database/migrations`, which run in every module's database.

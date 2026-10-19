@@ -126,12 +126,11 @@ final class DistributableServiceProvider extends BaseServiceProvider
             $cached = array_column($app->make(DiscoveryCache::class)->load()['modules'] ?? [], null, 'name');
 
             return new ModuleRegistry(array_map(
-                // A cache written before modules had a foundation folder is ignored, not misread.
-                static fn (string $name): Module => isset($cached[$name]['foundation'])
+                static fn (string $name): Module => isset($cached[$name])
                     ? Module::fromArray($cached[$name])
                     : $config->module($name),
                 $config->getDeclaredModules(),
-            ), $config->getLoadedModules(), $config->getFoundationNamespace());
+            ), $config->getLoadedModules());
         });
 
         $this->app->singleton(ModuleContext::class);
@@ -270,15 +269,10 @@ final class DistributableServiceProvider extends BaseServiceProvider
             }
         }
 
-        $foundation = $this->app->make(Modules::class)->getFoundationNamespace().'\\FoundationServiceProvider';
-
-        if (class_exists($foundation)) {
-            $this->app->register($foundation);
-        }
     }
 
     /**
-     * Autoloads the foundation and the modules this process runs, with no composer.json entry. A
+     * Autoloads the modules this process runs, with no composer.json entry. A
      * class of a module running elsewhere is never loaded: using one throws instead of reading
      * code this process must not depend on — whether that code is still on disk or was purged.
      */
@@ -286,8 +280,6 @@ final class DistributableServiceProvider extends BaseServiceProvider
     {
         $loader = new ClassLoader;
         $config = $this->app->make(Modules::class);
-
-        $loader->addPsr4($config->getFoundationNamespace().'\\', $config->getFoundationPath());
 
         foreach ($registry->local() as $module) {
             $loader->addPsr4($module->namespace.'\\', $module->classPath());

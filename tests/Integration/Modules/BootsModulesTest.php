@@ -51,13 +51,6 @@ it('wraps a route file in the middleware group of the same name when one exists'
     expect($route->gatherMiddleware())->toContain('admin');
 });
 
-it('serves the RPC endpoint of each local module inside the signed rpc group', function () {
-    $route = $this->app->make(Router::class)->getRoutes()->match(Request::create('/iam/rpc/1/find-user', 'POST'));
-
-    expect($route->gatherMiddleware())->toContain('rpc')
-        ->and($route->defaults['module'])->toBe('iam');
-});
-
 it('deep-merges the module config over the root config, and applies the values it overrides while the module runs', function () {
     expect(config('iam.flag'))->toBeTrue()
         ->and(config('iam.items'))->toBe(['from-root', 'from-module'])

@@ -16,17 +16,16 @@ use Distributable\Services\Stream\TransportManager;
 use Illuminate\Console\Command;
 
 /**
- * The consumer role: reads the envelopes published by every service and runs the handlers of the
- * services that run here. Each consuming service names a subscription (its own cursor), so adding
- * a consumer disturbs none of the others.
+ * The consumer role: reads the envelopes published by every module and runs the handlers of the
+ * modules that run here, or of the one --module names. Each consuming module names a subscription
+ * (its own cursor), so adding a consumer disturbs none of the others.
  */
 final class ConsumeEvents extends Command
 {
     protected $signature = 'stream:consume
-        {--service= : The consuming service (default: the one running, or every local one)}
         {--stream= : The stream to read (default: distributable.events.stream)}';
 
-    protected $description = 'Consume events from a stream and run this service handlers.';
+    protected $description = 'Consume events from a stream and run the handlers of the modules that run here.';
 
     public function handle(ModuleRegistry $registry, ModuleContext $context, TransportManager $transports, Dispatcher $dispatcher, Streamer $streamer): int
     {
@@ -38,7 +37,7 @@ final class ConsumeEvents extends Command
         $consumers = $this->consumers($registry, $context);
 
         if ($consumers === []) {
-            $this->error('No service runs here — name the consuming one with --service.');
+            $this->error('No module runs here — name the consuming one with --module.');
 
             return self::FAILURE;
         }
@@ -81,12 +80,6 @@ final class ConsumeEvents extends Command
     /** @return list<string> */
     private function consumers(ModuleRegistry $registry, ModuleContext $context): array
     {
-        $service = $this->option('service');
-
-        if (is_string($service) && $service !== '') {
-            return [$service];
-        }
-
         $current = $context->current()?->name;
 
         return $current !== null ? [$current] : $registry->localNames();

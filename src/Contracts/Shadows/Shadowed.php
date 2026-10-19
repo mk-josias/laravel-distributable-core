@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Distributable\Contracts\Shadows;
 
-/** A model other services keep a copy of; implemented by the ShadowSource trait. */
+/** A model other modules keep a copy of; implemented by the ShadowSource trait. */
 interface Shadowed
 {
-    /** @param list<string> $keepers the only services to update their copy; empty for all of them */
+    /** @param list<string> $keepers the only modules to update their copy; empty for all of them */
     public function announceShadow(bool $deleted = false, array $keepers = []): void;
 
     /**

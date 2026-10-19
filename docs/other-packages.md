@@ -33,7 +33,7 @@ and let the other modules validate tokens through a message iam answers:
 // apps/Iam/app/Rpc/FindUserByTokenHandler.php: the User model uses HasApiTokens
 public function handle(FindUserByToken $message): ?array
 {
-    $user = $this->users->byAccessToken($message->token);
+    $user = $this->users->byToken($message->token);
 
     return $user === null ? null : ['id' => (int) $user->getKey(), 'name' => (string) $user->name];
 }

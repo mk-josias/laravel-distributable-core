@@ -5,15 +5,11 @@ Calling the other module once per row would be slow, and reaching into its datab
 The module keeps a copy instead, in its own database, kept up to date by events. Only the owner
 writes the data.
 
-Copies are [laravel-microservices' copies](https://mk-josias.github.io/laravel-microservices/docs/shadows):
-each module is a service. This page covers what a module adds: where each piece lives, and which
-database the copy is in.
-
 ## Copy or call
 
 | | Through the contract | From the copy |
 |---|---|---|
-| Cost | one call per value, an HTTP call when the owner runs elsewhere | a local query, joins included |
+| Cost | one call per value, a call on the transport when the owner runs elsewhere | a local query, joins included |
 | Freshness | always current | current once the consumer has handled the events |
 | Use it for | checking one value, reading one record | lists, filters, sorts |
 
@@ -24,7 +20,7 @@ signups with their users from the copy (`SignupResource`).
 
 ```
 iam: User saved or deleted
-  └─ the row, with the $shadowed fields only, leaves in an event: distributable.shadow.changed
+  └─ the row, with the #[ShadowFields] fields only, leaves in an event: distributable.shadow.changed
        └─ stream
             ├─ analytics' consumer ─► UserShadow::sync() ─► the copy, in analytics' database
             └─ notifications' consumer ─► UserShadow::sync() ─► the copy, in notifications' database
@@ -37,38 +33,24 @@ copy lists it.
 
 ```php
 // apps/Iam/app/Models/User.php, the source
+// the fields the other modules' copies carry
+#[ShadowFields('name', 'email')]
 final class User extends Model implements Principal, Shadowed
 {
     use ShadowSource;
 
     protected $table = 'iam_users';
-
-    // the fields the other modules' copies carry
-    protected array $shadowed = ['name', 'email'];
 }
 ```
 
-Only the `$shadowed` fields, and the dates the row has, leave the module. The `password` of
+Only the `#[ShadowFields]` fields, and the dates the row has, leave the module. The `password` of
 iam's users, and their tokens, never do.
 
 ```php
 // foundation/Iam/Shadows/UserShadow.php, the shape of the copy, declared once by iam
+#[Shadow(module: 'iam', table: 'iam_users', migrations: [__DIR__.'/../database/shadows/users'])]
 class UserShadow extends ShadowModel implements Principal
 {
-    public static function owner(): string
-    {
-        return 'iam';
-    }
-
-    public static function sourceTable(): string
-    {
-        return 'iam_users';
-    }
-
-    public static function migrations(): array
-    {
-        return [__DIR__.'/../database/shadows/users'];
-    }
 }
 ```
 
@@ -79,14 +61,13 @@ protected array $shadows = [UserShadow::class];
 
 A module lists the foundation's class as it is, or a subclass of its own that adds relations,
 casts or a `beforeSync()`. Each listed class is one table: two forms of one source need two
-`$table`s, each with its own `migrations()`, and `modules:doctor` reports two copies in one table.
+`$table`s, each with its own `migrations:`, and `modules:doctor` reports two copies in one table.
 
 ## Where the copy lives
 
 A copy is a model like the module's others: it reads and writes the database of the module that
 is running. The same `UserShadow` is analytics' copy inside analytics and notifications' inside
-notifications; outside any module it throws, as every query does. When one consumer serves several
-keepers, it enters each in turn before writing its copies.
+notifications; outside any module it throws, as every query does.
 
 In the starter, analytics and notifications keep a copy of iam's users. `config/auth.php` sets
 `auth.principal` to `UserShadow`: with the default resolver (`LocalPrincipals`), a module loads the
@@ -99,6 +80,19 @@ authenticated user of a request from its own copy.
 - `beforeSync()` derives what the copy needs and the source never announced.
 - `shouldBeShadowed()` keeps only some rows: a row it returns `false` for is never written, and
   leaves the copy if it was there.
+
+```php
+// analytics keeps only the administrators
+protected static function shouldBeShadowed(array $attributes): bool
+{
+    return (bool) $attributes['is_admin'];
+}
+```
+
+An announcement that arrives late, after a newer one, is ignored when the source row and the copy
+both carry a date: the latest of `updated_at` and `deleted_at`, to the second. A source without
+those columns announces no date, and the copy then keeps whichever announcement arrived last. Such
+a copy can be overwritten by an older announcement; `shadows:announce` repairs it.
 
 ## Creating its table
 
@@ -121,9 +115,38 @@ Both commands address the event to the keepers, so only those modules update the
 ## On its own stream
 
 By default a row travels on the default stream, with the other events. A source model can name
-another stream in `distributable.events.streams`, and the keeper then reads it with
-`stream:consume --stream=shadows`. The keeper must read that stream, or its copy stays empty. See
-[laravel-microservices' copies](https://mk-josias.github.io/laravel-microservices/docs/shadows#on-its-own-stream).
+another stream of `distributable.events.streams` by overriding `shadowStream()`; its rows, and only
+its rows, travel on it:
 
-`modules:cache` records each module's shadow sources, so a process doesn't scan the module folders
-for them at boot.
+```php
+// iam: User's rows go on the `shadows` stream, the other events stay on the default one
+public function shadowStream(): ?string
+{
+    return 'shadows';
+}
+```
+
+```php
+// config/distributable.php, in iam and in every module keeping the copy
+'events' => ['streams' => [
+    'default' => ['driver' => 'redis'],
+    'shadows' => ['driver' => 'redis'],
+]],
+```
+
+```bash
+# on the keeper: one consumer per stream
+php artisan stream:consume --stream=shadows
+```
+
+A keeper has to read that stream, or its copy stays empty. With `events.reliable_publish` on, a
+row announced on `shadows` is written to `event_publications` with that stream, then published
+there. `shadows:want` and `shadows:announce` need nothing more: the want goes out on the default
+stream, the answer on the source's own.
+
+An order is kept only within one stream. A handler that reads a copy an earlier event was meant to
+fill (a welcome mail reading the user's copy) needs that copy's source and its own event on the same
+stream: on two streams, the event can overtake the copy.
+
+A program in another language can be the source: see
+[Other languages](./other-languages#being-the-source-of-a-copy).
