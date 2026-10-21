@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Distributable\Services\Stream;
 
+use Closure;
 use Distributable\Config\Streamer;
 use Distributable\Context\ModuleContext;
 use Distributable\Contracts\Stream\Handler;
@@ -66,12 +67,13 @@ final class Dispatcher
      * Runs one handler now, guarded when delivery is at-least-once.
      *
      * @param  class-string  $class
+     * @param  (Closure(object): object)|null  $prepare  receives the handler once built, as a queued job gives it its job
      */
-    public function handle(string $class, Envelope $envelope, ?string $module): void
+    public function handle(string $class, Envelope $envelope, ?string $module, ?Closure $prepare = null): void
     {
         $this->guarded($envelope->stream) && ! is_subclass_of($class, Idempotent::class)
-            ? $this->runGuarded($class, $envelope)
-            : $this->run($class, $envelope, $module);
+            ? $this->runGuarded($class, $envelope, $prepare)
+            : $this->run($class, $envelope, $module, $prepare);
     }
 
     /** @return list<class-string> the package's own handlers, then the application's */
@@ -106,15 +108,18 @@ final class Dispatcher
             ->delete();
     }
 
-    /** @param class-string $class */
-    private function runGuarded(string $class, Envelope $envelope): void
+    /**
+     * @param  class-string  $class
+     * @param  (Closure(object): object)|null  $prepare
+     */
+    private function runGuarded(string $class, Envelope $envelope, ?Closure $prepare = null): void
     {
         $module = $this->registry->ownerOf($class)->name
             ?? throw ModuleException::outsideModule($class);
 
         $connection = $this->context->connection($module);
 
-        $connection->transaction(function () use ($connection, $class, $envelope, $module): void {
+        $connection->transaction(function () use ($connection, $class, $envelope, $module, $prepare): void {
             $claimed = $connection->table($this->config->getConsumptionsTable())->insertOrIgnore([
                 'event_id' => $envelope->id,
                 'handler' => $class,
@@ -125,17 +130,19 @@ final class Dispatcher
                 return; // already handled — the replay stops here
             }
 
-            $this->run($class, $envelope, $module);
+            $this->run($class, $envelope, $module, $prepare);
         });
     }
 
     /**
      * @param  class-string  $class
      * @param  string|null  $module  the handler's own module, or the consumer's for one of the package
+     * @param  (Closure(object): object)|null  $prepare
      */
-    private function run(string $class, Envelope $envelope, ?string $module): void
+    private function run(string $class, Envelope $envelope, ?string $module, ?Closure $prepare = null): void
     {
         $handler = $this->container->make($class);
+        $handler = $prepare === null ? $handler : $prepare($handler);
 
         if (! $handler instanceof Handler) {
             throw ConfigurationException::invalidHandler($class, Handler::class);

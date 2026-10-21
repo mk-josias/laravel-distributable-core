@@ -24,6 +24,11 @@ final class CallQueuedHandler extends CallQueuedListener
 
     public function handle(Container $container): void
     {
-        $container->make(Dispatcher::class)->handle($this->class, Envelope::fromArray($this->envelope), $this->module);
+        $container->make(Dispatcher::class)->handle(
+            $this->class,
+            Envelope::fromArray($this->envelope),
+            $this->module,
+            fn (object $handler): object => $this->job === null ? $handler : $this->setJobInstanceIfNecessary($this->job, $handler),
+        );
     }
 }

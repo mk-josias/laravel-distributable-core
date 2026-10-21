@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Apps\Iam\Events\UserRegistered;
 use Apps\Iam\Handlers\QueuedOnUserRegistered;
+use Apps\Iam\Handlers\RetriedOnUserRegistered;
 use Distributable\Contracts\Stream\Bus;
 use Distributable\Providers\DistributableServiceProvider;
 use Distributable\Services\Stream\Dispatcher;
@@ -53,6 +54,14 @@ it('queues a handler that implements ShouldQueue, as Laravel queues a listener, 
     expect($queued)->toBe([[QueuedOnUserRegistered::class, 3]])
         ->and($this->app->make(Recorder::class)->records)->toBe([['iam.user.registered', ['id' => 5, 'name' => 'lamp']]])
         ->and($this->app->make(Recorder::class)->connections)->toBe(['iam']);
+});
+
+it('gives a queued handler its job, as Laravel gives one to a queued listener, so release() and attempts() work', function () {
+    Config::set('distributable.events.listen', ['iam.user.registered' => [RetriedOnUserRegistered::class]]);
+
+    $this->app->make(Bus::class)->emit(new UserRegistered(5, 'lamp'));
+
+    expect($this->app->make(Recorder::class)->traces)->toBe([RetriedOnUserRegistered::class]);
 });
 
 it('guards a queued handler as one that runs now', function () {
