@@ -8,16 +8,14 @@ use Closure;
 use Distributable\Config\Streamer;
 use Distributable\Contracts\Stream\Transport;
 use Distributable\Exceptions\ConfigurationException;
-use Distributable\Services\ModuleRegistry;
 use Distributable\Transports\Stream\ArrayTransport;
-use Distributable\Transports\Stream\LocalTransport;
 use Distributable\Transports\Stream\NullTransport;
 use Illuminate\Contracts\Container\Container;
 
 /**
  * Resolves a named stream of distributable.events.streams to its transport, like QueueManager::connection(),
  * and stays open: extend('kafka', fn ($app, array $options, string $stream) => …) registers any
- * driver. The package ships `local`, `array` and `null`; `redis` comes with its own package.
+ * driver. The package ships `array` and `null`; `redis` and `in-process` come with their own package.
  */
 final class TransportManager
 {
@@ -61,7 +59,6 @@ final class TransportManager
         }
 
         return match ($driver) {
-            'local' => new LocalTransport($this->container->make(ModuleRegistry::class), $this->container),
             'array' => new ArrayTransport,
             'null' => new NullTransport,
             default => throw ConfigurationException::unknownDriver($driver, $name),

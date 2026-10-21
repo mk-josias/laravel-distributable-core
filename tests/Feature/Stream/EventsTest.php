@@ -133,11 +133,11 @@ it('handles a redelivered event once', function () {
         ->and(DB::table('event_consumptions')->count())->toBe(1);
 });
 
-it('names the package of a shipped driver that is not installed', function () {
-    config()->set('distributable.events.streams.default.driver', 'redis');
+it('names the package of a shipped driver that is not installed', function (string $driver) {
+    config()->set('distributable.events.streams.default.driver', $driver);
 
-    expect(fn () => app(Transport::class))->toThrow(ConfigurationException::class, 'composer require mk-josias/laravel-distributable-stream-redis');
-});
+    expect(fn () => app(Transport::class))->toThrow(ConfigurationException::class, "composer require mk-josias/laravel-distributable-stream-{$driver}");
+})->with(['redis', 'in-process']);
 
 it('consumes the stream as this service', function () {
     config()->set('distributable.events.listen', ['billing.invoice.paid' => [OnInvoicePaid::class]]);

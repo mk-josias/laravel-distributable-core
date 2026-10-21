@@ -26,7 +26,8 @@
     "suggest": {
         "laravel/octane": "High-throughput application server; the kernel also runs under plain FPM",
         "mk-josias/laravel-distributable-rpc-http": "Calls to a module running in another process, over signed HTTP",
-        "mk-josias/laravel-distributable-stream-redis": "The redis events driver, on Redis Streams"
+        "mk-josias/laravel-distributable-stream-redis": "The redis events driver, on Redis Streams",
+        "mk-josias/laravel-distributable-stream-in-process": "The in-process events driver, for modules that run in one process"
     },
     "autoload": {
         "psr-4": {

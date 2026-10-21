@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Apps\Iam\Events\UserRegistered;
 use Apps\Iam\Handlers\QueuedOnUserRegistered;
 use Apps\Iam\Handlers\RetriedOnUserRegistered;
-use Distributable\Contracts\Stream\Bus;
+use Distributable\Data\Envelope;
 use Distributable\Providers\DistributableServiceProvider;
 use Distributable\Services\Stream\Dispatcher;
 use Distributable\Services\Stream\EnvelopeFactory;
@@ -19,28 +19,13 @@ use Illuminate\Support\Facades\Queue;
 uses(ModuleAppTestCase::class);
 
 beforeEach(function () {
-    Config::set('distributable.events.streams.default.driver', 'local');
     $this->app->singleton(Recorder::class);
 });
 
-it('hands an emitted event to the handlers of the modules this process runs, in their module, without a consumer', function () {
-    $this->app->make(Bus::class)->emit(new UserRegistered(5, 'lamp'));
-
-    expect($this->app->make(Recorder::class)->records)->toBe([['iam.user.registered', ['id' => 5, 'name' => 'lamp']]])
-        ->and($this->app->make(Recorder::class)->connections)->toBe(['iam']);
-});
-
-it('hands it over once the emitter\'s transaction has committed', function () {
-    $this->inModule('iam', function (): void {
-        DB::transaction(function (): void {
-            $this->app->make(Bus::class)->emit(new UserRegistered(5, 'lamp'));
-
-            expect($this->app->make(Recorder::class)->records)->toBe([]);
-        });
-    });
-
-    expect($this->app->make(Recorder::class)->records)->toHaveCount(1);
-});
+function registered(): Envelope
+{
+    return app(EnvelopeFactory::class)->for(new UserRegistered(5, 'lamp'), 'iam');
+}
 
 it('queues a handler that implements ShouldQueue, as Laravel queues a listener, and the worker runs it in its module', function () {
     Config::set('distributable.events.listen', ['iam.user.registered' => [QueuedOnUserRegistered::class]]);
@@ -49,7 +34,7 @@ it('queues a handler that implements ShouldQueue, as Laravel queues a listener, 
         $queued[] = [$event->job->resolveName(), $event->job->maxTries()];
     });
 
-    $this->app->make(Bus::class)->emit(new UserRegistered(5, 'lamp'));
+    $this->app->make(Dispatcher::class)->dispatch(registered());
 
     expect($queued)->toBe([[QueuedOnUserRegistered::class, 3]])
         ->and($this->app->make(Recorder::class)->records)->toBe([['iam.user.registered', ['id' => 5, 'name' => 'lamp']]])
@@ -59,7 +44,7 @@ it('queues a handler that implements ShouldQueue, as Laravel queues a listener, 
 it('gives a queued handler its job, as Laravel gives one to a queued listener, so release() and attempts() work', function () {
     Config::set('distributable.events.listen', ['iam.user.registered' => [RetriedOnUserRegistered::class]]);
 
-    $this->app->make(Bus::class)->emit(new UserRegistered(5, 'lamp'));
+    $this->app->make(Dispatcher::class)->dispatch(registered());
 
     expect($this->app->make(Recorder::class)->traces)->toBe([RetriedOnUserRegistered::class]);
 });
@@ -72,7 +57,7 @@ it('guards a queued handler as one that runs now', function () {
             (require $file)->up();
         }
     });
-    $envelope = app(EnvelopeFactory::class)->for(new UserRegistered(5, 'ada'), 'iam');
+    $envelope = registered();
     $jobs = 0;
     Queue::before(function () use (&$jobs): void {
         $jobs++;
