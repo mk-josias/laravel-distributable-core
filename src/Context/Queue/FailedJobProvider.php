@@ -5,28 +5,35 @@ declare(strict_types=1);
 namespace Distributable\Context\Queue;
 
 use DateTimeInterface;
+use Distributable\Context\ModuleContext;
+use Distributable\Data\Module;
+use Distributable\Exceptions\ModuleException;
 use Distributable\Services\ModuleRegistry;
+use Illuminate\Container\Container;
 use Illuminate\Database\ConnectionResolverInterface;
 use Illuminate\Queue\Failed\DatabaseUuidFailedJobProvider;
+use Illuminate\Support\Facades\Context;
 
 /**
- * Stores a failed job in the database of the module owning the job class; reads go through the
- * databases of every module this process runs.
+ * Stores a failed job in the module it ran in; reads enter each module this process runs and read its database.
+ * It never picks a module for a job: without one, it refuses.
  */
 final class FailedJobProvider extends DatabaseUuidFailedJobProvider
 {
     public function __construct(
         ConnectionResolverInterface $resolver,
-        string $database,
         string $table,
         private readonly ModuleRegistry $registry,
     ) {
-        parent::__construct($resolver, $database, $table);
+        // Every operation names its module (in()); a call that does not reaches NO_MODULE, which refuses it.
+        parent::__construct($resolver, ModuleContext::NO_MODULE, $table);
     }
 
     public function log($connection, $queue, $payload, $exception)
     {
-        return $this->on($this->connectionFor($payload), fn () => parent::log($connection, $queue, $payload, $exception));
+        [$module, $database] = $this->whereTheJobRan();
+
+        return $this->in($module, fn () => parent::log($connection, $queue, $payload, $exception), $database);
     }
 
     /** @return array<int, mixed> */
@@ -43,8 +50,8 @@ final class FailedJobProvider extends DatabaseUuidFailedJobProvider
 
     public function find($id)
     {
-        foreach ($this->connections() as $connection) {
-            $record = $this->on($connection, fn () => parent::find($id));
+        foreach ($this->modules() as $module) {
+            $record = $this->in($module, fn () => parent::find($id));
 
             if ($record !== null) {
                 return $record;
@@ -56,8 +63,8 @@ final class FailedJobProvider extends DatabaseUuidFailedJobProvider
 
     public function forget($id)
     {
-        foreach ($this->connections() as $connection) {
-            if ($this->on($connection, fn () => parent::forget($id))) {
+        foreach ($this->modules() as $module) {
+            if ($this->in($module, fn () => parent::forget($id))) {
                 return true;
             }
         }
@@ -75,55 +82,50 @@ final class FailedJobProvider extends DatabaseUuidFailedJobProvider
     {
         $arguments = func_get_args();
 
-        foreach ($this->connections() as $connection) {
-            $this->on($connection, fn () => parent::flush(...$arguments));
+        foreach ($this->modules() as $module) {
+            $this->in($module, fn () => parent::flush(...$arguments));
         }
     }
 
     public function prune(DateTimeInterface $before)
     {
-        return array_sum(array_map(fn (string $connection): int => $this->on($connection, fn () => parent::prune($before)), $this->connections()));
+        return array_sum(array_map(fn (Module $module): int => $this->in($module, fn () => parent::prune($before)), $this->modules()));
     }
 
     public function count($connection = null, $queue = null)
     {
-        return array_sum(array_map(fn (string $module): int => $this->on($module, fn () => parent::count($connection, $queue)), $this->connections()));
-    }
-
-    /** A job outside every module goes to the first module database, else to the configured one. */
-    private function connectionFor(string $payload): string
-    {
-        $decoded = json_decode($payload, true);
-        $class = is_array($decoded) ? (string) ($decoded['data']['commandName'] ?? $decoded['displayName'] ?? '') : '';
-        $module = $this->registry->forClass($class);
-
-        return $module !== null && $module->hasDatabase
-            ? $module->defaultConnection()
-            : ($this->connections()[0] ?? $this->database);
-    }
-
-    /** @return list<string> */
-    private function connections(): array
-    {
-        return Databases::of($this->registry) ?: [$this->database];
+        return array_sum(array_map(fn (Module $module): int => $this->in($module, fn () => parent::count($connection, $queue)), $this->modules()));
     }
 
     /**
-     * @template T
+     * The job's module, which Queue::before has switched to; for one that is gone, the connection its job carried, in the module that declares it.
      *
-     * @param  callable(): T  $callback
-     * @return T
+     * @return array{Module, string|null}
      */
-    private function on(string $connection, callable $callback): mixed
+    private function whereTheJobRan(): array
     {
-        $previous = $this->database;
-        $this->database = $connection;
+        $name = Context::getHidden(ModuleContext::CONTEXT_KEY);
+        $module = is_string($name) ? $this->registry->find($name) : null;
 
-        try {
-            return $callback();
-        } finally {
-            $this->database = $previous;
+        if ($module !== null && $module->hasDatabase) {
+            return [$module, null];
         }
+
+        $carried = Context::getHidden(ModuleContext::CONNECTION_KEY);
+
+        foreach ($this->registry->local() as $candidate) {
+            if (is_string($carried) && in_array($carried, $candidate->connections(), true)) {
+                return [$candidate, $carried];
+            }
+        }
+
+        throw ModuleException::noModuleRunning();
+    }
+
+    /** @return list<Module> */
+    private function modules(): array
+    {
+        return Databases::modules($this->registry);
     }
 
     /**
@@ -134,10 +136,31 @@ final class FailedJobProvider extends DatabaseUuidFailedJobProvider
     {
         $merged = [];
 
-        foreach ($this->connections() as $connection) {
-            $merged = [...$merged, ...$this->on($connection, $callback)];
+        foreach ($this->modules() as $module) {
+            $merged = [...$merged, ...$this->in($module, $callback)];
         }
 
         return $merged;
+    }
+
+    /**
+     * @template T
+     *
+     * @param  callable(): T  $callback
+     * @return T
+     */
+    private function in(Module $module, callable $callback, ?string $connection = null): mixed
+    {
+        return Container::getInstance()->make(ModuleContext::class)->within($module, function () use ($module, $callback, $connection): mixed {
+            $previous = [$this->resolver, $this->database];
+            $this->resolver = Container::getInstance()->make('db');
+            $this->database = $connection ?? Databases::for($module, Databases::FAILED);
+
+            try {
+                return $callback();
+            } finally {
+                [$this->resolver, $this->database] = $previous;
+            }
+        });
     }
 }

@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace Distributable\Services\Stream\Outbox;
 
 use Distributable\Config\Streamer;
+use Distributable\Context\ModuleContext;
 use Distributable\Data\Envelope;
-use Distributable\Services\ModuleRegistry;
 use Distributable\Services\Stream\TransportManager;
-use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Str;
 use stdClass;
@@ -24,9 +23,8 @@ use Throwable;
 final class Relay
 {
     public function __construct(
-        private readonly DatabaseManager $db,
+        private readonly ModuleContext $context,
         private readonly TransportManager $transports,
-        private readonly ModuleRegistry $registry,
         private readonly Streamer $config,
     ) {}
 
@@ -112,6 +110,6 @@ final class Relay
 
     private function table(string $module): Builder
     {
-        return $this->db->connection($this->registry->connectionOf($module))->table($this->config->getPublicationsTable());
+        return $this->context->connection($module)->table($this->config->getPublicationsTable());
     }
 }

@@ -1,6 +1,8 @@
 <?php
 
 declare(strict_types=1);
+use Illuminate\Broadcasting\BroadcastManager;
+use Illuminate\Contracts\Broadcasting\Broadcaster;
 
 return [
 
@@ -28,6 +30,11 @@ return [
         'prefix' => '{module}/{name}',
     ],
 
+    // A module's config file that joins the application's whole: config/distributable.php of a module (its streams).
+    'shared' => [
+        'distributable',
+    ],
+
     // Modules booted by THIS process: '*' = all, or a comma-separated list.
     'runs' => env('RUN_MODULES', '*'),
 
@@ -47,9 +54,15 @@ return [
     // Path answering which modules this process runs (e.g. '/'), or null to register nothing.
     'status_route' => env('MODULES_STATUS_ROUTE'),
 
-    // Container services built once per module, with that module's config, and swapped in as the
-    // module runs: e.g. ['cache', 'cache.store', 'mail.manager', 'mailer', 'filesystem'].
-    'per_module' => [],
+    // Container services built once per module, with that module's config, and swapped in as the module runs: what
+    // one opens by name (a connection, a store, a disk) stays its own. Add a package's manager, or a singleton of
+    // yours that receives one of these in its constructor.
+    'module_services' => [
+        'db', 'cache', 'cache.store', 'queue', 'queue.connection', 'mail.manager', 'mailer',
+        'filesystem', 'filesystem.disk', 'filesystem.cloud', 'log', 'redis',
+        BroadcastManager::class, Broadcaster::class,
+        'auth', 'auth.driver', 'validator', 'validation.presence',
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -78,7 +91,8 @@ return [
     |--------------------------------------------------------------------------
     | Named streams, like queue connections: each has a driver and that
     | driver's options. An event travels on the stream its stream() method
-    | names, or on the default one. Drivers: `array` (in memory, for tests),
+    | names, or on the default one. Drivers: `local` (to the modules this
+    | process runs, with no broker), `array` (in memory, for tests),
     | `null` (drops everything), and from its own package `redis`
     | (mk-josias/laravel-distributable-stream-redis).
     | Any other driver resolves through a creator registered with extend().
@@ -90,14 +104,9 @@ return [
         'streams' => [
 
             // Nothing is trimmed on write: stream:trim drops only what every consumer group acknowledged.
+            // A stream sets its driver; a driver's own options (the redis ones: key, block, count, claim_after, on_failure) are in its package's config file, and a stream may override them here.
             'default' => [
                 'driver' => env('DISTRIBUTABLE_STREAM_DRIVER', 'array'), // redis once its package is installed
-                'connection' => env('DISTRIBUTABLE_STREAM_CONNECTION'), // null: the driver's own default connection
-                'key' => 'distributable:events', // the Redis stream every module writes to
-                'block' => 5_000,           // read block window, ms
-                'count' => 50,              // entries per read
-                'claim_after' => 60_000,    // reclaim entries a dead consumer left pending, ms
-                'on_failure' => 'block',    // block: a failed entry is retried before later ones; skip: later ones go on, the failed one is dropped
             ],
 
         ],

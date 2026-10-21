@@ -23,7 +23,7 @@ it('finds the factory of a module model in the module database/factories, and th
 });
 
 it('creates a module model through its factory in the module database', function () {
-    Schema::connection('iam')->create('iam_users', function (Blueprint $table): void {
+    $this->inModule('iam', fn () => Schema::connection('iam'))->create('iam_users', function (Blueprint $table): void {
         $table->id();
         $table->string('name');
         $table->timestamps();
@@ -32,7 +32,7 @@ it('creates a module model through its factory in the module database', function
     $user = $this->inModuleOf(User::class, fn (): User => User::factory()->create());
 
     expect($user->getConnectionName())->toBe('iam')
-        ->and(DB::connection('iam')->table('iam_users')->value('name'))->toBe('ada');
+        ->and($this->inModule('iam', fn () => DB::connection('iam'))->table('iam_users')->value('name'))->toBe('ada');
 });
 
 it('keeps Laravel rule for every class outside a module', function () {

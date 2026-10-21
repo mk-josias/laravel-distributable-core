@@ -5,7 +5,6 @@ declare(strict_types=1);
 use Apps\Analytics\Models\UserShadow;
 use Distributable\Contracts\Rpc\ReportsRpcProblems;
 use Distributable\Contracts\Rpc\Transport;
-use Distributable\Services\Migrations\ModuleMigrations;
 use Distributable\Services\ModuleRegistry;
 use Distributable\Services\Rpc\TransportManager;
 use Distributable\Tests\ModuleAppTestCase;
@@ -178,18 +177,20 @@ it('reports the problems a transport names', function () {
         ->assertFailed();
 });
 
-it('fails on two modules setting one new config key to different values, and leaves lists and per-module values alone', function () {
-    $file = dirname(__DIR__, 2).'/Fixtures/apps/Analytics/config/iam.php';
-    file_put_contents($file, "<?php\n\nreturn ['flag' => false, 'items' => ['from-analytics'], 'nested' => ['override' => 'analytics']];\n");
+it('fails on two modules naming one stream differently, and leaves what each keeps for itself alone', function () {
+    $file = dirname(__DIR__, 2).'/Fixtures/apps/Analytics/config/distributable.php';
+    file_put_contents($file, "<?php\n\nreturn ['events' => ['streams' => ['audit' => ['driver' => 'null']]]];\n");
+    $private = dirname(__DIR__, 2).'/Fixtures/apps/Analytics/config/iam.php';
+    file_put_contents($private, "<?php\n\nreturn ['flag' => false, 'items' => ['from-analytics'], 'nested' => ['override' => 'analytics']];\n");
 
     try {
         $this->artisan('modules:doctor')
-            ->expectsOutputToContain('Modules [analytics, iam] set config [iam.flag] to different values')
-            ->doesntExpectOutputToContain('[iam.items')
-            ->doesntExpectOutputToContain('[iam.nested.override]')
+            ->expectsOutputToContain('Modules [analytics, iam] set config [distributable.events.streams.audit.driver] to different values')
+            ->doesntExpectOutputToContain('[iam.')
             ->assertFailed();
     } finally {
         unlink($file);
+        unlink($private);
     }
 });
 
@@ -211,7 +212,7 @@ it('fails on a copy naming a folder without any migration', function () {
 });
 
 it('runs the migrations a copy names in the database of the module keeping it', function () {
-    expect(app(ModuleMigrations::class)->forModule(app(ModuleRegistry::class)->get('analytics')))
+    expect($this->inModule('analytics', fn () => app('migrator')->paths()))
         ->toContain(dirname(__DIR__, 2).'/Fixtures/foundation/Iam/Shadows/../database/shadows/users');
 });
 

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use Apps\Iam\Events\UserRegistered;
 use Apps\Iam\Handlers\OnUserRegistered;
-use Distributable\Data\Envelope;
 use Distributable\Providers\DistributableServiceProvider;
 use Distributable\Services\Stream\Dispatcher;
+use Distributable\Services\Stream\EnvelopeFactory;
 use Distributable\Tests\Doubles\Recorder;
 use Distributable\Tests\ModuleAppTestCase;
 use Illuminate\Support\Facades\Config;
@@ -18,21 +18,22 @@ beforeEach(function () {
     $this->app->singleton(Recorder::class);
     Config::set('distributable.events.guard', true);
 
-    Config::set('database.default', 'iam');
-    foreach (glob(dirname((string) (new ReflectionClass(DistributableServiceProvider::class))->getFileName(), 3).'/database/migrations/*.php') as $file) {
-        (require $file)->up();
-    }
+    $this->inModule('iam', function (): void {
+        foreach (glob(dirname((string) (new ReflectionClass(DistributableServiceProvider::class))->getFileName(), 3).'/database/migrations/*.php') as $file) {
+            (require $file)->up();
+        }
+    });
 });
 
 it('runs a handler once and turns the redelivery into a no-op', function () {
-    $envelope = Envelope::for(new UserRegistered(5, 'ada'), 'iam');
+    $envelope = app(EnvelopeFactory::class)->for(new UserRegistered(5, 'ada'), 'iam');
     $dispatcher = $this->app->make(Dispatcher::class);
 
     $dispatcher->dispatch($envelope);
     $dispatcher->dispatch($envelope); // the broker hands the same entry over again
 
     expect($this->app->make(Recorder::class)->records)->toHaveCount(1)
-        ->and(DB::connection('iam')->table('event_consumptions')->count())->toBe(1);
+        ->and($this->inModule('iam', fn () => DB::connection('iam'))->table('event_consumptions')->count())->toBe(1);
 });
 
 it('marks per handler, not per event', function () {
@@ -40,21 +41,21 @@ it('marks per handler, not per event', function () {
         'iam.user.registered' => [OnUserRegistered::class, OnUserRegistered::class],
     ]);
 
-    $this->app->make(Dispatcher::class)->dispatch(Envelope::for(new UserRegistered(5, 'ada'), 'iam'));
+    $this->app->make(Dispatcher::class)->dispatch(app(EnvelopeFactory::class)->for(new UserRegistered(5, 'ada'), 'iam'));
 
     // Same handler class twice in the map is one guarded slot: the second is already claimed.
-    expect(DB::connection('iam')->table('event_consumptions')->count())->toBe(1);
+    expect($this->inModule('iam', fn () => DB::connection('iam'))->table('event_consumptions')->count())->toBe(1);
 });
 
 it('leaves no mark when the handler fails, so the event is replayed', function () {
     $this->app->bind(OnUserRegistered::class, fn () => throw new RuntimeException('handler blew up'));
 
-    $envelope = Envelope::for(new UserRegistered(5, 'ada'), 'iam');
+    $envelope = app(EnvelopeFactory::class)->for(new UserRegistered(5, 'ada'), 'iam');
 
     expect(fn () => $this->app->make(Dispatcher::class)->dispatch($envelope))
         ->toThrow(RuntimeException::class);
 
-    expect(DB::connection('iam')->table('event_consumptions')->count())->toBe(0);
+    expect($this->inModule('iam', fn () => DB::connection('iam'))->table('event_consumptions')->count())->toBe(0);
 });
 
 it('stays off when delivery is exactly-once', function () {

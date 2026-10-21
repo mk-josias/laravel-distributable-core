@@ -67,7 +67,7 @@ final class ModuleException extends RuntimeException
 
     public static function unknownRpcMessage(string $module, string $name, int $version): self
     {
-        return new self("Module [{$module}] answers no [{$name}] in version {$version}: only a message it registers in \$rpc can be sent.");
+        return new self("Module [{$module}] answers no [{$name}] in version {$version}: only a message it registers in \$rpcHandlers can be sent.");
     }
 
     public static function eventVersionAhead(string $name, int $version, int $known): self

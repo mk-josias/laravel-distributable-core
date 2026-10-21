@@ -5,9 +5,6 @@ declare(strict_types=1);
 namespace Distributable\Data;
 
 use Carbon\CarbonImmutable;
-use Distributable\Contracts\Stream\Event;
-use Illuminate\Support\Facades\Date;
-use Illuminate\Support\Str;
 
 /**
  * The wire contract. Every transport carries this shape and nothing else — that is what makes
@@ -28,27 +25,10 @@ final readonly class Envelope
         public array $payload,
         public array $headers,
         public CarbonImmutable $emittedAt,
+        public string $stream,
         public array $recipients = [],
-        public string $stream = 'default',
         public int $version = 1,
     ) {}
-
-    /** @param array<string, mixed> $headers */
-    public static function for(Event $event, string $emitter, array $headers = [], string $stream = 'default'): self
-    {
-        return new self(
-            // uuid7: time-ordered, so the unique index stays local.
-            id: (string) Str::uuid7(),
-            emitter: $emitter,
-            name: $event->name(),
-            payload: $event->payload(),
-            headers: $headers,
-            emittedAt: Date::now()->toImmutable(),
-            recipients: $event->recipients(),
-            stream: $stream,
-            version: $event->version(),
-        );
-    }
 
     public function isFor(string $module): bool
     {
@@ -82,7 +62,7 @@ final readonly class Envelope
             headers: (array) ($data['headers'] ?? []),
             emittedAt: CarbonImmutable::parse((string) $data['emitted_at']),
             recipients: array_values(array_map(strval(...), (array) ($data['recipients'] ?? []))),
-            stream: (string) ($data['stream'] ?? 'default'),
+            stream: (string) $data['stream'],
             version: (int) ($data['version'] ?? 1),
         );
     }

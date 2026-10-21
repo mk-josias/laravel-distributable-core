@@ -6,6 +6,8 @@ namespace Distributable\Providers;
 
 use Distributable\Config\Modules;
 use Distributable\Context\ModuleContext;
+use Distributable\Context\ModuleMigrator;
+use Distributable\Context\ModuleSeeders;
 use Distributable\Context\ScheduledTasks;
 use Distributable\Contracts\Rpc\Handler;
 use Distributable\Contracts\Rpc\Message;
@@ -19,7 +21,6 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Events\ShouldHandleEventsAfterCommit;
 use Illuminate\Routing\Router;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
@@ -27,9 +28,9 @@ use Illuminate\Support\Str;
 use Illuminate\View\Compilers\BladeCompiler;
 
 /**
- * Base service provider a module extends to get, without manual wiring: config merging
- * (each {module}/config/*.php deep-merges into the matching root config; a value the root config
- * already sets is the module's own instead, applied while the module runs),
+ * Base service provider a module extends to get, without manual wiring: its own config
+ * (each {module}/config/*.php is the module's alone, applied while it runs; only its config/distributable.php
+ * joins the application's),
  * translations ({module}/lang, namespaced by the module name),
  * routes ({module}/routes/{name}.php, prefixed {module}/{name}), console commands and scheduled tasks.
  * Registered only for local modules (DistributableServiceProvider follows RUN_MODULES), so a
@@ -40,13 +41,13 @@ abstract class ServiceProvider extends BaseServiceProvider
     use ResolvesModule;
 
     /** @var array<class-string<Message>, class-string<Handler<*>>> each foundation message this module answers, with its handler */
-    protected array $rpc = [];
+    protected array $rpcHandlers = [];
 
     /** @var array<class-string, list<string>> as EventServiceProvider::$listen: event => listener classes, or Class@method */
     protected array $listen = [];
 
     /** @var array<string, list<class-string>> as distributable.events.listen: event name => Handler classes */
-    protected array $handlers = [];
+    protected array $streamHandlers = [];
 
     /** @var list<class-string<ShadowModel>> the copies this module keeps: a foundation class, or a subclass of its own */
     protected array $shadows = [];
@@ -60,7 +61,24 @@ abstract class ServiceProvider extends BaseServiceProvider
             config()->set("distributable.shadows.{$this->module->name}", $this->shadows);
         }
 
-        $this->app->make(MessageRegistry::class)->add($this->module->name, $this->rpc);
+        $this->app->make(MessageRegistry::class)->add($this->module->name, $this->rpcHandlers);
+        ModuleSeeders::bind($this->app, $this->module);
+    }
+
+    /**
+     * A folder of migrations the module's provider loads is the module's own: the other modules do not run it.
+     *
+     * @param  array<array-key, string>|string  $paths
+     */
+    protected function loadMigrationsFrom($paths)
+    {
+        $module = $this->module->name;
+
+        $this->callAfterResolving('migrator', static function (ModuleMigrator $migrator) use ($module, $paths): void {
+            foreach ((array) $paths as $path) {
+                $migrator->modulePath($module, $path);
+            }
+        });
     }
 
     public function boot(): void
@@ -146,19 +164,17 @@ abstract class ServiceProvider extends BaseServiceProvider
 
         foreach (glob($configPath.'/*.php') ?: [] as $configFile) {
             $key = pathinfo($configFile, PATHINFO_FILENAME);
-            self::$applicationConfig[$key] ??= (array) config($key, []);
-            $values = require $configFile;
+            $values = (array) require $configFile;
 
-            // A scalar the application already sets is the module's own value: applied while the module runs.
-            foreach (Arr::dot($values) as $path => $value) {
-                if (! is_array($value) && $this->overridesApplicationScalar(self::$applicationConfig[$key], $path)) {
-                    config()->set("distributable.overlays.{$this->module->name}.{$key}.{$path}", $value);
-                    config()->set("distributable.overlay_base.{$key}.{$path}", Arr::get(self::$applicationConfig[$key], $path));
-                    Arr::forget($values, $path);
-                }
+            // A file the process reads whole, by name: the modules' values add up.
+            if (in_array($key, array_map(strval(...), (array) config('distributable.shared', [])), true)) {
+                config()->set($key, $this->deepMerge((array) config($key, []), $values));
+
+                continue;
             }
 
-            config()->set($key, $this->deepMerge(config($key, []), $values));
+            // Everything else is the module's own, applied while it runs: each value replaces the application's, a list or [] included.
+            config()->set("distributable.overlays.{$this->module->name}.{$key}", $values);
         }
     }
 
@@ -166,34 +182,11 @@ abstract class ServiceProvider extends BaseServiceProvider
     {
         $listen = (array) config('distributable.events.listen', []);
 
-        foreach ($this->handlers as $event => $handlers) {
+        foreach ($this->streamHandlers as $event => $handlers) {
             $listen[$event] = array_values(array_unique([...$listen[$event] ?? [], ...$handlers]));
         }
 
         config()->set('distributable.events.listen', $listen);
-    }
-
-    /** @var array<string, array<array-key, mixed>> each root config file as the application set it, before any module */
-    private static array $applicationConfig = [];
-
-    /**
-     * An item of a list is appended, never overridden.
-     *
-     * @param  array<array-key, mixed>  $application
-     */
-    private function overridesApplicationScalar(array $application, string $path): bool
-    {
-        $node = $application;
-
-        foreach (explode('.', $path) as $segment) {
-            if (! is_array($node) || array_is_list($node) || ! array_key_exists($segment, $node)) {
-                return false;
-            }
-
-            $node = $node[$segment];
-        }
-
-        return ! is_array($node);
     }
 
     /**
@@ -237,13 +230,13 @@ abstract class ServiceProvider extends BaseServiceProvider
         $config = $this->app->make(Modules::class);
 
         // routes/{name}.php → distributable.routes.prefix ({module}/{name}/… by default), wrapped in the
-        // `{name}` middleware group when the application defines one.
+        // `{name}` middleware group when the application defines one, which runs in the module.
         foreach (glob($module->path().'/routes/*.php') ?: [] as $routeFile) {
             $name = basename($routeFile, '.php');
             $middleware = $router->hasMiddlewareGroup($name) ? [$name] : [];
 
             Route::prefix($config->getRoutePrefix($module->name, $name))
-                ->middleware([...$middleware, SetModuleContext::class.':'.$module->name])
+                ->middleware([SetModuleContext::class.':'.$module->name, ...$middleware])
                 ->group($routeFile);
         }
     }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Distributable\Exceptions\ModuleException;
 use Distributable\Services\ModuleRegistry;
 use Distributable\Tests\ModuleAppTestCase;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 
@@ -107,6 +108,26 @@ it('finds the models of the module for model:prune with --module, and only them 
 
     $this->artisan('model:prune --module=billing')->expectsOutputToContain('No prunable [Apps\Billing\Models\Invoice] records found.');
     $this->artisan('model:prune')->expectsOutputToContain('No prunable models found.');
+});
+
+it('gives any command run with --module the paths and the namespace of the module, its views before the application\'s', function () {
+    $scan = new class extends Command
+    {
+        protected $signature = 'acme:scan';
+
+        public function handle(): void
+        {
+            $this->line(implode(' ', [app_path(), database_path(), config_path(), ...config('view.paths'), app()->getNamespace()]));
+        }
+    };
+    Artisan::registerCommand($this->app->make($scan::class));
+    $views = implode(' ', config('view.paths'));
+    $application = implode(' ', [app_path(), database_path(), config_path(), ...config('view.paths'), $this->app->getNamespace()]);
+
+    $this->artisan('acme:scan --module=billing')
+        ->expectsOutput("{$this->module}/app {$this->module}/database {$this->module}/config {$this->module}/resources/views {$views} Apps\Billing\\")
+        ->assertSuccessful();
+    $this->artisan('acme:scan')->expectsOutput($application)->assertSuccessful();
 });
 
 it('offers --module on every generator but make:provider, a module having one provider', function () {

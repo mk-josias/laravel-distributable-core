@@ -7,6 +7,7 @@ namespace Distributable\Traits;
 use BackedEnum;
 use DateTimeInterface;
 use Distributable\Attributes\ShadowFields;
+use Distributable\Attributes\ShadowStream;
 use Distributable\Context\ModuleContext;
 use Distributable\Contracts\Stream\Bus;
 use Distributable\Events\ShadowChanged;
@@ -46,10 +47,10 @@ trait ShadowSource
             ?? throw ModuleException::outsideModule(static::class);
     }
 
-    /** The stream of distributable.events.streams this model's rows are announced on; override it, null is the default one. */
+    /** The stream of distributable.events.streams this model's rows are announced on: the one #[ShadowStream] names, or the default one. */
     public function shadowStream(): ?string
     {
-        return null;
+        return ClassAttribute::of(static::class, ShadowStream::class)?->name;
     }
 
     /**

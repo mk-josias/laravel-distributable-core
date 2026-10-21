@@ -44,6 +44,7 @@ abstract class ModuleAppTestCase extends TestCase
             'items' => ['from-root'],
             'nested' => ['kept' => 'root', 'override' => 'root'],
             'codes' => [403 => 'root forbidden', 404 => 'root not found'],
+            'cleared' => ['root'],
         ]);
 
     }

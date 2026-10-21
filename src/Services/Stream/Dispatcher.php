@@ -18,7 +18,7 @@ use Distributable\Handlers\AnnounceShadowSource;
 use Distributable\Handlers\SyncShadows;
 use Distributable\Services\ModuleRegistry;
 use Illuminate\Contracts\Container\Container;
-use Illuminate\Database\DatabaseManager;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Date;
 
@@ -39,16 +39,16 @@ final class Dispatcher
         private readonly Streamer $config,
         private readonly ModuleRegistry $registry,
         private readonly ModuleContext $context,
-        private readonly DatabaseManager $db,
         private readonly TransportManager $transports,
         private readonly PayloadVersions $versions,
     ) {}
 
-    /** With a $consumer, only its handlers run: a process running several modules has one consumer per module. */
+    /**
+     * With a $consumer, only its handlers run: a process running several modules has one consumer per module.
+     * A handler that implements ShouldQueue goes on the queue, as a Laravel listener does.
+     */
     public function dispatch(Envelope $envelope, ?string $consumer = null): void
     {
-        $guarded = $this->guarded($envelope->stream);
-
         foreach ($this->handlersFor($envelope->name) as $class) {
             $owner = $this->registry->ownerOf($class)?->name;
 
@@ -56,10 +56,22 @@ final class Dispatcher
                 continue;
             }
 
-            $guarded && ! is_subclass_of($class, Idempotent::class)
-                ? $this->runGuarded($class, $envelope)
-                : $this->run($class, $envelope, $owner ?? $consumer);
+            is_subclass_of($class, ShouldQueue::class)
+                ? $this->container->make(QueuedHandlers::class)->queue($class, $envelope, $owner ?? $consumer)
+                : $this->handle($class, $envelope, $owner ?? $consumer);
         }
+    }
+
+    /**
+     * Runs one handler now, guarded when delivery is at-least-once.
+     *
+     * @param  class-string  $class
+     */
+    public function handle(string $class, Envelope $envelope, ?string $module): void
+    {
+        $this->guarded($envelope->stream) && ! is_subclass_of($class, Idempotent::class)
+            ? $this->runGuarded($class, $envelope)
+            : $this->run($class, $envelope, $module);
     }
 
     /** @return list<class-string> the package's own handlers, then the application's */
@@ -88,7 +100,7 @@ final class Dispatcher
             return;
         }
 
-        $this->db->connection($this->registry->connectionOf($consumer))
+        $this->context->connection($consumer)
             ->table($this->config->getConsumptionsTable())
             ->where('event_id', $envelope->id)
             ->delete();
@@ -100,7 +112,7 @@ final class Dispatcher
         $module = $this->registry->ownerOf($class)->name
             ?? throw ModuleException::outsideModule($class);
 
-        $connection = $this->db->connection($this->registry->connectionOf($module));
+        $connection = $this->context->connection($module);
 
         $connection->transaction(function () use ($connection, $class, $envelope, $module): void {
             $claimed = $connection->table($this->config->getConsumptionsTable())->insertOrIgnore([

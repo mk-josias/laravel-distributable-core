@@ -123,7 +123,10 @@ final class Doctor extends Command
         foreach ($registry->local() as $module) {
             foreach (glob($module->path().'/config/*.php') ?: [] as $file) {
                 foreach ($this->scalars(require $file, pathinfo($file, PATHINFO_FILENAME)) as $key => $value) {
-                    $values[$key][$module->name] = $value;
+                    // Only what stays in the application's config can conflict: the rest is each module's own.
+                    if ($this->isShared($key)) {
+                        $values[$key][$module->name] = $value;
+                    }
                 }
             }
         }
@@ -131,17 +134,23 @@ final class Doctor extends Command
         $conflicts = [];
 
         foreach ($values as $key => $byModule) {
-            // A value the application already sets is each module's own, applied while it runs.
-            if (config()->has("distributable.overlay_base.{$key}")) {
-                continue;
-            }
-
             if (count(array_unique(array_map(serialize(...), $byModule))) > 1) {
                 $conflicts[$key] = implode(', ', array_keys($byModule));
             }
         }
 
         return $conflicts;
+    }
+
+    private function isShared(string $key): bool
+    {
+        foreach ((array) config('distributable.shared', []) as $shared) {
+            if (str_starts_with($key, $shared.'.')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

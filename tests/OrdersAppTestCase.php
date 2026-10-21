@@ -18,7 +18,9 @@ use Orchestra\Testbench\TestCase as Orchestra;
 abstract class OrdersAppTestCase extends Orchestra
 {
     use ModuleAware;
-    use RefreshDatabase;
+    use RefreshDatabase {
+        migrateFreshUsing as private laravelMigrateFreshUsing;
+    }
 
     /** @var list<string> the connection of the orders module, outside of which no default connection exists */
     protected $connectionsToTransact = ['testing'];
@@ -51,6 +53,12 @@ abstract class OrdersAppTestCase extends Orchestra
         });
         $config->set('distributable.events.streams.default.driver', 'array');
         $config->set('distributable.events.reliable_publish', true);
+    }
+
+    /** @return array<string, mixed> RefreshDatabase's migrate:fresh, in the module whose database it rebuilds */
+    protected function migrateFreshUsing(): array
+    {
+        return [...$this->laravelMigrateFreshUsing(), '--module' => ['orders']];
     }
 
     protected function setUp(): void

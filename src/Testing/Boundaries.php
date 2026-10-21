@@ -31,9 +31,9 @@ final readonly class Boundaries
 
         foreach ($modules as $module) {
             $others = array_values(array_filter($modules, static fn (Module $other): bool => $other->name !== $module->name));
-            // A copy the module keeps may bear its source's name: that name is the module's own table.
+            // A copy the module keeps may bear its source's name, and a connection may bear the name others give theirs: both are the module's own.
             $copies = array_map(static fn (string $shadow): string => (new $shadow)->getTable(), $this->shadows->localShadows($module->name));
-            $foreign = array_diff(array_merge(...array_map(fn (Module $other): array => $this->storageOf($other), $others)), $copies);
+            $foreign = array_diff(array_merge(...array_map(fn (Module $other): array => $this->storageOf($other), $others)), $copies, $this->storageOf($module));
 
             foreach ($this->references($module->path()) as $file => $names) {
                 foreach ($names as $name) {

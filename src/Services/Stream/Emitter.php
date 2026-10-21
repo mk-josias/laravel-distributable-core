@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace Distributable\Services\Stream;
 
 use Distributable\Config\Streamer;
+use Distributable\Context\ModuleContext;
 use Distributable\Contracts\Stream\Bus;
 use Distributable\Contracts\Stream\Event;
-use Distributable\Services\ModuleRegistry;
 use Distributable\Services\Stream\Outbox\Relay;
 use Distributable\Services\Stream\Outbox\Writer;
-use Illuminate\Database\DatabaseManager;
 
 /**
  * The single emission path: an event becomes an envelope stamped with its emitting module, then
@@ -24,8 +23,7 @@ final class Emitter implements Bus
         private readonly TransportManager $transports,
         private readonly Writer $outbox,
         private readonly Relay $relay,
-        private readonly DatabaseManager $db,
-        private readonly ModuleRegistry $registry,
+        private readonly ModuleContext $context,
         private readonly Streamer $config,
     ) {}
 
@@ -33,7 +31,7 @@ final class Emitter implements Bus
     {
         $envelope = $this->envelopes->for($event, $emitter);
 
-        $connection = $this->db->connection($this->registry->connectionOf($envelope->emitter));
+        $connection = $this->context->connection($envelope->emitter);
 
         if (! $this->config->publishesReliably()) {
             $connection->afterCommit(fn () => $this->transports->stream($envelope->stream)->publish($envelope));

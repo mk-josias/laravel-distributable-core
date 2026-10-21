@@ -49,14 +49,13 @@ final class MakeModule extends Command
 
                 return [
                     'default' => '{$module->name}',
-                    'owner' => '{$module->name}_owner',
                     'connections' => [
                         '{$module->name}' => [
                             'driver' => env('DB_CONNECTION', 'pgsql'),
                             'database' => '{$module->name}',
                             'username' => '{$module->name}_app',
                         ],
-                        '{$module->name}_owner' => [
+                        'owner' => [
                             'driver' => env('DB_CONNECTION', 'pgsql'),
                             'database' => '{$module->name}',
                             'username' => '{$module->name}_owner',

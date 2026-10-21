@@ -11,11 +11,11 @@ use Illuminate\Support\ServiceProvider;
 /**
  * Base of the provider of a foundation: what it declares for every module. The application lists it
  * in bootstrap/providers.php, or a foundation package in extra.laravel.providers.
- * A module answers its own messages in its provider's $rpc.
+ * A module answers its own messages in its provider's $rpcHandlers.
  */
 abstract class FoundationServiceProvider extends ServiceProvider
 {
-    /** @var array<string, class-string<Versioned>> event name => the payload class that declares its versions */
+    /** @var list<class-string<Versioned>> the payload classes: each says its event and version with #[Payload] */
     protected array $payloads = [];
 
     public function boot(): void

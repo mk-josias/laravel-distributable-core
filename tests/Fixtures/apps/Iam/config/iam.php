@@ -7,4 +7,6 @@ return [
     'items' => ['from-module'],
     'nested' => ['override' => 'module'],
     'codes' => [404 => 'module not found'],
+    'only' => ['deep' => 'iam'],
+    'cleared' => [],
 ];

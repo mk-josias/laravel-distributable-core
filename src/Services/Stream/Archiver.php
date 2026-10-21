@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Distributable\Services\Stream;
 
 use Carbon\CarbonImmutable;
+use Distributable\Config\Streamer;
 use Distributable\Contracts\Stream\ArchivesStreams;
 use Distributable\Contracts\Stream\ArchiveStore;
 use Distributable\Data\Envelope;
@@ -13,7 +14,7 @@ use Distributable\Exceptions\ConfigurationException;
 /** Copies the entries of a stream to an archive store, and puts them back on a stream. */
 final class Archiver
 {
-    public function __construct(private readonly TransportManager $transports) {}
+    public function __construct(private readonly TransportManager $transports, private readonly Streamer $streams) {}
 
     /**
      * Writes the matching entries of the stream to $target, in batches.
@@ -34,10 +35,11 @@ final class Archiver
     ): int {
         self::assertFilters($where);
 
+        $stream ??= $this->streams->getDefaultStream();
         $transport = $this->transports->stream($stream);
 
         if (! $transport instanceof ArchivesStreams) {
-            throw ConfigurationException::unarchivableStream($stream ?? 'default');
+            throw ConfigurationException::unarchivableStream($stream);
         }
 
         $exported = 0;

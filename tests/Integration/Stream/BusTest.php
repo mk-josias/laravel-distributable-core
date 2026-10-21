@@ -10,6 +10,7 @@ use Distributable\Contracts\Stream\Transport;
 use Distributable\Data\Envelope;
 use Distributable\Exceptions\ConfigurationException;
 use Distributable\Services\Stream\Dispatcher;
+use Distributable\Services\Stream\EnvelopeFactory;
 use Distributable\Services\Stream\TransportManager;
 use Distributable\Tests\Doubles\Recorder;
 use Distributable\Tests\Doubles\RecordingTransport;
@@ -112,7 +113,7 @@ it('restores the propagated context around the handler, then the caller one', fu
     Context::add('trace_id', 'abc');
 
     $this->app->make(Dispatcher::class)->dispatch(
-        new Envelope('00000000-0000-0000-0000-000000000001', 'iam', 'iam.user.registered', ['id' => 5, 'name' => 'lamp'], ['trace_id' => 'remote'], now()->toImmutable()),
+        new Envelope('00000000-0000-0000-0000-000000000001', 'iam', 'iam.user.registered', ['id' => 5, 'name' => 'lamp'], ['trace_id' => 'remote'], now()->toImmutable(), 'default'),
     );
 
     expect($this->app->make(Recorder::class)->traces)->toBe(['remote'])
@@ -123,7 +124,7 @@ it('runs a handler on the database of its own module, then puts the caller one b
     $default = DB::getDefaultConnection();
 
     $this->app->make(Dispatcher::class)->dispatch(
-        new Envelope('00000000-0000-0000-0000-000000000002', 'iam', 'iam.user.registered', ['id' => 5, 'name' => 'lamp'], [], now()->toImmutable()),
+        new Envelope('00000000-0000-0000-0000-000000000002', 'iam', 'iam.user.registered', ['id' => 5, 'name' => 'lamp'], [], now()->toImmutable(), 'default'),
     );
 
     expect($this->app->make(Recorder::class)->connections)->toBe(['iam'])
@@ -131,7 +132,9 @@ it('runs a handler on the database of its own module, then puts the caller one b
 });
 
 it('round-trips an envelope through the wire format', function () {
-    $envelope = Envelope::for(new UserRegistered(5, 'lamp'), 'iam', ['trace_id' => 'abc']);
+    Config::set('distributable.events.propagate', ['trace_id']);
+    Context::add('trace_id', 'abc');
+    $envelope = app(EnvelopeFactory::class)->for(new UserRegistered(5, 'lamp'), 'iam');
 
     $decoded = Envelope::fromJson($envelope->toJson());
 

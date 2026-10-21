@@ -25,15 +25,17 @@ use Distributable\Console\Commands\SkipEntries;
 use Distributable\Console\Commands\TrimEvents;
 use Distributable\Console\Commands\UnusedPackages;
 use Distributable\Console\Commands\WantShadows;
-use Distributable\Console\Migrations;
 use Distributable\Console\ModuleGenerators;
 use Distributable\Console\ModuleOption;
-use Distributable\Console\ModuleSeedCommand;
+use Distributable\Console\ModulePublishCommand;
+use Distributable\Context\CurrentDatabase;
 use Distributable\Context\ModuleConcurrencyDriver;
 use Distributable\Context\ModuleContext;
 use Distributable\Context\ModuleDeferredCallbacks;
 use Distributable\Context\ModuleFactories;
+use Distributable\Context\ModuleMigrator;
 use Distributable\Context\ModuleTaskDispatcher;
+use Distributable\Context\NoModuleConnection;
 use Distributable\Context\Queue\BatchRepository;
 use Distributable\Context\Queue\FailedJobProvider;
 use Distributable\Context\ScheduledTasks;
@@ -54,6 +56,7 @@ use Distributable\Services\Shadows\ShadowRegistry;
 use Distributable\Services\Stream\ArchiveStores;
 use Distributable\Services\Stream\Emitter;
 use Distributable\Services\Stream\PayloadVersions;
+use Distributable\Services\Stream\QueuedHandlers;
 use Distributable\Services\Stream\TransportManager;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\BatchRepository as BatchRepositoryContract;
@@ -68,11 +71,10 @@ use Illuminate\Console\Events\ScheduledTaskFinished;
 use Illuminate\Console\Events\ScheduledTaskStarting;
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
-use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
-use Illuminate\Database\Console\Migrations as Laravel;
-use Illuminate\Database\Console\Seeds\SeedCommand;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Migrations\DatabaseMigrationRepository;
+use Illuminate\Foundation\Console\VendorPublishCommand;
 use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Process\Factory as ProcessFactory;
 use Illuminate\Queue\Events\JobProcessing;
@@ -91,14 +93,19 @@ final class DistributableServiceProvider extends BaseServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/../../config/distributable.php', 'distributable');
+
+        // The keys exist, empty, so that a module that sets one keeps it for itself (ServiceProvider overlays).
+        $this->app['config']->set(['queue.failed.database' => null, 'queue.batching.database' => null]);
         $this->mergeSections(['rpc', 'events']);
 
         // Every database belongs to a module: until one runs, the default connection refuses every query.
         $this->app['config']->set('database.connections.'.ModuleContext::NO_MODULE, ['driver' => ModuleContext::NO_MODULE]);
         $this->app['config']->set('database.default', ModuleContext::NO_MODULE);
+
+        // Built without touching a database, so a service Laravel builds on the default connection exists; its first query throws.
         $this->app->afterResolving('db', static fn (DatabaseManager $db) => $db->extend(
             ModuleContext::NO_MODULE,
-            static fn () => throw ModuleException::noModuleRunning(),
+            static fn () => new NoModuleConnection,
         ));
 
         $this->carryTheModuleIntoDeferredWork();
@@ -112,6 +119,7 @@ final class DistributableServiceProvider extends BaseServiceProvider
         $this->app->singleton(TransportManager::class);
         $this->app->singleton(ArchiveStores::class);
         $this->app->singleton(PayloadVersions::class);
+        $this->app->singleton(QueuedHandlers::class);
         $this->app->singleton(Bus::class, Emitter::class);
         // Injecting the contract yields the default stream; the manager stays the seam where a driver is added with extend().
         $this->app->bind(Transport::class, static fn (Application $app): Transport => $app->make(TransportManager::class)->stream());
@@ -141,7 +149,7 @@ final class DistributableServiceProvider extends BaseServiceProvider
         $this->app->singleton(ModuleGenerators::class);
         $this->app->singleton(ScheduledTasks::class);
         $this->app->afterResolving(Command::class, ModuleOption::addTo(...));
-        $this->app->extend(SeedCommand::class, static fn (mixed $command, Application $app): ModuleSeedCommand => new ModuleSeedCommand($app->make('db')));
+        $this->app->extend(VendorPublishCommand::class, static fn (mixed $command, Application $app): ModulePublishCommand => new ModulePublishCommand($app['files']));
 
         // On the booting callback: after every provider (and the app's own configuration)
         // has registered, before any provider boots — module providers slot in between.
@@ -167,24 +175,21 @@ final class DistributableServiceProvider extends BaseServiceProvider
         }
     }
 
-    /** Laravel's own migrate:* commands, run once per database: the application's, then each local module's. */
+    /** Laravel's own migrate:* commands, in the module they run in: its database, its folders. */
     private function registerModuleMigrations(): void
     {
-        $this->app->extend(Laravel\MigrateCommand::class, static fn (mixed $command, Application $app): Migrations\MigrateCommand => new Migrations\MigrateCommand($app['migrator'], $app[Dispatcher::class]));
-        $this->app->extend(Laravel\StatusCommand::class, static fn (mixed $command, Application $app): Migrations\StatusCommand => new Migrations\StatusCommand($app['migrator']));
-        $this->app->extend(Laravel\RollbackCommand::class, static fn (mixed $command, Application $app): Migrations\RollbackCommand => new Migrations\RollbackCommand($app['migrator']));
-        $this->app->extend(Laravel\ResetCommand::class, static fn (mixed $command, Application $app): Migrations\ResetCommand => new Migrations\ResetCommand($app['migrator']));
-        $this->app->extend(Laravel\FreshCommand::class, static fn (mixed $command, Application $app): Migrations\FreshCommand => new Migrations\FreshCommand($app['migrator']));
-        $this->app->extend(Laravel\RefreshCommand::class, static fn (): Migrations\RefreshCommand => new Migrations\RefreshCommand);
+        // Built once, for every command that holds them: they reach the database of the module they run in.
+        $this->app->extend('migration.repository', static fn (mixed $repository, Application $app): DatabaseMigrationRepository => new DatabaseMigrationRepository(new CurrentDatabase, (string) ($app['config']['database.migrations.table'] ?? $app['config']['database.migrations'])));
+        $this->app->extend('migrator', static fn (mixed $migrator, Application $app): ModuleMigrator => new ModuleMigrator($app['migration.repository'], new CurrentDatabase, $app['files'], $app['events']));
     }
 
     /** Failed jobs and batches live in the database of the module owning the job, when Laravel stores them in a database. */
     private function registerQueueDatabases(): void
     {
+        // There is no application database: a failed job or a batch goes where its module is, and queue.failed.database and queue.batching.database are not read.
         $this->app->extend('queue.failer', static fn (mixed $failer, Application $app): mixed => config('queue.failed.driver') === 'database-uuids'
             ? new FailedJobProvider(
                 $app->make('db'),
-                (string) config('queue.failed.database', ''),
                 (string) config('queue.failed.table', 'failed_jobs'),
                 $app->make(ModuleRegistry::class),
             )
@@ -192,8 +197,6 @@ final class DistributableServiceProvider extends BaseServiceProvider
 
         $this->app->singleton(BatchRepository::class, static fn (Application $app): BatchRepository => new BatchRepository(
             $app->make(BatchFactory::class),
-            $app->make(DatabaseManager::class),
-            (string) config('queue.batching.database', ''),
             (string) config('queue.batching.table', 'job_batches'),
             $app->make(ModuleRegistry::class),
         ));
@@ -220,10 +223,11 @@ final class DistributableServiceProvider extends BaseServiceProvider
         Event::listen(CommandStarting::class, function (CommandStarting $event): void {
             $command = $this->app->make(ConsoleKernel::class)->all()[$event->command] ?? null;
             $context = $this->app->make(ModuleContext::class);
-            $context->enter($command === null ? $context->current() : $this->app->make(ModuleRegistry::class)->forClass($command::class));
+            // A command no module owns, called from a module (Artisan::call), runs in that module, as a route does.
+            $context->enter(($command === null ? null : $this->app->make(ModuleRegistry::class)->forClass($command::class)) ?? $context->current());
 
-            // --module on any command (db:seed, tinker, model:show…) names the module it runs in.
-            if (is_string($named = $event->input->getParameterOption('--module', null))) {
+            // --module on any command (db:seed, tinker, model:show…) names the module it starts in; ModuleOption runs it in each module named, * in all.
+            if (is_string($named = $event->input->getParameterOption('--module', null)) && $named !== '*') {
                 $this->app->make(ModuleContext::class)->switchTo($this->app->make(ModuleRegistry::class)->get($named));
             }
         });

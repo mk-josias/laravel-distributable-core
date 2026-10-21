@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace Distributable\Services\Stream\Outbox;
 
 use Distributable\Config\Streamer;
+use Distributable\Context\ModuleContext;
 use Distributable\Data\Envelope;
-use Distributable\Services\ModuleRegistry;
-use Illuminate\Database\DatabaseManager;
 
 /**
  * Writes a publication row on the emitting module's own connection, so it lands inside the
@@ -17,14 +16,13 @@ use Illuminate\Database\DatabaseManager;
 final class Writer
 {
     public function __construct(
-        private readonly ModuleRegistry $registry,
-        private readonly DatabaseManager $db,
+        private readonly ModuleContext $context,
         private readonly Streamer $config,
     ) {}
 
     public function write(Envelope $envelope): void
     {
-        $this->db->connection($this->registry->connectionOf($envelope->emitter))->table($this->config->getPublicationsTable())->insert([
+        $this->context->connection($envelope->emitter)->table($this->config->getPublicationsTable())->insert([
             'id' => $envelope->id,
             'emitter' => $envelope->emitter,
             'name' => $envelope->name,

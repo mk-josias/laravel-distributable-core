@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Distributable\Testing;
 
 use Closure;
+use Distributable\Config\Streamer;
 use Distributable\Context\ModuleContext;
 use Distributable\Data\Envelope;
 use Distributable\Data\Module;
@@ -80,6 +81,7 @@ trait ModuleAware
             payload: $payload,
             headers: [],
             emittedAt: Date::now()->toImmutable(),
+            stream: $this->app->make(Streamer::class)->getDefaultStream(),
             version: $version,
         );
 

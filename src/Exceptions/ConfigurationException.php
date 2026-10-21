@@ -21,7 +21,7 @@ final class ConfigurationException extends RuntimeException
 
     public static function unversionedPayload(string $class, string $contract): self
     {
-        return new self("[{$class}] is in a \$payloads map: it must implement {$contract}.");
+        return new self("[{$class}] is in \$payloads: it must implement {$contract}.");
     }
 
     public static function unknownStream(string $name): self
@@ -75,12 +75,12 @@ final class ConfigurationException extends RuntimeException
 
     public static function messageOfAnotherModule(string $message, string $owner, string $module): self
     {
-        return new self("[{$message}] belongs to module [{$owner}]: module [{$module}] cannot answer it in \$rpc.");
+        return new self("[{$message}] belongs to module [{$owner}]: module [{$module}] cannot answer it in \$rpcHandlers.");
     }
 
     public static function handlerWithoutContract(string $handler): self
     {
-        return new self("[{$handler}] answers a message in \$rpc but does not implement Contracts\\Rpc\\Handler.");
+        return new self("[{$handler}] answers a message in \$rpcHandlers but does not implement Contracts\\Rpc\\Handler.");
     }
 
     public static function handlerOfAnotherMessage(string $handler, string $message): self

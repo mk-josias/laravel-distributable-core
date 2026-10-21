@@ -42,11 +42,11 @@ it('runs the local call in iam context, whichever module calls it', function () 
 });
 
 it('runs DB:: queries and a DB::transaction() of the local call on iam database, called from analytics', function () {
-    Schema::connection('iam')->create('iam_users', function (Blueprint $table): void {
+    $this->inModule('iam', fn () => Schema::connection('iam'))->create('iam_users', function (Blueprint $table): void {
         $table->id();
         $table->string('name');
     });
-    DB::connection('iam')->table('iam_users')->insert(['id' => 1, 'name' => 'ada']);
+    $this->inModule('iam', fn () => DB::connection('iam'))->table('iam_users')->insert(['id' => 1, 'name' => 'ada']);
 
     $count = $this->inModule('analytics', function (): int {
         app(IamClient::class)->renameUser(1, 'grace');
@@ -55,9 +55,9 @@ it('runs DB:: queries and a DB::transaction() of the local call on iam database,
     });
 
     expect($count)->toBe(1)
-        ->and(DB::connection('iam')->table('iam_users')->value('name'))->toBe('grace')
-        ->and(Schema::connection('analytics')->hasTable('iam_users'))->toBeFalse()
-        ->and(DB::connection('iam')->transactionLevel())->toBe(0);
+        ->and($this->inModule('iam', fn () => DB::connection('iam'))->table('iam_users')->value('name'))->toBe('grace')
+        ->and($this->inModule('analytics', fn () => Schema::connection('analytics'))->hasTable('iam_users'))->toBeFalse()
+        ->and($this->inModule('iam', fn () => DB::connection('iam'))->transactionLevel())->toBe(0);
 });
 
 it('only answers a message its module registers', function () {

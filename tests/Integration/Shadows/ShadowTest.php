@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Apps\Analytics\Models\UserShadow;
 use Apps\Iam\Models\User;
+use Distributable\Context\ModuleContext;
 use Distributable\Data\Envelope;
 use Distributable\Services\Stream\Dispatcher;
 use Distributable\Tests\ModuleAppTestCase;
@@ -16,21 +17,23 @@ uses(ModuleAppTestCase::class);
 beforeEach(function () {
     // One file per module database.
     foreach (['iam', 'analytics'] as $module) {
-        config()->set("database.connections.{$module}.database", tempnam(sys_get_temp_dir(), "distributable-{$module}-"));
-        DB::purge($module);
+        $this->inModule($module, static function () use ($module): void {
+            config()->set("database.connections.{$module}.database", tempnam(sys_get_temp_dir(), "distributable-{$module}-"));
+            DB::purge($module);
+        });
     }
 
-    $this->artisan('migrate')->assertSuccessful();
+    $this->artisan('migrate --module=iam --module=analytics')->assertSuccessful();
 });
 
 function copies(): Builder
 {
-    return DB::connection('analytics')->table('iam_users');
+    return app(ModuleContext::class)->connection('analytics')->table('iam_users');
 }
 
 it('migrates the copy into the keeper database, under its source name', function () {
-    expect(Schema::connection('analytics')->hasTable('iam_users'))->toBeTrue()
-        ->and(Schema::connection('analytics')->hasColumn('iam_users', 'deleted_at'))->toBeTrue();
+    expect($this->inModule('analytics', fn () => Schema::connection('analytics'))->hasTable('iam_users'))->toBeTrue()
+        ->and($this->inModule('analytics', fn () => Schema::connection('analytics'))->hasColumn('iam_users', 'deleted_at'))->toBeTrue();
 });
 
 it('keeps the copy in step with the source, deletion included', function () {
@@ -39,12 +42,12 @@ it('keeps the copy in step with the source, deletion included', function () {
 
     expect(copies()->where('id', $user->id)->value('name'))->toBe('ada');
 
-    $user->update(['name' => 'grace']);
+    $this->inModule('iam', fn () => $user->update(['name' => 'grace']));
     $this->artisan('stream:consume --module=analytics')->assertSuccessful();
 
     expect(copies()->where('id', $user->id)->value('name'))->toBe('grace');
 
-    $user->delete();
+    $this->inModule('iam', fn () => $user->delete());
     $this->artisan('stream:consume --module=analytics')->assertSuccessful();
 
     expect(copies()->where('id', $user->id)->value('deleted_at'))->not->toBeNull();
@@ -63,7 +66,7 @@ it('leaves the copies of analytics to the analytics consumer, when one process r
 });
 
 it('writes each keeper copy in its own database when no module consumes the announcement', function () {
-    $envelope = new Envelope((string) str()->uuid7(), 'iam', 'distributable.shadow.changed', ['source' => 'iam_users', 'key' => 9, 'attributes' => ['name' => 'barbara']], [], now()->toImmutable());
+    $envelope = new Envelope((string) str()->uuid7(), 'iam', 'distributable.shadow.changed', ['source' => 'iam_users', 'key' => 9, 'attributes' => ['name' => 'barbara']], [], now()->toImmutable(), 'default');
 
     app(Dispatcher::class)->dispatch($envelope);
 
@@ -88,7 +91,7 @@ it('refuses any write to a copy that does not come from the source', function ()
 it('leaves a copy alone when the announcement is addressed to another keeper', function () {
     $user = $this->inModule('iam', fn () => User::query()->create(['name' => 'ada']));
     $this->artisan('stream:consume --module=analytics')->assertSuccessful();
-    DB::connection('iam')->table('iam_users')->where('id', $user->id)->update(['name' => 'grace']);
+    $this->inModule('iam', fn () => DB::connection('iam'))->table('iam_users')->where('id', $user->id)->update(['name' => 'grace']);
 
     $this->artisan('shadows:announce iam_users --keepers=gateway')->assertSuccessful();
     $this->artisan('stream:consume --module=analytics')->assertSuccessful();

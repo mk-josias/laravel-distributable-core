@@ -64,14 +64,12 @@ it('runs on the default its config/database.php names, as the root one names the
         ->and(Module::fromName('ledger', 'Apps', $root)->connections())->toBe(['main']);
 });
 
-it('migrates on the connection its config/database.php names as owner, and on its own without one', function () {
-    $root = sys_get_temp_dir().'/distributable-owner-'.uniqid();
-    moduleWithDatabase($root, 'Till', ['default' => 'till', 'owner' => 'till_owner', 'connections' => ['till' => ['driver' => 'sqlite'], 'till_owner' => ['driver' => 'sqlite']]]);
-    moduleWithDatabase($root, 'Kiosk', ['default' => 'kiosk', 'connections' => ['kiosk' => ['driver' => 'sqlite']]]);
+it('declares only the connections it defines: a default may name one of the application', function () {
+    $root = sys_get_temp_dir().'/distributable-declared-'.uniqid();
+    moduleWithDatabase($root, 'Shared', ['default' => 'application']);
 
-    expect(Module::fromName('till', 'Apps', $root)->ownerConnection())->toBe('till_owner')
-        ->and(Module::fromName('till', 'Apps', $root)->connections())->toBe(['till', 'till_owner'])
-        ->and(Module::fromName('kiosk', 'Apps', $root)->ownerConnection())->toBe('kiosk');
+    expect(Module::fromName('shared', 'Apps', $root)->connections())->toBe(['application'])
+        ->and(Module::fromName('shared', 'Apps', $root)->declaredConnections())->toBe([]);
 });
 
 it('rejects a name that is not lowercase snake_case', function (string $name) {

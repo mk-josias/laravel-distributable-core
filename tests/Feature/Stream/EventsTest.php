@@ -113,7 +113,7 @@ it('keeps the publications and the consumption marks in the tables distributable
     config()->set('distributable.events.listen', ['billing.invoice.paid' => [OnInvoicePaid::class]]);
 
     app(Bus::class)->emit(new OrderPlaced(7));
-    app(Dispatcher::class)->dispatch(new Envelope('0191f3c2-8a41-7c2e-9b55-3f1c7d0a4e90', 'billing', 'billing.invoice.paid', ['order_id' => 7], [], now()->toImmutable()), 'orders');
+    app(Dispatcher::class)->dispatch(new Envelope('0191f3c2-8a41-7c2e-9b55-3f1c7d0a4e90', 'billing', 'billing.invoice.paid', ['order_id' => 7], [], now()->toImmutable(), 'default'), 'orders');
 
     expect(DB::table('outbox')->count())->toBe(1)
         ->and(DB::table('inbox')->count())->toBe(1)
@@ -124,7 +124,7 @@ it('handles a redelivered event once', function () {
     config()->set('distributable.events.guard', true);
     config()->set('distributable.events.listen', ['billing.invoice.paid' => [OnInvoicePaid::class]]);
 
-    $envelope = new Envelope('0191f3c2-8a41-7c2e-9b55-3f1c7d0a4e88', 'billing', 'billing.invoice.paid', ['order_id' => 7], [], now()->toImmutable());
+    $envelope = new Envelope('0191f3c2-8a41-7c2e-9b55-3f1c7d0a4e88', 'billing', 'billing.invoice.paid', ['order_id' => 7], [], now()->toImmutable(), 'default');
 
     app(Dispatcher::class)->dispatch($envelope, 'orders');
     app(Dispatcher::class)->dispatch($envelope, 'orders');
@@ -141,7 +141,7 @@ it('names the package of a shipped driver that is not installed', function () {
 
 it('consumes the stream as this service', function () {
     config()->set('distributable.events.listen', ['billing.invoice.paid' => [OnInvoicePaid::class]]);
-    app(Transport::class)->publish(new Envelope('0191f3c2-8a41-7c2e-9b55-3f1c7d0a4e89', 'billing', 'billing.invoice.paid', ['order_id' => 9], [], now()->toImmutable()));
+    app(Transport::class)->publish(new Envelope('0191f3c2-8a41-7c2e-9b55-3f1c7d0a4e89', 'billing', 'billing.invoice.paid', ['order_id' => 9], [], now()->toImmutable(), 'default'));
 
     $this->artisan('stream:consume')->expectsOutputToContain('Consuming as [orders] from: orders, billing')->assertSuccessful();
 

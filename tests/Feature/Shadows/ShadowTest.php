@@ -17,7 +17,7 @@ uses(OrdersAppTestCase::class);
 
 function customerChanged(int $key, array $attributes): Envelope
 {
-    return new Envelope((string) str()->uuid7(), 'billing', ShadowChanged::NAME, ['source' => 'customers', 'key' => $key, 'attributes' => $attributes], [], now()->toImmutable());
+    return new Envelope((string) str()->uuid7(), 'billing', ShadowChanged::NAME, ['source' => 'customers', 'key' => $key, 'attributes' => $attributes], [], now()->toImmutable(), 'default');
 }
 
 it('keeps a copy of the rows another service announces, in a table named after this service', function () {

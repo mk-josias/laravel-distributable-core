@@ -11,6 +11,7 @@ use Distributable\Context\ModuleContext;
 use Distributable\Exceptions\ModuleException;
 use Distributable\Tests\ModuleAppTestCase;
 use Illuminate\Foundation\Testing\WithConsoleEvents;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -20,6 +21,26 @@ uses(ModuleAppTestCase::class, WithConsoleEvents::class);
 
 it('runs a module route on the module connection', function () {
     $this->get('/iam/api/v1/connection')->assertOk()->assertSee('iam');
+});
+
+it('runs the middleware group of a module route file in the module, a closure route included', function () {
+    $seen = new ArrayObject;
+    app()->instance('record-connection', new class($seen)
+    {
+        public function __construct(private readonly ArrayObject $seen) {}
+
+        public function handle(Request $request, Closure $next): mixed
+        {
+            $this->seen[] = DB::getDefaultConnection();
+
+            return $next($request);
+        }
+    });
+    app('router')->pushMiddlewareToGroup('admin', 'record-connection');
+
+    $this->get('/iam/admin/hello')->assertOk();
+
+    expect($seen->getArrayCopy())->toBe(['iam']);
 });
 
 it('runs a module controller in its module, from a route declared outside the module', function () {
@@ -74,8 +95,7 @@ it('tells which listeners a module attached, where Event::assertListening() only
 });
 
 it('keeps the context connection when a module config sets database.default', function () {
-    config()->set('distributable.overlay_base.database.default', 'sqlite');
-    config()->set('distributable.overlays.iam.database.default', 'elsewhere');
+    $this->inModule('iam', fn () => config()->set('database.default', 'elsewhere'));
 
     app(ModuleContext::class)->switchTo(null);
 

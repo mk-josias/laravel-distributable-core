@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace Distributable\Events;
 
+use Distributable\Attributes\Emits;
 use Distributable\Contracts\Stream\Event as EventContract;
+use Distributable\Services\Discovery\ClassAttribute;
 
 /**
- * Base for events: a concrete event returns its name and its typed payload as an array. Nothing
- * else — identity, emitting module, propagated context and timestamp are the Envelope's
- * business, so the payload stays business only.
+ * Base for events: a concrete event says what it is with #[Emits] and returns its typed payload as
+ * an array. Nothing else — identity, emitting module, propagated context and timestamp are the
+ * Envelope's business, so the payload stays business only.
  */
 abstract class Event implements EventContract
 {
-    abstract public function name(): string;
-
     /** @return array<string, mixed> */
     abstract public function payload(): array;
 
@@ -24,15 +24,9 @@ abstract class Event implements EventContract
         return [];
     }
 
-    /** The stream of distributable.events.streams it travels on; null for the default one. */
+    /** The stream of distributable.events.streams it travels on: the one #[Emits] names, or the default one. */
     public function stream(): ?string
     {
-        return null;
-    }
-
-    /** The version of the payload's shape: raised when a field is renamed, removed or changes meaning. */
-    public function version(): int
-    {
-        return 1;
+        return ClassAttribute::of(static::class, Emits::class)?->stream;
     }
 }

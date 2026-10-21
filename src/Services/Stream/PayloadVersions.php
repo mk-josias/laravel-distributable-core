@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Distributable\Services\Stream;
 
+use Distributable\Attributes\Payload;
 use Distributable\Contracts\Stream\Versioned;
 use Distributable\Data\Envelope;
 use Distributable\Exceptions\ConfigurationException;
 use Distributable\Exceptions\ModuleException;
+use Distributable\Services\Discovery\ClassAttribute;
 
 /** Lifts the payload of an envelope to the version this process reads, so a handler only ever sees the current shape. */
 final class PayloadVersions
@@ -15,22 +17,25 @@ final class PayloadVersions
     /** @var array<string, class-string<Versioned>> event name => the payload class that declares its versions */
     private array $payloads = [];
 
-    /** @param array<string, class-string> $payloads */
+    /** @param list<class-string> $payloads */
     public function add(array $payloads): void
     {
-        foreach ($payloads as $name => $class) {
+        foreach ($payloads as $class) {
             if (! is_subclass_of($class, Versioned::class)) {
                 throw ConfigurationException::unversionedPayload($class, Versioned::class);
             }
 
-            $this->payloads[$name] = $class;
+            $payload = ClassAttribute::of($class, Payload::class)
+                ?? throw ConfigurationException::missingAttribute($class, Payload::class);
+
+            $this->payloads[$payload->event] = $class;
         }
     }
 
     /** The version of $name this process reads: 1 until its payload class declares another. */
     public function current(string $name): int
     {
-        return isset($this->payloads[$name]) ? $this->payloads[$name]::version() : 1;
+        return isset($this->payloads[$name]) ? $this->declared($this->payloads[$name])->version : 1;
     }
 
     /**
@@ -53,5 +58,12 @@ final class PayloadVersions
         }
 
         return $payload;
+    }
+
+    /** @param class-string $class */
+    private function declared(string $class): Payload
+    {
+        return ClassAttribute::of($class, Payload::class)
+            ?? throw ConfigurationException::missingAttribute($class, Payload::class);
     }
 }

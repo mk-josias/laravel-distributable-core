@@ -18,7 +18,7 @@ use ReflectionClass;
 use ReflectionNamedType;
 
 /**
- * The handler each local module gives its messages (a provider's $rpc). Every transport ends here,
+ * The handler each local module gives its messages (a provider's $rpcHandlers). Every transport ends here,
  * so a message behaves the same whether it came from this process or another.
  */
 final class MessageRegistry

@@ -51,22 +51,70 @@ it('wraps a route file in the middleware group of the same name when one exists'
     expect($route->gatherMiddleware())->toContain('admin');
 });
 
-it('deep-merges the module config over the root config, and applies the values it overrides while the module runs', function () {
-    expect(config('iam.flag'))->toBeTrue()
-        ->and(config('iam.items'))->toBe(['from-root', 'from-module'])
+it('keeps what a module sets, a value, a key, a list or an empty array, for the time it runs', function () {
+    expect(config('iam.flag'))->toBeNull()
+        ->and(config('iam.flag', 'default'))->toBe('default')
+        ->and($this->inModule('iam', fn () => config('iam.flag')))->toBeTrue()
+        ->and($this->inModule('analytics', fn () => config('iam.flag', 'default')))->toBe('default')
+        ->and(config('iam.only.deep', 'none'))->toBe('none')
+        ->and($this->inModule('iam', fn () => config('iam.only.deep')))->toBe('iam')
+        ->and(config('iam.only.deep', 'none'))->toBe('none')
+        ->and(config('iam.items'))->toBe(['from-root'])
+        ->and($this->inModule('iam', fn () => config('iam.items')))->toBe(['from-module'])
+        ->and(config('iam.cleared'))->toBe(['root'])
+        ->and($this->inModule('iam', fn () => config('iam.cleared')))->toBe([])
         ->and(config('iam.nested'))->toBe(['kept' => 'root', 'override' => 'root'])
         ->and($this->inModule('iam', fn () => config('iam.nested')))->toBe(['kept' => 'root', 'override' => 'module'])
         ->and($this->inModule('analytics', fn () => config('iam.nested.override')))->toBe('root');
 });
 
-it('merges an array keyed by integers key by key, as it does any other map', function () {
-    expect($this->inModule('iam', fn () => config('iam.codes')))->toBe([403 => 'root forbidden', 404 => 'module not found']);
+it('keeps what each context sets while it runs: the application its own, a module its own', function () {
+    $this->inModule('iam', fn () => config()->set('iam.nested.override', 'set-in-iam'));
+    config()->set('iam.nested.override', 'set-at-root');
+    config()->set('iam.nested.kept', 'root-again');
+
+    expect(config('iam.nested'))->toBe(['kept' => 'root-again', 'override' => 'set-at-root'])
+        ->and($this->inModule('analytics', fn () => config('iam.nested')))->toBe(['kept' => 'root-again', 'override' => 'set-at-root'])
+        ->and($this->inModule('iam', fn () => config('iam.nested')))->toBe(['kept' => 'root-again', 'override' => 'set-in-iam'])
+        ->and(config('iam.nested.override'))->toBe('set-at-root');
 });
 
-it('appends a list item once, however many times it is declared', function () {
+it('keeps for the module what it names in a table the process looks up: neither the application nor another module sees it', function (string $entry) {
+    expect(config($entry))->toBeNull()
+        ->and($this->inModule('analytics', fn () => config($entry)))->toBeNull()
+        ->and($this->inModule('iam', fn () => config($entry)))->not->toBeNull();
+})->with([
+    'database.connections.iam',
+    'queue.connections.iam_queue',
+    'cache.stores.iam_store',
+    'filesystems.disks.iam_disk',
+    'mail.mailers.iam_mailer',
+    'logging.channels.iam_channel',
+    'broadcasting.connections.iam_broadcaster',
+    'auth.guards.iam_guard',
+    'auth.providers.iam_provider',
+]);
+
+it('adds to the application what a module declares in its config/distributable.php', function () {
+    expect(config('distributable.events.streams.audit'))->not->toBeNull()
+        ->and($this->inModule('analytics', fn () => config('distributable.events.streams.audit')))->not->toBeNull();
+});
+
+it('keeps for the module a value it changes in an entry of such a table the application defines', function () {
+    expect(config('cache.stores.array.serialize'))->toBeFalse()
+        ->and($this->inModule('iam', fn () => config('cache.stores.array.serialize')))->toBeTrue()
+        ->and($this->inModule('analytics', fn () => config('cache.stores.array.serialize')))->toBeFalse();
+});
+
+it('merges an array keyed by integers key by key, as it does any other map', function () {
+    expect($this->inModule('iam', fn () => config('iam.codes')))->toBe([403 => 'root forbidden', 404 => 'module not found'])
+        ->and(config('iam.codes'))->toBe([403 => 'root forbidden', 404 => 'root not found']);
+});
+
+it('keeps the list a module sets as it is, however many times its provider registers', function () {
     $this->app->register(IamServiceProvider::class, force: true);
 
-    expect(config('iam.items'))->toBe(['from-root', 'from-module']);
+    expect($this->inModule('iam', fn () => config('iam.items')))->toBe(['from-module']);
 });
 
 it('keeps the cached config as it is, instead of merging the module config over it again', function () {

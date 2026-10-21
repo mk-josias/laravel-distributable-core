@@ -11,6 +11,7 @@ use Distributable\Exceptions\ConfigurationException;
 use Distributable\Exceptions\ModuleException;
 use Distributable\Providers\DistributableServiceProvider;
 use Distributable\Services\Stream\Dispatcher;
+use Distributable\Services\Stream\EnvelopeFactory;
 use Distributable\Services\Stream\Outbox\Relay;
 use Distributable\Services\Stream\PayloadVersions;
 use Distributable\Services\Stream\TransportManager;
@@ -25,17 +26,18 @@ beforeEach(fn () => $this->app->singleton(Recorder::class));
 
 function renamed(int $version, array $payload): Envelope
 {
-    return new Envelope('00000000-0000-0000-0000-00000000000'.$version, 'iam', 'iam.user.renamed', $payload, [], now()->toImmutable(), version: $version);
+    return new Envelope('00000000-0000-0000-0000-00000000000'.$version, 'iam', 'iam.user.renamed', $payload, [], now()->toImmutable(), 'default', version: $version);
 }
 
-it('carries the version of the event in the envelope, and reads an envelope without one as version 1', function () {
-    $envelope = Envelope::for(new UserRenamed(5, 'Ada Lovelace'), 'iam');
+it('carries the version of the payload in the envelope, and reads an envelope without one as version 1', function () {
+    $envelopes = $this->app->make(EnvelopeFactory::class);
+    $envelope = $envelopes->for(new UserRenamed(5, 'Ada Lovelace'), 'iam');
     $legacy = $envelope->toArray();
     unset($legacy['version']);
 
     expect($envelope->version)->toBe(3)
         ->and(Envelope::fromJson($envelope->toJson())->version)->toBe(3)
-        ->and(Envelope::for(new UserRegistered(5, 'lamp'), 'iam')->version)->toBe(1)
+        ->and($envelopes->for(new UserRegistered(5, 'lamp'), 'iam')->version)->toBe(1)
         ->and(Envelope::fromArray($legacy)->version)->toBe(1);
 });
 
@@ -73,7 +75,7 @@ it('reads an event nobody declared a version for as version 1 only', function ()
         ->and($versions->current('iam.user.renamed'))->toBe(3);
 
     $this->app->make(Dispatcher::class)->dispatch(
-        new Envelope('00000000-0000-0000-0000-000000000009', 'iam', 'iam.user.registered', ['id' => 5], [], now()->toImmutable(), version: 2),
+        new Envelope('00000000-0000-0000-0000-000000000009', 'iam', 'iam.user.registered', ['id' => 5], [], now()->toImmutable(), 'default', version: 2),
     );
 })->throws(ModuleException::class, 'arrived in version 2, and this process reads it up to version 1');
 
@@ -86,11 +88,11 @@ it('keeps the version through the publications table, up to the sent envelope', 
     Config::set('distributable.events.streams.default.driver', 'recording');
     $this->app->instance(RecordingTransport::class, new RecordingTransport);
     $this->app->make(TransportManager::class)->extend('recording', fn ($app): Transport => $app->make(RecordingTransport::class));
-    Config::set('database.default', 'iam');
-
-    foreach (glob(dirname((string) (new ReflectionClass(DistributableServiceProvider::class))->getFileName(), 3).'/database/migrations/*.php') as $file) {
-        (require $file)->up();
-    }
+    $this->inModule('iam', function (): void {
+        foreach (glob(dirname((string) (new ReflectionClass(DistributableServiceProvider::class))->getFileName(), 3).'/database/migrations/*.php') as $file) {
+            (require $file)->up();
+        }
+    });
 
     $this->app->make(Bus::class)->emit(new UserRenamed(5, 'Ada Lovelace'));
     $this->app->make(Relay::class)->drain('iam');

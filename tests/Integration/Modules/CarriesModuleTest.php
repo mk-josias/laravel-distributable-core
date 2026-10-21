@@ -11,11 +11,14 @@ use Distributable\Context\ModuleTaskDispatcher;
 use Distributable\Exceptions\ModuleException;
 use Distributable\Tests\Doubles\DeferredReportsProvider;
 use Distributable\Tests\ModuleAppTestCase;
+use Illuminate\Cache\ArrayStore;
 use Illuminate\Contracts\Concurrency\Driver;
 use Illuminate\Support\Defer\DeferredCallback;
 use Illuminate\Support\Defer\DeferredCallbackCollection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Laravel\Octane\Contracts\DispatchesTasks;
 use Laravel\SerializableClosure\SerializableClosure;
 
@@ -29,8 +32,8 @@ it('refuses a module code that enters another module', function () {
         ->and($this->inModule('iam', static fn (): string => 'entered'))->toBe('entered');
 });
 
-it('gives each module its own instance of a per_module service, built once and swapped in as it runs', function () {
-    config()->set('distributable.per_module', ['cache', 'cache.store']);
+it('gives each module its own instance of a module_services service, built once and swapped in as it runs', function () {
+    config()->set('distributable.module_services', ['cache', 'cache.store']);
 
     $this->inModule('iam', fn () => Cache::put('owner', 'iam'));
     $this->inModule('analytics', fn () => Cache::put('owner', 'analytics'));
@@ -42,14 +45,50 @@ it('gives each module its own instance of a per_module service, built once and s
         ->and($this->inModule('iam', fn () => app('cache')))->toBe($iam);
 });
 
-it('builds a per_module service of a deferred provider on the first switch, through its extenders', function () {
+it('teaches a module the drivers the application learned before it first runs, on a store of its own', function () {
+    config()->set('cache.stores.custom', ['driver' => 'custom']);
+    Cache::extend('custom', fn () => Cache::repository(new ArrayStore));
+    Cache::store('custom')->put('owner', 'application');
+
+    expect($this->inModule('iam', fn () => Cache::store('custom')->get('owner')))->toBeNull()
+        ->and(Cache::store('custom')->get('owner'))->toBe('application');
+});
+
+it('teaches a module that already ran the drivers the application learned since, and keeps what it opened', function () {
+    $this->inModule('iam', fn () => Cache::put('owner', 'iam'));
+    config()->set('cache.stores.custom', ['driver' => 'custom']);
+    Cache::extend('custom', fn () => Cache::repository(new ArrayStore));
+
+    expect($this->inModule('iam', fn () => Cache::store('custom')->put('key', 'value')))->toBeTrue()
+        ->and($this->inModule('iam', fn () => Cache::get('owner')))->toBe('iam');
+});
+
+it('keeps a driver a module learns to that module', function () {
+    config()->set('cache.stores.custom', ['driver' => 'custom']);
+    $this->inModule('iam', fn () => Cache::extend('custom', fn () => Cache::repository(new ArrayStore)));
+
+    expect($this->inModule('iam', fn () => Cache::store('custom')->put('key', 'value')))->toBeTrue()
+        ->and(fn () => Cache::store('custom'))->toThrow(InvalidArgumentException::class, 'Driver [custom] is not supported.')
+        ->and(fn () => $this->inModule('analytics', fn () => Cache::store('custom')))->toThrow(InvalidArgumentException::class, 'Driver [custom] is not supported.');
+});
+
+it('teaches a module what the application taught any service in code, a disk driver or a validation rule', function () {
+    config()->set('filesystems.disks.custom', ['driver' => 'custom', 'root' => sys_get_temp_dir()]);
+    Storage::extend('custom', fn ($app, array $config) => Storage::createLocalDriver($config));
+    Validator::extend('even', fn (string $attribute, mixed $value): bool => $value % 2 === 0);
+
+    expect($this->inModule('iam', fn () => Storage::disk('custom')->path('file')))->toBe(sys_get_temp_dir().'/file')
+        ->and($this->inModule('iam', fn () => Validator::make(['n' => 2], ['n' => 'even'])->passes()))->toBeTrue();
+});
+
+it('builds a module_services service of a deferred provider on the first switch, through its extenders', function () {
     app()->addDeferredServices(['reports' => DeferredReportsProvider::class]);
     app()->extend('reports', static function (ArrayObject $reports): ArrayObject {
         $reports['extended'] = true;
 
         return $reports;
     });
-    config()->set('distributable.per_module', ['reports']);
+    config()->set('distributable.module_services', ['reports']);
 
     $iam = $this->inModule('iam', fn () => app('reports'));
     $analytics = $this->inModule('analytics', fn () => app('reports'));
@@ -63,7 +102,7 @@ it('builds a per_module service of a deferred provider on the first switch, thro
 it('runs a scheduled closure in the module that declared it, then leaves the module', function () {
     $this->artisan('schedule:run')->assertSuccessful();
 
-    expect(Cache::get('scheduled-connection'))->toBe('iam')
+    expect($this->inModule('iam', fn () => Cache::get('scheduled-connection')))->toBe('iam')
         ->and(DB::getDefaultConnection())->toBe(ModuleContext::NO_MODULE);
 });
 
@@ -72,7 +111,7 @@ it('runs a queued closure in the module that queued it', function () {
         dispatch(static fn () => Cache::put('connection', DB::getDefaultConnection()));
     });
 
-    expect(Cache::get('connection'))->toBe('iam');
+    expect($this->inModule('iam', fn () => Cache::get('connection')))->toBe('iam');
 });
 
 it('runs a deferred callback in the module that deferred it, after that module handed back', function () {
@@ -82,7 +121,7 @@ it('runs a deferred callback in the module that deferred it, after that module h
 
     app(DeferredCallbackCollection::class)->invoke();
 
-    expect(Cache::get('connection'))->toBe('iam');
+    expect($this->inModule('iam', fn () => Cache::get('connection')))->toBe('iam');
 });
 
 it('gives a task its module, even serialized and run where no module is set', function () {

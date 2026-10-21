@@ -5,28 +5,43 @@ declare(strict_types=1);
 namespace Distributable\Context\Queue;
 
 use DateTimeInterface;
+use Distributable\Context\ModuleContext;
+use Distributable\Data\Module;
+use Distributable\Exceptions\ModuleException;
 use Distributable\Services\ModuleRegistry;
 use Illuminate\Bus\Batch;
 use Illuminate\Bus\BatchFactory;
 use Illuminate\Bus\DatabaseBatchRepository;
 use Illuminate\Bus\PendingBatch;
-use Illuminate\Database\DatabaseManager;
+use Illuminate\Container\Container;
+use Illuminate\Database\Connection;
+use Illuminate\Support\Facades\Context;
 
 /**
  * Stores a batch in the database of the module owning its jobs — a batch belongs to one module.
  * While a job runs, the provider points the repository at that job's module (Queue::before);
- * reads go through the databases of every module this process runs.
+ * reads enter each module this process runs and read its database.
  */
 final class BatchRepository extends DatabaseBatchRepository
 {
+    public const string CONTEXT_KEY = 'distributable.batch_module';
+
     public function __construct(
         BatchFactory $factory,
-        private readonly DatabaseManager $db,
-        string $default,
         string $table,
         private readonly ModuleRegistry $registry,
     ) {
-        parent::__construct($factory, $db->connection(Databases::of($registry)[0] ?? $default), $table);
+        // Only until store() or find() names the module.
+        parent::__construct($factory, self::open(Databases::all($registry)[0] ?? throw ModuleException::noModuleRunning()), $table);
+    }
+
+    /** The module's connection, opened in the module: only there is it configured. */
+    private static function open(Module $module): Connection
+    {
+        return Container::getInstance()->make(ModuleContext::class)->within(
+            $module,
+            static fn (): Connection => Container::getInstance()->make('db')->connection(Databases::for($module, Databases::BATCHING)),
+        );
     }
 
     public function useModuleOf(string $class): void
@@ -34,7 +49,7 @@ final class BatchRepository extends DatabaseBatchRepository
         $module = $this->registry->forClass($class);
 
         if ($module !== null && $module->hasDatabase) {
-            $this->setConnection($this->db->connection($module->defaultConnection()));
+            $this->setConnection(self::open($module));
         }
     }
 
@@ -49,15 +64,23 @@ final class BatchRepository extends DatabaseBatchRepository
             default => '',
         };
 
-        $this->useModuleOf($class);
+        $running = Context::getHidden(ModuleContext::CONTEXT_KEY);
+        $module = $this->registry->forClass($class) ?? (is_string($running) ? $this->registry->find($running) : null);
+
+        if ($module === null || ! $module->hasDatabase) {
+            throw ModuleException::noModuleRunning();
+        }
+
+        $this->setConnection(self::open($module));
+        Context::addHidden(self::CONTEXT_KEY, $module->name);
 
         return parent::store($batch);
     }
 
     public function find(string $batchId)
     {
-        foreach (Databases::of($this->registry) as $connection) {
-            $this->setConnection($this->db->connection($connection));
+        foreach ($this->searchOrder() as $module) {
+            $this->setConnection(self::open($module));
 
             if ($this->connection->table($this->table)->where('id', $batchId)->exists()) {
                 break;
@@ -67,13 +90,27 @@ final class BatchRepository extends DatabaseBatchRepository
         return parent::find($batchId);
     }
 
+    /**
+     * The module that stored the batch comes first when the job carries it; the others stay as a fallback.
+     *
+     * @return list<Module>
+     */
+    private function searchOrder(): array
+    {
+        $modules = Databases::all($this->registry);
+        $stored = Context::getHidden(self::CONTEXT_KEY);
+        $first = array_values(array_filter($modules, static fn (Module $module): bool => $module->name === $stored));
+
+        return [...$first, ...array_values(array_filter($modules, static fn (Module $module): bool => $module->name !== $stored))];
+    }
+
     /** @return list<Batch> */
     public function get($limit = 50, $before = null)
     {
         $batches = [];
 
-        foreach (Databases::of($this->registry) as $connection) {
-            $this->setConnection($this->db->connection($connection));
+        foreach (Databases::modules($this->registry) as $module) {
+            $this->setConnection(self::open($module));
             $batches = [...$batches, ...parent::get($limit, $before)];
         }
 
@@ -116,8 +153,8 @@ final class BatchRepository extends DatabaseBatchRepository
     {
         $total = 0;
 
-        foreach (Databases::of($this->registry) as $connection) {
-            $this->setConnection($this->db->connection($connection));
+        foreach (Databases::modules($this->registry) as $module) {
+            $this->setConnection(self::open($module));
             $total += $callback();
         }
 

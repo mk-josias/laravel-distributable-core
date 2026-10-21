@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Distributable\Console;
 
-use Closure;
 use Distributable\Data\Module;
 use Distributable\Services\ModuleRegistry;
 use Illuminate\Console\Events\CommandFinished;
@@ -12,12 +11,10 @@ use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Foundation\Application;
 use Symfony\Component\Finder\Finder;
 
-/** With --module, what a Laravel make:* command generates lands in that module, under its namespace, and model:prune and model:show find its models. */
+/** With --module, a Laravel make:* command writes in the module's paths, given by its context; this fixes what Laravel hard-codes. */
 final class ModuleGenerators
 {
-    private const array SCANS_MODELS = ['model:prune', 'model:show'];
-
-    /** @var array{module: Module, app: string, database: string, config: string, views: mixed, namespace: string|null, files: list<string>}|null */
+    /** @var array{module: Module, files: list<string>}|null */
     private ?array $swapped = null;
 
     private int $nested = 0;
@@ -35,9 +32,7 @@ final class ModuleGenerators
             return;
         }
 
-        $name = str_starts_with((string) $event->command, 'make:') || in_array($event->command, self::SCANS_MODELS, true)
-            ? $event->input->getParameterOption('--module', null)
-            : null;
+        $name = str_starts_with((string) $event->command, 'make:') ? $event->input->getParameterOption('--module', null) : null;
 
         if (! is_string($name)) {
             return;
@@ -50,21 +45,7 @@ final class ModuleGenerators
             mkdir($module->classPath().'/Models', 0755, true);
         }
 
-        $this->swapped = [
-            'module' => $module,
-            'app' => $this->app->path(),
-            'database' => $this->app->databasePath(),
-            'config' => $this->app->configPath(),
-            'views' => $this->app->make('config')->get('view.paths'),
-            'namespace' => $this->namespace(),
-            'files' => $this->files($module),
-        ];
-
-        $this->app->useAppPath($module->classPath());
-        $this->app->useDatabasePath($module->path().'/database');
-        $this->app->useConfigPath($module->path().'/config');
-        $this->app->make('config')->set('view.paths', [$module->path().'/resources/views']);
-        $this->namespace($module->namespace.'\\');
+        $this->swapped = ['module' => $module, 'files' => $this->files($module)];
     }
 
     public function finished(CommandFinished $event): void
@@ -81,11 +62,6 @@ final class ModuleGenerators
 
         ['module' => $module, 'files' => $before] = $this->swapped;
 
-        $this->app->useAppPath($this->swapped['app']);
-        $this->app->useDatabasePath($this->swapped['database']);
-        $this->app->useConfigPath($this->swapped['config']);
-        $this->app->make('config')->set('view.paths', $this->swapped['views']);
-        $this->namespace($this->swapped['namespace']);
         $this->swapped = null;
 
         foreach ($this->fix($module, array_values(array_diff($this->files($module), $before))) as $moved) {
@@ -150,13 +126,5 @@ final class ModuleGenerators
         return $directories === []
             ? []
             : array_map(strval(...), iterator_to_array(Finder::create()->files()->in($directories), false));
-    }
-
-    /** Reads the application namespace Laravel caches, or sets it when one is given: Laravel offers no setter. */
-    private function namespace(?string ...$namespace): ?string
-    {
-        return Closure::bind(function () use ($namespace): ?string {
-            return $namespace === [] ? $this->namespace : $this->namespace = $namespace[0];
-        }, $this->app, Application::class)();
     }
 }

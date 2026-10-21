@@ -14,7 +14,7 @@ it('merges the distributable config with its defaults, and the microservices one
         ->and(config('distributable.modules.path'))->toBe('apps')
         ->and(config('distributable.modules.namespace'))->toBe('Apps')
         ->and(config('distributable.foundation.path'))->toBe('foundation')
-        ->and(config('distributable.events.streams.default.key'))->toBe('distributable:events')
+        ->and(config('distributable.events.streams.default.driver'))->toBe('array')
         ->and(config('distributable.rpc.transport'))->toBeNull();
 });
 

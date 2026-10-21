@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Apps\Iam\Events\UserRegistered;
 use Distributable\Data\Envelope;
+use Distributable\Services\Stream\EnvelopeFactory;
 use Distributable\Services\Stream\TransportManager;
 use Distributable\Stream\Redis\RedisStreamTransport;
 use Distributable\Tests\ModuleAppTestCase;
@@ -55,8 +56,8 @@ function consumeAll(RedisStreamTransport $transport, string $consumer, int $expe
 
 it('delivers the published envelopes in order to each consumer group', function () {
     $transport = redisTransport();
-    $transport->publish(Envelope::for(new UserRegistered(1, 'a'), 'iam'));
-    $transport->publish(Envelope::for(new UserRegistered(2, 'b'), 'iam'));
+    $transport->publish(app(EnvelopeFactory::class)->for(new UserRegistered(1, 'a'), 'iam'));
+    $transport->publish(app(EnvelopeFactory::class)->for(new UserRegistered(2, 'b'), 'iam'));
 
     expect(consumeAll($transport, 'analytics', 2))->toBe([1, 2])
         ->and(consumeAll(redisTransport(), 'iam', 2))->toBe([1, 2])
@@ -65,9 +66,9 @@ it('delivers the published envelopes in order to each consumer group', function 
 
 it('keeps one order across every emitting module, in the single key of the stream', function () {
     $transport = redisTransport();
-    $transport->publish(Envelope::for(new UserRegistered(1, 'a'), 'iam'));
-    $transport->publish(Envelope::for(new UserRegistered(2, 'b'), 'analytics'));
-    $transport->publish(Envelope::for(new UserRegistered(3, 'c'), 'iam'));
+    $transport->publish(app(EnvelopeFactory::class)->for(new UserRegistered(1, 'a'), 'iam'));
+    $transport->publish(app(EnvelopeFactory::class)->for(new UserRegistered(2, 'b'), 'analytics'));
+    $transport->publish(app(EnvelopeFactory::class)->for(new UserRegistered(3, 'c'), 'iam'));
 
     expect(consumeAll($transport, 'gateway', 3))->toBe([1, 2, 3])
         ->and((int) Redis::connection()->command('xlen', [config('distributable.events.streams.default.key')]))->toBe(3);
@@ -75,8 +76,8 @@ it('keeps one order across every emitting module, in the single key of the strea
 
 it('acknowledges unread the entries of an emitter the consumer does not listen to', function () {
     $transport = redisTransport();
-    $transport->publish(Envelope::for(new UserRegistered(1, 'a'), 'analytics'));
-    $transport->publish(Envelope::for(new UserRegistered(2, 'b'), 'iam'));
+    $transport->publish(app(EnvelopeFactory::class)->for(new UserRegistered(1, 'a'), 'analytics'));
+    $transport->publish(app(EnvelopeFactory::class)->for(new UserRegistered(2, 'b'), 'iam'));
 
     expect(consumeAll($transport, 'gateway', 1, ['iam']))->toBe([2])
         ->and(Redis::connection()->command('xpending', [config('distributable.events.streams.default.key'), 'gateway'])[0])->toBe(0);
@@ -110,8 +111,8 @@ function consumeFailingOnce(string $failing, int $last): array
 
 it('retries a failed entry before any later one when the stream blocks on failure', function () {
     $transport = redisTransport();
-    $transport->publish(Envelope::for(new UserRegistered(1, 'a'), 'iam'));
-    $transport->publish(Envelope::for(new UserRegistered(2, 'b'), 'iam'));
+    $transport->publish(app(EnvelopeFactory::class)->for(new UserRegistered(1, 'a'), 'iam'));
+    $transport->publish(app(EnvelopeFactory::class)->for(new UserRegistered(2, 'b'), 'iam'));
 
     expect(consumeFailingOnce('1', 2))->toBe([1, 2]);
 });
@@ -119,8 +120,8 @@ it('retries a failed entry before any later one when the stream blocks on failur
 it('goes on past a failed entry and drops it when the stream skips on failure', function () {
     config()->set('distributable.events.streams.default.on_failure', 'skip');
     $transport = redisTransport();
-    $transport->publish(Envelope::for(new UserRegistered(1, 'a'), 'iam'));
-    $transport->publish(Envelope::for(new UserRegistered(2, 'b'), 'iam'));
+    $transport->publish(app(EnvelopeFactory::class)->for(new UserRegistered(1, 'a'), 'iam'));
+    $transport->publish(app(EnvelopeFactory::class)->for(new UserRegistered(2, 'b'), 'iam'));
 
     expect(consumeFailingOnce('1', 2))->toBe([2])
         ->and(Redis::connection()->command('xpending', [config('distributable.events.streams.default.key'), 'analytics'])[0])->toBe(0);
@@ -130,7 +131,7 @@ it('replays an entry a dead consumer left unacknowledged', function () {
     config()->set('distributable.events.streams.default.claim_after', 0);
     $transport = redisTransport();
     $key = config('distributable.events.streams.default.key');
-    $transport->publish(Envelope::for(new UserRegistered(1, 'a'), 'iam'));
+    $transport->publish(app(EnvelopeFactory::class)->for(new UserRegistered(1, 'a'), 'iam'));
 
     Redis::connection()->command('xgroup', ['CREATE', $key, 'analytics', '0', true]);
     Redis::connection()->command('xreadgroup', ['analytics', 'dead-consumer', [$key => '>'], 10]);
@@ -141,8 +142,8 @@ it('replays an entry a dead consumer left unacknowledged', function () {
 
 it('trims only the entries every consumer group has acknowledged', function () {
     $transport = redisTransport();
-    $transport->publish(Envelope::for(new UserRegistered(1, 'a'), 'iam'));
-    $transport->publish(Envelope::for(new UserRegistered(2, 'b'), 'iam'));
+    $transport->publish(app(EnvelopeFactory::class)->for(new UserRegistered(1, 'a'), 'iam'));
+    $transport->publish(app(EnvelopeFactory::class)->for(new UserRegistered(2, 'b'), 'iam'));
 
     expect($transport->trim())->toBe(0);
 
@@ -157,7 +158,7 @@ it('gives back only the entries below what every consumer group has read', funct
     $ids = fn (): array => collect($transport->entries(null, null, true))->map(fn (Envelope $envelope): int => $envelope->payload['id'])->all();
 
     foreach ([1, 2, 3] as $id) {
-        $transport->publish(Envelope::for(new UserRegistered($id, 'a'), 'iam'));
+        $transport->publish(app(EnvelopeFactory::class)->for(new UserRegistered($id, 'a'), 'iam'));
     }
 
     consumeAll($transport, 'analytics', 3);

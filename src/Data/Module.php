@@ -98,22 +98,16 @@ final readonly class Module
         return $this->databaseKey('default');
     }
 
-    /** @return list<string> its default, its owner, and each connection its config/database.php declares */
+    /** @return list<string> its default, and each connection its config/database.php declares */
     public function connections(): array
     {
-        $declared = array_map(strval(...), array_keys((array) ($this->databaseConfig()['connections'] ?? [])));
-
-        return array_values(array_unique(array_filter([$this->defaultConnection(), $this->ownerConnection(), ...$declared], is_string(...))));
+        return array_values(array_unique(array_filter([$this->defaultConnection(), ...$this->declaredConnections()], is_string(...))));
     }
 
-    /**
-     * The connection the migrate commands and DDL use: the `owner` its config/database.php names, as
-     * `default` names the one it runs on; without it, that one. The runtime connection stays
-     * least-privileged — and on PostgreSQL, subject to the row-level security policies the owner installs.
-     */
-    public function ownerConnection(): ?string
+    /** @return list<string> the connections its config/database.php defines; a default may name the application's instead */
+    public function declaredConnections(): array
     {
-        return $this->databaseKey('owner') ?? $this->defaultConnection();
+        return array_map(strval(...), array_keys((array) ($this->databaseConfig()['connections'] ?? [])));
     }
 
     private function databaseKey(string $key): ?string

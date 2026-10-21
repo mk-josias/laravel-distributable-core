@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Distributable\Events;
 
+use Distributable\Attributes\Emits;
+
 /** A source row as it now stands, announced to the modules keeping a copy of it. */
+#[Emits(ShadowChanged::NAME)]
 final class ShadowChanged extends Event
 {
     public const string NAME = 'distributable.shadow.changed';
@@ -31,11 +34,6 @@ final class ShadowChanged extends Event
     public function stream(): ?string
     {
         return $this->stream;
-    }
-
-    public function name(): string
-    {
-        return self::NAME;
     }
 
     /** @return array{source: string, key: int|string, attributes: array<string, mixed>} */

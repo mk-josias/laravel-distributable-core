@@ -31,7 +31,7 @@ use Illuminate\Support\Facades\DB;
 
 final class IamServiceProvider extends ServiceProvider
 {
-    protected array $rpc = [
+    protected array $rpcHandlers = [
         FindUser::class => FindUserHandler::class,
         FindUserV2::class => FindUserV2Handler::class,
         TraceId::class => TraceIdHandler::class,
@@ -49,10 +49,17 @@ final class IamServiceProvider extends ServiceProvider
         SomethingCommitted::class => [AfterCommitRecordEventConnection::class],
     ];
 
-    protected array $handlers = [
+    protected array $streamHandlers = [
         IamEvent::UserRegistered->value => [OnUserRegistered::class],
         UserRenamedPayload::NAME => [OnUserRegistered::class],
     ];
+
+    public function boot(): void
+    {
+        parent::boot();
+
+        $this->loadMigrationsFrom(dirname(__DIR__, 2).'/database/extra');
+    }
 
     protected function schedule(Schedule $schedule): void
     {

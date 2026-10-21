@@ -13,7 +13,7 @@ use Distributable\Tests\Fixtures\Orders\Rpc\OrdersTraceIdHandler;
 
 final class OrdersServiceProvider extends ServiceProvider
 {
-    protected array $rpc = [
+    protected array $rpcHandlers = [
         FindOrder::class => FindOrderHandler::class,
         OrdersTraceId::class => OrdersTraceIdHandler::class,
     ];

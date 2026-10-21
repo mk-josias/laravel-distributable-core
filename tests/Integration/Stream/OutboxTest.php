@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 use Apps\Iam\Events\UserAudited;
 use Apps\Iam\Events\UserRegistered;
+use Distributable\Context\ModuleContext;
 use Distributable\Contracts\Stream\Bus;
 use Distributable\Contracts\Stream\Transport;
 use Distributable\Data\Envelope;
 use Distributable\Providers\DistributableServiceProvider;
+use Distributable\Services\Stream\EnvelopeFactory;
 use Distributable\Services\Stream\Outbox\Relay;
 use Distributable\Services\Stream\TransportManager;
 use Distributable\Tests\Doubles\ExplodingTransport;
@@ -37,19 +39,20 @@ beforeEach(function () {
     $this->app->singleton(Recorder::class);
 
     // The package's publication migrations, on the iam module's database.
-    Config::set('database.default', 'iam');
-    foreach (glob(dirname((string) (new ReflectionClass(DistributableServiceProvider::class))->getFileName(), 3).'/database/migrations/*.php') as $file) {
-        (require $file)->up();
-    }
+    $this->inModule('iam', function (): void {
+        foreach (glob(dirname((string) (new ReflectionClass(DistributableServiceProvider::class))->getFileName(), 3).'/database/migrations/*.php') as $file) {
+            (require $file)->up();
+        }
+    });
 });
 
 function publications(): Builder
 {
-    return DB::connection('iam')->table('event_publications');
+    return app(ModuleContext::class)->connection('iam')->table('event_publications');
 }
 
 it('stores the event in the module database with the transaction, and deletes the row once it is sent', function () {
-    DB::connection('iam')->transaction(function (): void {
+    $this->inModule('iam', fn () => DB::connection('iam'))->transaction(function (): void {
         $this->app->make(Bus::class)->emit(new UserRegistered(5, 'lamp'));
 
         $row = publications()->first();
@@ -80,7 +83,7 @@ it('publishes without a row when events are not published reliably', function ()
 
 it('publishes nothing when the business transaction rolls back', function () {
     try {
-        DB::connection('iam')->transaction(function (): void {
+        $this->inModule('iam', fn () => DB::connection('iam'))->transaction(function (): void {
             $this->app->make(Bus::class)->emit(new UserRegistered(5, 'lamp'));
 
             throw new RuntimeException('business failure');
@@ -112,7 +115,7 @@ it('keeps a row when its sending fails, and sends it on demand', function () {
 });
 
 it('sends the stored rows of every local module database from the command', function () {
-    $envelope = Envelope::for(new UserRegistered(5, 'lamp'), 'iam');
+    $envelope = app(EnvelopeFactory::class)->for(new UserRegistered(5, 'lamp'), 'iam');
     publications()->insert([
         'id' => $envelope->id,
         'emitter' => 'iam',

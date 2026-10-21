@@ -10,6 +10,6 @@ use Foundation\Iam\Events\UserRenamedPayload;
 final class FoundationServiceProvider extends BaseServiceProvider
 {
     protected array $payloads = [
-        UserRenamedPayload::NAME => UserRenamedPayload::class,
+        UserRenamedPayload::class,
     ];
 }
