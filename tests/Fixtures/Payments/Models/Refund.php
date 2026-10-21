@@ -2,20 +2,21 @@
 
 declare(strict_types=1);
 
-namespace Distributable\Tests\Fixtures\Orders\Models;
+namespace Distributable\Tests\Fixtures\Payments\Models;
 
 use Distributable\Attributes\ShadowFields;
+use Distributable\Attributes\ShadowStream;
 use Distributable\Contracts\Shadows\Shadowed;
 use Distributable\Traits\ShadowSource;
 use Illuminate\Database\Eloquent\Model;
 
 /**
  * @property int $id
- * @property int $total
- * @property string $note
+ * @property int $amount
  */
-#[ShadowFields('total')]
-final class Order extends Model implements Shadowed
+#[ShadowFields('amount')]
+#[ShadowStream('shadows')]
+final class Refund extends Model implements Shadowed
 {
     use ShadowSource;
 

@@ -49,10 +49,10 @@ it('knows no module for a class outside the namespaces of the modules', function
 
 it('refuses a module whose folder is inside the folder of another', function () {
     new ModuleRegistry([
-        Module::fromName('shop', 'Apps', 'apps', '.', 'App'),
-        Module::fromName('billing', 'Apps', 'apps'),
+        Module::fromName('payments', 'Apps', 'apps', '.', 'App'),
+        Module::fromName('messaging', 'Apps', 'apps'),
     ]);
-})->throws(ModuleException::class, 'is inside the folder of module [shop]');
+})->throws(ModuleException::class, 'is inside the folder of module [payments]');
 
 it('resolves the module owning a class from its namespace', function () {
     $registry = registryLoading();

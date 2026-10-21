@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Distributable\Tests\Fixtures\Orders\Rpc;
+namespace Distributable\Tests\Fixtures\Payments\Rpc;
 
 use Distributable\Contracts\Rpc\Handler;
 use Illuminate\Support\Facades\Context;
 
-/** @implements Handler<OrdersTraceId> */
-final class OrdersTraceIdHandler implements Handler
+/** @implements Handler<PaymentsTraceId> */
+final class PaymentsTraceIdHandler implements Handler
 {
-    public function handle(OrdersTraceId $message): ?string
+    public function handle(PaymentsTraceId $message): ?string
     {
         $trace = Context::get('trace_id');
 

@@ -10,40 +10,40 @@ use Distributable\Providers\DistributableServiceProvider;
 use Distributable\Services\Stream\Dispatcher;
 use Distributable\Services\Stream\TransportManager;
 use Distributable\Tests\Doubles\FlakyTransport;
-use Distributable\Tests\Fixtures\Orders\Events\OrderPlaced;
-use Distributable\Tests\Fixtures\Orders\Handlers\OnInvoicePaid;
-use Distributable\Tests\OrdersAppTestCase;
+use Distributable\Tests\Fixtures\Payments\Events\PaymentCaptured;
+use Distributable\Tests\Fixtures\Payments\Handlers\OnReceiptSent;
+use Distributable\Tests\PaymentsAppTestCase;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\DB;
 
-uses(OrdersAppTestCase::class);
+uses(PaymentsAppTestCase::class);
 
 it('stamps an event with this service as its emitter, and the propagated context', function () {
     config()->set('distributable.events.propagate', ['trace_id']);
     Context::add('trace_id', 'abc');
 
-    app(Bus::class)->emit(new OrderPlaced(7));
+    app(Bus::class)->emit(new PaymentCaptured(7));
 
     $envelope = app(Transport::class)->published()[0];
 
     expect($envelope)->toBeInstanceOf(Envelope::class)
-        ->and($envelope->emitter)->toBe('orders')
-        ->and($envelope->name)->toBe('orders.order.placed')
+        ->and($envelope->emitter)->toBe('payments')
+        ->and($envelope->name)->toBe('payments.payment.captured')
         ->and($envelope->payload)->toBe(['id' => 7])
         ->and($envelope->headers)->toBe(['trace_id' => 'abc']);
 });
 
 it('runs the handlers listening to an event another module emitted', function () {
-    config()->set('distributable.events.listen', ['billing.invoice.paid' => [OnInvoicePaid::class]]);
+    config()->set('distributable.events.listen', ['messaging.receipt.sent' => [OnReceiptSent::class]]);
 
-    $this->receive('orders', 'billing.invoice.paid', ['order_id' => 7]);
+    $this->receive('payments', 'messaging.receipt.sent', ['payment_id' => 7]);
 
-    expect(DB::table('paid_orders')->pluck('order_id')->all())->toBe([7]);
+    expect(DB::table('sent_receipts')->pluck('payment_id')->all())->toBe([7]);
 });
 
 it('publishes right after the commit and writes no row when events are not published reliably', function () {
     DB::transaction(function (): void {
-        app(Bus::class)->emit(new OrderPlaced(7));
+        app(Bus::class)->emit(new PaymentCaptured(7));
 
         expect(app(Transport::class)->published())->toBe([]);
     });
@@ -55,7 +55,7 @@ it('publishes right after the commit and writes no row when events are not publi
 it('publishes nothing when the transaction rolls back and events are not written in it', function () {
     try {
         DB::transaction(function (): void {
-            app(Bus::class)->emit(new OrderPlaced(7));
+            app(Bus::class)->emit(new PaymentCaptured(7));
 
             throw new RuntimeException('rollback');
         });
@@ -69,13 +69,13 @@ it('writes the event in the publications table with the business transaction, an
     config()->set('distributable.events.reliable_publish', true);
 
     DB::transaction(function (): void {
-        app(Bus::class)->emit(new OrderPlaced(7));
+        app(Bus::class)->emit(new PaymentCaptured(7));
 
         expect(app(Transport::class)->published())->toBe([])
-            ->and(DB::table('event_publications')->where('emitter', 'orders')->count())->toBe(1);
+            ->and(DB::table('event_publications')->where('emitter', 'payments')->count())->toBe(1);
     });
 
-    expect(app(Transport::class)->published()[0]->name)->toBe('orders.order.placed')
+    expect(app(Transport::class)->published()[0]->name)->toBe('payments.payment.captured')
         ->and(DB::table('event_publications')->count())->toBe(0);
 });
 
@@ -85,7 +85,7 @@ it('keeps the row when the sending after the commit fails, and sends it on deman
     config()->set('distributable.events.reliable_publish', true);
     config()->set('distributable.events.streams.default.driver', 'flaky');
 
-    DB::transaction(fn () => app(Bus::class)->emit(new OrderPlaced(7)));
+    DB::transaction(fn () => app(Bus::class)->emit(new PaymentCaptured(7)));
 
     $row = DB::table('event_publications')->first();
 
@@ -110,10 +110,10 @@ it('keeps the publications and the consumption marks in the tables distributable
     }
     config()->set('distributable.events.reliable_publish', true);
     config()->set('distributable.events.guard', true);
-    config()->set('distributable.events.listen', ['billing.invoice.paid' => [OnInvoicePaid::class]]);
+    config()->set('distributable.events.listen', ['messaging.receipt.sent' => [OnReceiptSent::class]]);
 
-    app(Bus::class)->emit(new OrderPlaced(7));
-    app(Dispatcher::class)->dispatch(new Envelope('0191f3c2-8a41-7c2e-9b55-3f1c7d0a4e90', 'billing', 'billing.invoice.paid', ['order_id' => 7], [], now()->toImmutable(), 'default'), 'orders');
+    app(Bus::class)->emit(new PaymentCaptured(7));
+    app(Dispatcher::class)->dispatch(new Envelope('0191f3c2-8a41-7c2e-9b55-3f1c7d0a4e90', 'messaging', 'messaging.receipt.sent', ['payment_id' => 7], [], now()->toImmutable(), 'default'), 'payments');
 
     expect(DB::table('outbox')->count())->toBe(1)
         ->and(DB::table('inbox')->count())->toBe(1)
@@ -122,14 +122,14 @@ it('keeps the publications and the consumption marks in the tables distributable
 
 it('handles a redelivered event once', function () {
     config()->set('distributable.events.guard', true);
-    config()->set('distributable.events.listen', ['billing.invoice.paid' => [OnInvoicePaid::class]]);
+    config()->set('distributable.events.listen', ['messaging.receipt.sent' => [OnReceiptSent::class]]);
 
-    $envelope = new Envelope('0191f3c2-8a41-7c2e-9b55-3f1c7d0a4e88', 'billing', 'billing.invoice.paid', ['order_id' => 7], [], now()->toImmutable(), 'default');
+    $envelope = new Envelope('0191f3c2-8a41-7c2e-9b55-3f1c7d0a4e88', 'messaging', 'messaging.receipt.sent', ['payment_id' => 7], [], now()->toImmutable(), 'default');
 
-    app(Dispatcher::class)->dispatch($envelope, 'orders');
-    app(Dispatcher::class)->dispatch($envelope, 'orders');
+    app(Dispatcher::class)->dispatch($envelope, 'payments');
+    app(Dispatcher::class)->dispatch($envelope, 'payments');
 
-    expect(DB::table('paid_orders')->count())->toBe(1)
+    expect(DB::table('sent_receipts')->count())->toBe(1)
         ->and(DB::table('event_consumptions')->count())->toBe(1);
 });
 
@@ -140,10 +140,10 @@ it('names the package of a shipped driver that is not installed', function (stri
 })->with(['redis', 'in-process']);
 
 it('consumes the stream as this service', function () {
-    config()->set('distributable.events.listen', ['billing.invoice.paid' => [OnInvoicePaid::class]]);
-    app(Transport::class)->publish(new Envelope('0191f3c2-8a41-7c2e-9b55-3f1c7d0a4e89', 'billing', 'billing.invoice.paid', ['order_id' => 9], [], now()->toImmutable(), 'default'));
+    config()->set('distributable.events.listen', ['messaging.receipt.sent' => [OnReceiptSent::class]]);
+    app(Transport::class)->publish(new Envelope('0191f3c2-8a41-7c2e-9b55-3f1c7d0a4e89', 'messaging', 'messaging.receipt.sent', ['payment_id' => 9], [], now()->toImmutable(), 'default'));
 
-    $this->artisan('stream:consume')->expectsOutputToContain('Consuming as [orders] from: orders, billing')->assertSuccessful();
+    $this->artisan('stream:consume')->expectsOutputToContain('Consuming as [payments] from: payments, messaging')->assertSuccessful();
 
-    expect(DB::table('paid_orders')->pluck('order_id')->all())->toBe([9]);
+    expect(DB::table('sent_receipts')->pluck('payment_id')->all())->toBe([9]);
 });

@@ -30,7 +30,7 @@ it('takes its own path and namespace from the declaration, when set', function (
 });
 
 it('can be the project itself: its path is the project, its classes app/ under its namespace', function () {
-    $module = Module::fromName('shop', 'Apps', 'apps', '.', 'App');
+    $module = Module::fromName('payments', 'Apps', 'apps', '.', 'App');
 
     expect($module->namespace)->toBe('App')
         ->and($module->provider)->toBe('App\Providers\AppServiceProvider')
@@ -74,4 +74,4 @@ it('declares only the connections it defines: a default may name one of the appl
 
 it('rejects a name that is not lowercase snake_case', function (string $name) {
     Module::fromName($name, 'Apps', 'apps');
-})->throws(ModuleException::class, 'Invalid module name')->with(['Iam', 'my-shop', '1shop', '']);
+})->throws(ModuleException::class, 'Invalid module name')->with(['Iam', 'my-payments', '1payments', '']);

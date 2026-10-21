@@ -10,9 +10,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('orders', function (Blueprint $table): void {
+        Schema::create('payments', function (Blueprint $table): void {
             $table->id();
-            $table->integer('total');
+            $table->integer('amount');
             $table->string('note')->default('');
         });
 
@@ -21,8 +21,8 @@ return new class extends Migration
             $table->integer('amount');
         });
 
-        Schema::create('paid_orders', function (Blueprint $table): void {
-            $table->integer('order_id');
+        Schema::create('sent_receipts', function (Blueprint $table): void {
+            $table->integer('payment_id');
         });
     }
 };

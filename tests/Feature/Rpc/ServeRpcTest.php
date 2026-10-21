@@ -5,9 +5,9 @@ declare(strict_types=1);
 use Distributable\Contracts\Rpc\ServesRpc;
 use Distributable\Contracts\Rpc\Transport;
 use Distributable\Services\Rpc\TransportManager;
-use Distributable\Tests\OrdersAppTestCase;
+use Distributable\Tests\PaymentsAppTestCase;
 
-uses(OrdersAppTestCase::class);
+uses(PaymentsAppTestCase::class);
 
 it('starts the process of a transport that has one', function () {
     app(TransportManager::class)->extend('listening', fn () => new class implements ServesRpc, Transport

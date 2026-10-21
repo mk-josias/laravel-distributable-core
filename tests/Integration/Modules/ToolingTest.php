@@ -28,9 +28,9 @@ it('installs the config and the modules directory, then a module declares itself
             ->and(is_dir($root.'/apps'))->toBeTrue()
             ->and(is_dir($root.'/foundation'))->toBeFalse();
 
-        $this->artisan('modules:make billing')->assertSuccessful();
+        $this->artisan('modules:make payments')->assertSuccessful();
 
-        expect((require $root.'/config/distributable.php')['declared'])->toHaveKey('billing');
+        expect((require $root.'/config/distributable.php')['declared'])->toHaveKey('payments');
     } finally {
         File::deleteDirectory($root);
     }
@@ -76,10 +76,10 @@ it('leaves composer.json to the application: a new module writes none', function
     config()->set('distributable.foundation.path', 'foundation');
 
     try {
-        $this->artisan('modules:make billing')->assertSuccessful();
+        $this->artisan('modules:make payments')->assertSuccessful();
 
         expect(file_get_contents($root.'/composer.json'))->toBe('{"autoload": {"psr-4": {"App\\\\": "app/"}}, "extra": {}}')
-            ->and(is_file($root.'/apps/Billing/composer.json'))->toBeFalse();
+            ->and(is_file($root.'/apps/Payments/composer.json'))->toBeFalse();
     } finally {
         File::deleteDirectory($root);
     }
@@ -96,16 +96,16 @@ it('deletes a module: its folder and its declaration', function () {
     config()->set('distributable.foundation.path', 'foundation');
 
     try {
-        $this->artisan('modules:make billing')->assertSuccessful();
-        $this->artisan('modules:make shipping')->assertSuccessful();
-        config()->set('distributable.declared', ['billing' => [], 'shipping' => []]);
+        $this->artisan('modules:make payments')->assertSuccessful();
+        $this->artisan('modules:make messaging')->assertSuccessful();
+        config()->set('distributable.declared', ['payments' => [], 'messaging' => []]);
         $this->app->forgetInstance(ModuleRegistry::class);
 
-        $this->artisan('modules:delete billing --force')->assertSuccessful();
+        $this->artisan('modules:delete payments --force')->assertSuccessful();
 
-        expect(is_dir($root.'/apps/Billing'))->toBeFalse()
-            ->and(is_dir($root.'/apps/Shipping'))->toBeTrue()
-            ->and((require $root.'/config/distributable.php')['declared'])->toBe(['shipping' => []]);
+        expect(is_dir($root.'/apps/Payments'))->toBeFalse()
+            ->and(is_dir($root.'/apps/Messaging'))->toBeTrue()
+            ->and((require $root.'/config/distributable.php')['declared'])->toBe(['messaging' => []]);
     } finally {
         File::deleteDirectory($root);
     }

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Distributable\Tests\Fixtures\Orders\Events;
+namespace Distributable\Tests\Fixtures\Payments\Events;
 
 use Distributable\Attributes\Emits;
 use Distributable\Events\Event;
 
-#[Emits('orders.order.placed', module: 'orders')]
-final class OrderPlaced extends Event
+#[Emits('payments.payment.captured', module: 'payments')]
+final class PaymentCaptured extends Event
 {
     public function __construct(private readonly int $id) {}
 

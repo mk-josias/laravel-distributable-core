@@ -7,72 +7,72 @@ use Distributable\Data\Envelope;
 use Distributable\Events\ShadowChanged;
 use Distributable\Services\Stream\Dispatcher;
 use Distributable\Services\Stream\TransportManager;
-use Distributable\Tests\Fixtures\Orders\Models\CustomerShadow;
-use Distributable\Tests\Fixtures\Orders\Models\Order;
-use Distributable\Tests\Fixtures\Orders\Models\Refund;
-use Distributable\Tests\OrdersAppTestCase;
+use Distributable\Tests\Fixtures\Payments\Models\ContactShadow;
+use Distributable\Tests\Fixtures\Payments\Models\Payment;
+use Distributable\Tests\Fixtures\Payments\Models\Refund;
+use Distributable\Tests\PaymentsAppTestCase;
 use Illuminate\Support\Facades\DB;
 
-uses(OrdersAppTestCase::class);
+uses(PaymentsAppTestCase::class);
 
-function customerChanged(int $key, array $attributes): Envelope
+function contactChanged(int $key, array $attributes): Envelope
 {
-    return new Envelope((string) str()->uuid7(), 'billing', ShadowChanged::NAME, ['source' => 'customers', 'key' => $key, 'attributes' => $attributes], [], now()->toImmutable(), 'default');
+    return new Envelope((string) str()->uuid7(), 'messaging', ShadowChanged::NAME, ['source' => 'contacts', 'key' => $key, 'attributes' => $attributes], [], now()->toImmutable(), 'default');
 }
 
 it('keeps a copy of the rows another service announces, in a table named after this service', function () {
-    app(Dispatcher::class)->dispatch(customerChanged(3, ['name' => 'Ada']), 'orders');
-    app(Dispatcher::class)->dispatch(customerChanged(3, ['name' => 'Grace']), 'orders');
+    app(Dispatcher::class)->dispatch(contactChanged(3, ['name' => 'Ada']), 'payments');
+    app(Dispatcher::class)->dispatch(contactChanged(3, ['name' => 'Grace']), 'payments');
 
-    expect((new CustomerShadow)->getTable())->toBe('customers')
-        ->and(DB::table('customers')->get()->map(fn ($row): array => (array) $row)->all())
+    expect((new ContactShadow)->getTable())->toBe('contacts')
+        ->and(DB::table('contacts')->get()->map(fn ($row): array => (array) $row)->all())
         ->toBe([['id' => 3, 'name' => 'Grace', 'deleted_at' => null]]);
 });
 
 it('soft-deletes the copy of a row deleted at the source', function () {
-    app(Dispatcher::class)->dispatch(customerChanged(3, ['name' => 'Ada']), 'orders');
-    app(Dispatcher::class)->dispatch(customerChanged(3, ['name' => 'Ada', 'deleted_at' => '2026-10-03 10:00:00']), 'orders');
+    app(Dispatcher::class)->dispatch(contactChanged(3, ['name' => 'Ada']), 'payments');
+    app(Dispatcher::class)->dispatch(contactChanged(3, ['name' => 'Ada', 'deleted_at' => '2026-10-03 10:00:00']), 'payments');
 
-    expect(CustomerShadow::query()->count())->toBe(0)
-        ->and(CustomerShadow::query()->withTrashed()->count())->toBe(1);
+    expect(ContactShadow::query()->count())->toBe(0)
+        ->and(ContactShadow::query()->withTrashed()->count())->toBe(1);
 });
 
 it('keeps only the rows its copy wants, and drops a row that stops matching', function () {
-    app(Dispatcher::class)->dispatch(customerChanged(3, ['name' => 'Ada']), 'orders');
-    app(Dispatcher::class)->dispatch(customerChanged(4, ['name' => 'Hidden']), 'orders');
-    app(Dispatcher::class)->dispatch(customerChanged(3, ['name' => 'Hidden']), 'orders');
+    app(Dispatcher::class)->dispatch(contactChanged(3, ['name' => 'Ada']), 'payments');
+    app(Dispatcher::class)->dispatch(contactChanged(4, ['name' => 'Hidden']), 'payments');
+    app(Dispatcher::class)->dispatch(contactChanged(3, ['name' => 'Hidden']), 'payments');
 
-    expect(CustomerShadow::query()->withTrashed()->count())->toBe(0);
+    expect(ContactShadow::query()->withTrashed()->count())->toBe(0);
 });
 
 it('ignores an announcement older than the copy', function () {
-    app(Dispatcher::class)->dispatch(customerChanged(3, ['name' => 'Ada']), 'orders');
-    app(Dispatcher::class)->dispatch(customerChanged(3, ['name' => 'Ada', 'deleted_at' => '2026-10-03 10:00:00']), 'orders');
-    app(Dispatcher::class)->dispatch(customerChanged(3, ['name' => 'Late', 'deleted_at' => '2026-10-02 10:00:00']), 'orders');
+    app(Dispatcher::class)->dispatch(contactChanged(3, ['name' => 'Ada']), 'payments');
+    app(Dispatcher::class)->dispatch(contactChanged(3, ['name' => 'Ada', 'deleted_at' => '2026-10-03 10:00:00']), 'payments');
+    app(Dispatcher::class)->dispatch(contactChanged(3, ['name' => 'Late', 'deleted_at' => '2026-10-02 10:00:00']), 'payments');
 
-    expect(CustomerShadow::query()->withTrashed()->pluck('name')->all())->toBe(['Ada'])
-        ->and(CustomerShadow::query()->count())->toBe(0);
+    expect(ContactShadow::query()->withTrashed()->pluck('name')->all())->toBe(['Ada'])
+        ->and(ContactShadow::query()->count())->toBe(0);
 });
 
 it('applies an announcement that carries no date, whatever the copy holds', function () {
-    app(Dispatcher::class)->dispatch(customerChanged(3, ['name' => 'Ada', 'deleted_at' => '2026-10-03 10:00:00']), 'orders');
-    app(Dispatcher::class)->dispatch(customerChanged(3, ['name' => 'Grace']), 'orders');
+    app(Dispatcher::class)->dispatch(contactChanged(3, ['name' => 'Ada', 'deleted_at' => '2026-10-03 10:00:00']), 'payments');
+    app(Dispatcher::class)->dispatch(contactChanged(3, ['name' => 'Grace']), 'payments');
 
-    expect(CustomerShadow::query()->withTrashed()->pluck('name')->all())->toBe(['Grace']);
+    expect(ContactShadow::query()->withTrashed()->pluck('name')->all())->toBe(['Grace']);
 });
 
 it('never writes the copy outside a sync', function () {
-    expect((new CustomerShadow(['id' => 1, 'name' => 'Ada']))->save())->toBeFalse();
+    expect((new ContactShadow(['id' => 1, 'name' => 'Ada']))->save())->toBeFalse();
 });
 
 it('announces a source row with only its shadowed fields, as this service', function () {
-    $order = Order::query()->create(['total' => 120, 'note' => 'private']);
+    $payment = Payment::query()->create(['amount' => 120, 'note' => 'private']);
 
     $envelope = app(Transport::class)->published()[0];
 
-    expect($envelope->emitter)->toBe('orders')
+    expect($envelope->emitter)->toBe('payments')
         ->and($envelope->name)->toBe(ShadowChanged::NAME)
-        ->and($envelope->payload)->toBe(['source' => 'orders', 'key' => $order->id, 'attributes' => ['total' => 120]]);
+        ->and($envelope->payload)->toBe(['source' => 'payments', 'key' => $payment->id, 'attributes' => ['amount' => 120]]);
 });
 
 it('announces a source row on the stream its model names, not on the default one', function () {

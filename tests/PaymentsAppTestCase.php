@@ -8,21 +8,21 @@ use Distributable\Context\ModuleContext;
 use Distributable\Providers\DistributableServiceProvider;
 use Distributable\Services\ModuleRegistry;
 use Distributable\Testing\ModuleAware;
-use Distributable\Tests\Fixtures\Orders\Providers\OrdersServiceProvider;
+use Distributable\Tests\Fixtures\Payments\Providers\PaymentsServiceProvider;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Orchestra\Testbench\TestCase as Orchestra;
 
-/** The `orders` application, a module of its own: it answers FindOrder and calls `billing`, which runs elsewhere. */
-abstract class OrdersAppTestCase extends Orchestra
+/** The `payments` application, a module of its own: it answers FindPayment and calls `messaging`, which runs elsewhere. */
+abstract class PaymentsAppTestCase extends Orchestra
 {
     use ModuleAware;
     use RefreshDatabase {
         migrateFreshUsing as private laravelMigrateFreshUsing;
     }
 
-    /** @var list<string> the connection of the orders module, outside of which no default connection exists */
+    /** @var list<string> the connection of the payments module, outside of which no default connection exists */
     protected $connectionsToTransact = ['testing'];
 
     /** @return list<class-string> */
@@ -34,22 +34,22 @@ abstract class OrdersAppTestCase extends Orchestra
     /** @param Application $app */
     protected function defineEnvironment($app): void
     {
-        $app->useAppPath(__DIR__.'/Fixtures/Orders');
+        $app->useAppPath(__DIR__.'/Fixtures/Payments');
 
         $config = $app->make(Repository::class);
 
         $config->set('database.default', 'testing');
         $config->set('distributable.declared', [
-            'orders' => ['path' => __DIR__.'/Fixtures/Orders', 'namespace' => 'Distributable\Tests\Fixtures\Orders'],
-            'billing' => ['host' => 'http://billing.test'],
+            'payments' => ['path' => __DIR__.'/Fixtures/Payments', 'namespace' => 'Distributable\Tests\Fixtures\Payments'],
+            'messaging' => ['host' => 'http://messaging.test'],
         ]);
-        // Billing's messages and client are its foundation's: Fixtures/Billing.
+        // Messaging's messages and client are its foundation's: Fixtures/Messaging.
         $config->set('distributable.foundation.path', __DIR__.'/Fixtures');
-        $config->set('distributable.runs', 'orders');
+        $config->set('distributable.runs', 'payments');
 
         // As the package registers a module's providers: once the declaration is read.
         $app->booting(static function () use ($app): void {
-            $app->register(OrdersServiceProvider::class);
+            $app->register(PaymentsServiceProvider::class);
         });
         $config->set('distributable.events.streams.default.driver', 'array');
         $config->set('distributable.events.reliable_publish', true);
@@ -58,7 +58,7 @@ abstract class OrdersAppTestCase extends Orchestra
     /** @return array<string, mixed> RefreshDatabase's migrate:fresh, in the module whose database it rebuilds */
     protected function migrateFreshUsing(): array
     {
-        return [...$this->laravelMigrateFreshUsing(), '--module' => ['orders']];
+        return [...$this->laravelMigrateFreshUsing(), '--module' => ['payments']];
     }
 
     protected function setUp(): void
@@ -68,6 +68,6 @@ abstract class OrdersAppTestCase extends Orchestra
         config()->set('distributable.events.reliable_publish', false);
 
         // The test runs as the application's own code: inside its one module.
-        $this->app->make(ModuleContext::class)->enter($this->app->make(ModuleRegistry::class)->get('orders'));
+        $this->app->make(ModuleContext::class)->enter($this->app->make(ModuleRegistry::class)->get('payments'));
     }
 }

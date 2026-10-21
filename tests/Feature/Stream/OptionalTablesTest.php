@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use Distributable\Tests\OrdersAppTestCase;
+use Distributable\Tests\PaymentsAppTestCase;
 
-uses(OrdersAppTestCase::class);
+uses(PaymentsAppTestCase::class);
 
 function migration(string $file): object
 {

@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Distributable\Tests\Fixtures\Orders\Models;
+namespace Distributable\Tests\Fixtures\Payments\Models;
 
 use Distributable\Attributes\ShadowFields;
-use Distributable\Attributes\ShadowStream;
 use Distributable\Contracts\Shadows\Shadowed;
 use Distributable\Traits\ShadowSource;
 use Illuminate\Database\Eloquent\Model;
@@ -13,10 +12,10 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * @property int $id
  * @property int $amount
+ * @property string $note
  */
 #[ShadowFields('amount')]
-#[ShadowStream('shadows')]
-final class Refund extends Model implements Shadowed
+final class Payment extends Model implements Shadowed
 {
     use ShadowSource;
 

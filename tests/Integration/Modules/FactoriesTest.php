@@ -37,6 +37,6 @@ it('creates a module model through its factory in the module database', function
 
 it('keeps Laravel rule for every class outside a module', function () {
     expect(ModuleFactories::factoryName('App\Models\Post'))->toBe('Database\Factories\PostFactory')
-        ->and(ModuleFactories::factoryName('App\Billing\Invoice'))->toBe('Database\Factories\Billing\InvoiceFactory')
+        ->and(ModuleFactories::factoryName('App\Payments\Payment'))->toBe('Database\Factories\Payments\PaymentFactory')
         ->and(Factory::resolveFactoryName('App\Models\Post'))->toBe('Database\Factories\PostFactory');
 });

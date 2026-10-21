@@ -8,7 +8,7 @@ use Distributable\Tests\TestCase;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
-use Shop\ShopServiceProvider;
+use Payments\PaymentsServiceProvider;
 
 /** An application of one module: the module is the Testbench application itself. */
 abstract class ModuleOfItsOwnTestCase extends TestCase
@@ -16,7 +16,7 @@ abstract class ModuleOfItsOwnTestCase extends TestCase
     /** @param Application $app */
     protected function defineEnvironment($app): void
     {
-        $app->make(Repository::class)->set('distributable.declared', ['shop' => ['path' => '.', 'namespace' => 'Shop']]);
+        $app->make(Repository::class)->set('distributable.declared', ['payments' => ['path' => '.', 'namespace' => 'Payments']]);
         $app->make(Repository::class)->set('distributable.events.streams.default.driver', 'array');
     }
 }
@@ -24,12 +24,12 @@ abstract class ModuleOfItsOwnTestCase extends TestCase
 uses(ModuleOfItsOwnTestCase::class);
 
 it('is the project, and keeps the application\'s config as it is: nothing set aside as its own', function () {
-    require_once dirname(__DIR__, 2).'/Fixtures/shop/ShopServiceProvider.php';
-    app()->register(ShopServiceProvider::class);
-    $module = app(ModuleRegistry::class)->get('shop');
+    require_once dirname(__DIR__, 2).'/Fixtures/payments-app/PaymentsServiceProvider.php';
+    app()->register(PaymentsServiceProvider::class);
+    $module = app(ModuleRegistry::class)->get('payments');
 
     expect(realpath($module->path()))->toBe(realpath(base_path()))
-        ->and(config('distributable.overlays.shop'))->toBeNull();
+        ->and(config('distributable.overlays.payments'))->toBeNull();
 });
 
 it('leaves the application\'s routes/ to bootstrap/app.php: none is loaded again under the module\'s prefix', function () {
@@ -38,10 +38,10 @@ it('leaves the application\'s routes/ to bootstrap/app.php: none is loaded again
     file_put_contents("{$routes}/web.php", "<?php\n\nIlluminate\\Support\\Facades\\Route::get('ping', fn () => 'pong');\n");
 
     try {
-        require_once dirname(__DIR__, 2).'/Fixtures/shop/ShopServiceProvider.php';
-        app()->register(ShopServiceProvider::class);
+        require_once dirname(__DIR__, 2).'/Fixtures/payments-app/PaymentsServiceProvider.php';
+        app()->register(PaymentsServiceProvider::class);
 
-        expect(collect(Route::getRoutes()->getRoutes())->map->uri()->all())->not->toContain('shop/web/ping');
+        expect(collect(Route::getRoutes()->getRoutes())->map->uri()->all())->not->toContain('payments/web/ping');
     } finally {
         unlink("{$routes}/web.php");
         $created && rmdir($routes);
@@ -49,5 +49,5 @@ it('leaves the application\'s routes/ to bootstrap/app.php: none is loaded again
 });
 
 it('is never deleted: its folder is the application\'s', function () {
-    $this->artisan('modules:delete', ['name' => 'shop', '--force' => true]);
+    $this->artisan('modules:delete', ['name' => 'payments', '--force' => true]);
 })->throws(ModuleException::class, 'deleting it would delete the application');

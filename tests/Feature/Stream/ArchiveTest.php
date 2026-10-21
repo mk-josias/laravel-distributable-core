@@ -9,14 +9,14 @@ use Distributable\Exceptions\ConfigurationException;
 use Distributable\Services\Stream\ArchiveStores;
 use Distributable\Services\Stream\TransportManager;
 use Distributable\Tests\Doubles\ArchivingTransport;
-use Distributable\Tests\Fixtures\Orders\Events\OrderPlaced;
-use Distributable\Tests\OrdersAppTestCase;
+use Distributable\Tests\Fixtures\Payments\Events\PaymentCaptured;
+use Distributable\Tests\PaymentsAppTestCase;
 use Illuminate\Support\Facades\Date;
 
-uses(OrdersAppTestCase::class);
+uses(PaymentsAppTestCase::class);
 
-/** A stream that keeps three orders of this service, emitted on the 1st, 2nd and 3rd of September. */
-function streamOfOrders(): ArchivingTransport
+/** A stream that keeps three payments of this service, emitted on the 1st, 2nd and 3rd of September. */
+function streamOfPayments(): ArchivingTransport
 {
     $transport = new ArchivingTransport;
     app(TransportManager::class)->extend('archiving', fn (): Transport => $transport);
@@ -24,7 +24,7 @@ function streamOfOrders(): ArchivingTransport
 
     foreach ([1, 2, 3] as $id) {
         Date::setTestNow("2026-09-0{$id} 10:00:00");
-        app(Bus::class)->emit(new OrderPlaced($id));
+        app(Bus::class)->emit(new PaymentCaptured($id));
     }
 
     Date::setTestNow();
@@ -33,7 +33,7 @@ function streamOfOrders(): ArchivingTransport
 }
 
 it('copies only the entries emitted in the window --since and --until name, and deletes nothing', function () {
-    $transport = streamOfOrders();
+    $transport = streamOfPayments();
     $path = tempnam(sys_get_temp_dir(), 'archive');
 
     $this->artisan("stream:export {$path} --since=2026-09-02 --until=2026-09-03")->assertSuccessful();
@@ -43,7 +43,7 @@ it('copies only the entries emitted in the window --since and --until name, and 
 });
 
 it('copies only what every consumer acknowledged with --acknowledged', function () {
-    $transport = streamOfOrders();
+    $transport = streamOfPayments();
     $transport->acknowledged = 2;
     $path = tempnam(sys_get_temp_dir(), 'archive');
 
@@ -53,18 +53,18 @@ it('copies only what every consumer acknowledged with --acknowledged', function 
 });
 
 it('imports only the entries matching its filters, back on the stream', function () {
-    $transport = streamOfOrders();
+    $transport = streamOfPayments();
     $path = tempnam(sys_get_temp_dir(), 'archive');
     $this->artisan("stream:export {$path}")->assertSuccessful();
 
-    $this->artisan("stream:import {$path} --emitter=orders --where=payload.id=2")->assertSuccessful();
+    $this->artisan("stream:import {$path} --emitter=payments --where=payload.id=2")->assertSuccessful();
 
     expect($transport->published)->toHaveCount(4)
         ->and($transport->published[3]->payload)->toBe(['id' => 2]);
 });
 
 it('keeps the entries in the store --store names, registered with extend()', function () {
-    $transport = streamOfOrders();
+    $transport = streamOfPayments();
     $memory = new class implements ArchiveStore
     {
         /** @var array<string, list<array<string, mixed>>> */
@@ -90,7 +90,7 @@ it('keeps the entries in the store --store names, registered with extend()', fun
 });
 
 it('fails on a store nobody registered', function () {
-    streamOfOrders();
+    streamOfPayments();
 
     $this->artisan('stream:export somewhere --store=s3');
 })->throws(ConfigurationException::class, 'Archive store [s3] is not supported');

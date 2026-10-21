@@ -1,7 +1,7 @@
 # Laravel Distributable
 
 laravel-distributable lets you structure a Laravel application as a set of modules: autonomous
-areas, each a business domain (orders, billing) or a supporting domain the others rely on
+areas, each a business domain (payments, messaging) or a supporting domain the others rely on
 (identity, notifications), with a boundary of its own. Modules can run together in one
 process, or be distributed as microservices, each in a process of its own, without changing their
 code.
@@ -24,11 +24,11 @@ A module is a folder of an ordinary Laravel application, with its own routes, mo
 and database:
 
 ```bash
-php artisan modules:make billing
+php artisan modules:make payments
 ```
 
 ```
-apps/Billing/
+apps/Payments/
 ├── app/
 ├── config/database.php
 ├── database/migrations/

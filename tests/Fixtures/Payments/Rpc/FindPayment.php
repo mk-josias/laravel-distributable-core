@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Distributable\Tests\Fixtures\Orders\Rpc;
+namespace Distributable\Tests\Fixtures\Payments\Rpc;
 
 use Distributable\Attributes\Rpc;
 use Distributable\Contracts\Rpc\Message;
 
-#[Rpc(module: 'orders')]
-final readonly class FindOrder implements Message
+#[Rpc(module: 'payments')]
+final readonly class FindPayment implements Message
 {
     public function __construct(public int $id) {}
 
