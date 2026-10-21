@@ -5,10 +5,14 @@ you ask. This page says what grows, what cleans it, and when.
 
 ## What grows, and what cleans it
 
-| What grows | Where | Cleaned by | Safe when |
-|---|---|---|---|
-| the stream | Redis, one stream per configured stream (`distributable:events` by default) | `stream:trim` | every module that reads it has acknowledged the entries |
-| the consumption marks | `event_consumptions`, in the consuming module's database | `stream:prune-consumptions`, or `guard_cleanup => acknowledge` | the marked event can no longer be redelivered |
+- **the stream**
+  - Where: Redis, one stream per configured stream (`distributable:events` by default)
+  - Cleaned by: `stream:trim`
+  - Safe when: every module that reads it has acknowledged the entries
+- **the consumption marks**
+  - Where: `event_consumptions`, in the consuming module's database
+  - Cleaned by: `stream:prune-consumptions`, or `guard_cleanup => acknowledge`
+  - Safe when: the marked event can no longer be redelivered
 
 `event_publications` does not grow: with `DISTRIBUTABLE_EVENTS_RELIABLE_PUBLISH` on, a row is
 deleted once its event is sent, so the table only holds the events that could not go out.
@@ -38,14 +42,15 @@ php artisan stream:republish
 php artisan stream:skip --module=analytics
 ```
 
-| Command | Options |
-|---|---|
-| `stream:trim` | `--stream` |
-| `stream:prune-consumptions` | `--days` (7 by default): it must outlast how long an event can stay in the stream |
-| `stream:export` | `--store`, `--emitter`, `--stream`, `--since`, `--until`, `--where`, `--acknowledged`, `--batch` |
-| `stream:import` | `--store`, `--emitter`, `--stream`, `--since`, `--until`, `--where` |
-| `stream:republish` | `--module` |
-| `stream:skip` | `--module`, `--stream`, `--until` (a date: every entry up to it, entries not read yet included) |
+- **`stream:trim`:** `--stream`
+- **`stream:prune-consumptions`:** `--days` (7 by default): it must outlast how long an event can
+  stay in the stream
+- **`stream:export`:** `--store`, `--emitter`, `--stream`, `--since`, `--until`, `--where`,
+  `--acknowledged`, `--batch`
+- **`stream:import`:** `--store`, `--emitter`, `--stream`, `--since`, `--until`, `--where`
+- **`stream:republish`:** `--module`
+- **`stream:skip`:** `--module`, `--stream`, `--until` (a date: every entry up to it, entries not
+  read yet included)
 
 `export` and `import` read and write the stream itself, so they need no setting; the transport has
 to be able to give its entries back (`redis` does). `republish` works on the rows of
@@ -75,14 +80,9 @@ implement `ArchivesStreams` (`redis` does). `import` publishes the entries again
 guard turns what a consumer already applied into a no-op, unless `guard_cleanup` is `acknowledge`,
 which deletes the marks, so an imported event is applied again.
 
-The archive is a store: `file` (JSON lines, one envelope per line) ships, and
-`distributable.events.archive` names the default. Another one implements
-`Contracts\Stream\ArchiveStore` (`write($target, $rows)`, `read($source)`) and is registered by name:
-
-```php
-app(\Distributable\Services\Stream\ArchiveStores::class)
-    ->extend('s3', fn ($app) => new S3ArchiveStore($app->make('filesystem')->disk('s3')));
-```
+By default the archive store is `file` (`DISTRIBUTABLE_STREAM_ARCHIVE`): it writes JSON lines, one
+envelope per line. To archive elsewhere (S3, for instance), see
+[Writing a driver](./extending#an-archive-store).
 
 ## The consumption marks
 

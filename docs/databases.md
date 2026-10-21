@@ -31,7 +31,7 @@ The connections can point to separate databases on one server, separate schemas 
 separate servers, or sqlite files in tests: the code is the same. Several modules can share one
 database; give their tables distinct names then (`protected $table = 'iam_users'`).
 
-Without `default`, the module has no database: its models must name their connection.
+Without `default`, the module has no connection set: its models must name theirs.
 
 ## A second database
 
@@ -84,7 +84,7 @@ line in the file: keep one closure per line, or the worker may rebuild the wrong
 
 ## Code outside a module
 
-Outside a module there is no database: a route closure in `routes/web.php`, another package's
+Outside a module there is no default connection: a route closure in `routes/web.php`, another package's
 route, or Tinker without `--module` throws `ModuleException` ("No module runs here") on its first
 query. It goes through the module's client instead, which still works when the module runs
 elsewhere:

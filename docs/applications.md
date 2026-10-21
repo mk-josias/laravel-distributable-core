@@ -46,15 +46,20 @@ and can be empty (`'analytics' => []`).
 'foundation' => ['path' => 'foundation', 'namespace' => 'Foundation'],
 ```
 
-| Key | What it says |
-|---|---|
-| `declared.iam.host` | the URL of `iam` when it runs in another process: calls to it go there, as `IAM_HOST=http://iam.internal:8000` does. It can also be `['url' => …, 'transport' => …]` to name another transport. `modules:doctor` reports a module that runs elsewhere and serves a contract without one |
-| `declared.{name}.path`, `declared.{name}.namespace` | its own folder and the namespace of its `app/`, when it isn't `apps/{Name}` under `Apps\{Name}`: `'iam' => ['path' => 'apps/Identity', 'namespace' => 'Apps\Identity']` |
-| `declared.{name}.foundation` | its folder under `foundation/` when it isn't the name in StudlyCase: `'iam' => ['foundation' => 'Identity']` |
-| `modules`, `foundation` | the directory of the modules and of the foundation (`path`), and their root namespace (`namespace`) |
+- **`declared.iam.host`:** the URL of `iam` when it runs in another process: calls to it go there,
+  as `IAM_HOST=http://iam.internal:8000` does. It can also be `['url' => …, 'transport' => …]` to
+  name another transport. `modules:doctor` reports a module that runs elsewhere and serves a
+  contract without one
+- **`declared.{name}.path`, `declared.{name}.namespace`:** its own folder and the namespace of its
+  `app/`, when it isn't `apps/{Name}` under `Apps\{Name}`: `'iam' => ['path' => 'apps/Identity',
+  'namespace' => 'Apps\Identity']`
+- **`declared.{name}.foundation`:** its folder under `foundation/` when it isn't the name in
+  StudlyCase: `'iam' => ['foundation' => 'Identity']`
+- **`modules`, `foundation`:** the directory of the modules and of the foundation (`path`), and
+  their root namespace (`namespace`)
 
 `RUN_MODULES` is not a key of `declared`: it says which of these modules a process runs. For
-example, in a `docker-compose.yml` where `analytics` calls `iam` in another container:
+example, in a `docker-compose.mesh.yml` where `analytics` calls `iam` in another container:
 
 ```yaml
   analytics:
@@ -107,10 +112,9 @@ folder per module (`Iam/`, `Notifications/`); how you lay yours out is yours.
 
 ## What an application needs to call a module that runs elsewhere
 
-| It needs | Why |
-|---|---|
-| the same `DISTRIBUTABLE_RPC_SECRET` (or `APP_KEY`) as the others | the transport signs a call and the called application rejects any it can't verify |
-| the event stream, shared | events travel on it between applications |
-| `declared.{module}.host` for each module it calls | its calls go to that host |
+- **the same `DISTRIBUTABLE_RPC_SECRET` (or `APP_KEY`) as the others:** the transport signs a call
+  and the called application rejects any it can't verify
+- **the event stream, shared:** events travel on it between applications
+- **`declared.{module}.host` for each module it calls:** its calls go to that host
 
 The rest, placing processes and building images, is in [Deploying modules](./deploying).

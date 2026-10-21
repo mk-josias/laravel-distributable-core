@@ -1,39 +1,32 @@
-# Read-only copies (shadows)
+# Keeping a copy of another module's data
+
+By the end of this page, `analytics` lists its signups with their users' names in one query, without
+calling `iam` for each row.
 
 A module sometimes needs another module's rows next to its own, to join, filter or sort on them.
-Calling the other module once per row would be slow, and reaching into its database is forbidden.
-The module keeps a copy instead, in its own database, kept up to date by events. Only the owner
-writes the data.
+Calling the other module once per row would be slow, and reaching into its database is forbidden. So
+the module keeps a copy in its own database, kept up to date by events. Only the owner writes the
+data.
 
 ## Copy or call
 
-| | Through the contract | From the copy |
-|---|---|---|
-| Cost | one call per value, a call on the transport when the owner runs elsewhere | a local query, joins included |
-| Freshness | always current | current once the consumer has handled the events |
-| Use it for | checking one value, reading one record | lists, filters, sorts |
+- **Call** (through a message) to check one value or read one record: it is always current, and costs
+  a call on the transport when the owner runs elsewhere.
+- **Copy** for lists, filters and sorts: a local query, joins included. It is current once the
+  consumer has handled the events.
 
-In the starter, analytics checks one user through iam's contract (`ExistingUser`) and lists
-signups with their users from the copy (`SignupResource`).
+In the starter, every module asks iam for a user's permissions through its message (`Grants`), and
+analytics reads a signup's user from the copy (`Signup::user()` is a `belongsTo` on `UserShadow`).
 
-## How a row travels
+## Declare the copy
 
-```
-iam: User saved or deleted
-  └─ the row, with the #[ShadowFields] fields only, leaves in an event: distributable.shadow.changed
-       └─ stream
-            ├─ analytics' consumer ─► UserShadow::sync() ─► the copy, in analytics' database
-            └─ notifications' consumer ─► UserShadow::sync() ─► the copy, in notifications' database
-```
+Three pieces, one in each place.
 
-## The three pieces
-
-The owner has the source model and publishes the shape of the copy. Each module that keeps the
-copy lists it.
+The owner marks the fields that leave its module. Only these, and the dates the row has, are
+copied: iam's `password` and tokens never are.
 
 ```php
-// apps/Iam/app/Models/User.php, the source
-// the fields the other modules' copies carry
+// apps/Iam/app/Models/User.php
 #[ShadowFields('name', 'email')]
 final class User extends Model implements Principal, Shadowed
 {
@@ -43,43 +36,60 @@ final class User extends Model implements Principal, Shadowed
 }
 ```
 
-Only the `#[ShadowFields]` fields, and the dates the row has, leave the module. The `password` of
-iam's users, and their tokens, never do.
+The owner publishes the shape of the copy in the foundation, once:
 
 ```php
-// foundation/Iam/Shadows/UserShadow.php, the shape of the copy, declared once by iam
+// foundation/Iam/Shadows/UserShadow.php
 #[Shadow(module: 'iam', table: 'iam_users', migrations: [__DIR__.'/../database/shadows/users'])]
 class UserShadow extends ShadowModel implements Principal
 {
 }
 ```
 
+Each module that keeps the copy lists it:
+
 ```php
-// apps/Analytics/app/Providers/AnalyticsServiceProvider.php, the copies analytics keeps
+// apps/Analytics/app/Providers/AnalyticsServiceProvider.php
 protected array $shadows = [UserShadow::class];
 ```
 
-A module lists the foundation's class as it is, or a subclass of its own that adds relations,
-casts or a `beforeSync()`. Each listed class is one table: two forms of one source need two
-`$table`s, each with its own `migrations:`, and `modules:doctor` reports two copies in one table.
+That's all. `iam` announces each saved or deleted user, and analytics' consumer writes it into
+analytics' own `iam_users` table:
 
-## Where the copy lives
+```
+iam: User saved or deleted
+  └─ the #[ShadowFields] fields leave in an event
+       └─ stream
+            ├─ analytics' consumer ─► the copy, in analytics' database
+            └─ notifications' consumer ─► the copy, in notifications' database
+```
 
-A copy is a model like the module's others: it reads and writes the database of the module that
-is running. The same `UserShadow` is analytics' copy inside analytics and notifications' inside
-notifications; outside any module it throws, as every query does.
+`UserShadow` is an ordinary model that reads and writes the database of the module running it: the
+same class is analytics' copy inside analytics and notifications' inside notifications.
+
+A module can list a subclass of its own that adds relations, casts or a `beforeSync()`. Each listed
+class is one table: two forms of one source need two `$table`s, each with its `migrations:`.
+`modules:doctor` reports two copies in one table.
+
+## Create its table
+
+The owner publishes the migration, and `migrations:` in `#[Shadow]` says where it is: files or
+folders, as Laravel's `loadMigrationsFrom()`. `php artisan migrate` runs it in the database of every
+module that keeps the copy. See [Migrations](./migrations#a-copys-migration).
+
+## Read it
 
 In the starter, analytics and notifications keep a copy of iam's users. `config/auth.php` sets
-`auth.principal` to `UserShadow`: with the default resolver (`LocalPrincipals`), a module loads the
-authenticated user of a request from its own copy.
+`auth.principal` to `UserShadow`: with the default resolver, a module loads a request's
+authenticated user from its own copy.
 
-## Reading it, and what it refuses
+A copy refuses what would let it drift from its source:
 
-- A copy rejects any write that doesn't come from `sync()`.
-- A source row that is deleted becomes a soft delete in the copy.
-- `beforeSync()` derives what the copy needs and the source never announced.
-- `shouldBeShadowed()` keeps only some rows: a row it returns `false` for is never written, and
-  leaves the copy if it was there.
+- it rejects any write that doesn't come from the owner's announcements;
+- a source row that is deleted becomes a soft delete in the copy;
+- `beforeSync()` derives what the copy needs and the source never announced;
+- `shouldBeShadowed()` keeps only some rows. A row it returns `false` for is never written, and
+  leaves the copy if it was there:
 
 ```php
 // analytics keeps only the administrators
@@ -90,16 +100,11 @@ protected static function shouldBeShadowed(array $attributes): bool
 ```
 
 An announcement that arrives late, after a newer one, is ignored when the source row and the copy
-both carry a date: the latest of `updated_at` and `deleted_at`, to the second. A source without
-those columns announces no date, and the copy then keeps whichever announcement arrived last. Such
-a copy can be overwritten by an older announcement; `shadows:announce` repairs it.
+both carry a date: the latest of `updated_at` and `deleted_at`, to the second. A source without those
+columns announces no date, and the copy keeps whichever arrived last. Such a copy can be overwritten
+by an older announcement; `shadows:announce` repairs it.
 
-## Creating its table
-
-iam publishes the migration of the copy's table, and `UserShadow::migrations()` names where it is:
-`foundation/Iam/database/shadows/users`. `migrate` runs it in the database of every module that keeps a copy. See [Migrations](./migrations#writing-a-migration).
-
-## Filling a copy that is created late
+## Fill a copy that is created late
 
 A copy created after the source already had rows is empty. Fill it:
 
@@ -110,20 +115,18 @@ php artisan shadows:want [--keepers=analytics] [--sources=iam_users]
 php artisan shadows:announce iam_users [--keepers=analytics]
 ```
 
-Both commands address the event to the keepers, so only those modules update their copy.
+Both address the event to the keepers, so only those modules update their copy.
 
-## On its own stream
+## Put a source on its own stream
 
 By default a row travels on the default stream, with the other events. A source model can name
-another stream of `distributable.events.streams` by overriding `shadowStream()`; its rows, and only
-its rows, travel on it:
+another stream with `#[ShadowStream]`:
 
 ```php
 // iam: User's rows go on the `shadows` stream, the other events stay on the default one
-public function shadowStream(): ?string
-{
-    return 'shadows';
-}
+#[ShadowFields('name', 'email')]
+#[ShadowStream('shadows')]
+final class User extends Model implements Principal, Shadowed
 ```
 
 ```php
@@ -139,14 +142,13 @@ public function shadowStream(): ?string
 php artisan stream:consume --stream=shadows
 ```
 
-A keeper has to read that stream, or its copy stays empty. With `events.reliable_publish` on, a
-row announced on `shadows` is written to `event_publications` with that stream, then published
-there. `shadows:want` and `shadows:announce` need nothing more: the want goes out on the default
-stream, the answer on the source's own.
+A keeper has to read that stream, or its copy stays empty.
 
-An order is kept only within one stream. A handler that reads a copy an earlier event was meant to
-fill (a welcome mail reading the user's copy) needs that copy's source and its own event on the same
+Order is kept only within one stream. A handler that reads a copy an earlier event was meant to fill
+(a welcome mail reading the user's copy) needs that copy's source and its own event on the same
 stream: on two streams, the event can overtake the copy.
 
-A program in another language can be the source: see
-[Other languages](./other-languages#being-the-source-of-a-copy).
+## A program in another language as the source
+
+A program can own the rows: see
+[Programs in other languages](./other-languages#being-the-source-of-a-copy).

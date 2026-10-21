@@ -1,35 +1,50 @@
 # Migrations
 
-Each module has its own database, so `migrate` runs once per module database. It never runs once
-for "the application": there is no database that belongs to no module.
+Each module has its own connection, so `migrate` runs once per module connection. It never runs once
+for "the application": there is no connection that belongs to no module.
 
 ## What runs in a module's database
 
 Four sources feed one module's database:
 
-| Source | Where it lives | In the starter | Why it is in every module's database |
-|---|---|---|---|
-| The application | `database/migrations` | `failed_jobs` and `job_batches` | a failed job or a batch is stored in the database of the module that owns the job class, so each module database needs the table |
-| The packages | the paths a package registers | the package: `event_consumptions`, unless the guard is off; `event_publications` and its `version` column, only when `DISTRIBUTABLE_EVENTS_RELIABLE_PUBLISH` is on | the publication row is written in the emitting module's database, in its transaction; the consumption mark is written in the consuming module's database |
-| The module | `{module}/database/migrations` | iam: its users and its permission tables | the module's own tables; no other module may name them |
-| The copies | the files or folders the copy's `migrations()` names | `iam_users`, copied into analytics and notifications | the owner publishes the migration, each module that keeps the copy runs it |
+- **The application**
+  - Where it lives: `database/migrations`
+  - In the starter: `failed_jobs` and `job_batches`
+  - Why it is in every module's database: a failed job or a batch is stored in the database of the
+  module that owns the job class, so each module database needs the table
+- **The packages**
+  - Where it lives: the paths a package registers
+  - In the starter: the package: `event_consumptions`, unless the guard is off; `event_publications`
+  and its `version` column, only when `DISTRIBUTABLE_EVENTS_RELIABLE_PUBLISH` is on
+  - Why it is in every module's database: the publication row is written in the emitting module's
+  database, in its transaction; the consumption mark is written in the consuming module's database
+- **The module**
+  - Where it lives: `{module}/database/migrations`
+  - In the starter: iam: its users, its permission tables and its access tokens
+  - Why it is in every module's database: the module's own tables; no other module may name them
+- **The copies**
+  - Where it lives: the files or folders the copy's `migrations()` names
+  - In the starter: `iam_users`, copied into analytics and notifications
+  - Why it is in every module's database: the owner publishes the migration, each module that keeps
+  the copy runs it
 
-Laravel sorts every migration of a run by file name, whatever its source. The table lists where
-they come from, not the order they run in.
+Laravel sorts every migration of a run by file name, whatever its source. The four sources above say
+where they come from, not the order they run in.
 
 ## The starter, database by database
 
-| Database | Application | Package | Module | Copy | Files |
-|---|---|---|---|---|---|
-| `iam` | 1 | 0 | 2 | 0 | 3 |
-| `analytics` | 1 | 0 | 3 | 1 | 5 |
-| `notifications` | 1 | 0 | 1 | 1 | 3 |
+- **`iam`:** 4 files. The application's (`failed_jobs` and `job_batches`), then its own: `iam_users`,
+  the permission tables and `iam_access_tokens`. It keeps no copy.
+- **`analytics`:** 5 files. The application's, then its own `analytics_signups`, `analytics_mails`
+  and `analytics_datasets`, then the copy of `iam_users`.
+- **`notifications`:** 3 files. The application's, its own `notifications_inbox`, then the copy of
+  `iam_users`.
 
-The package column counts the package's own tables only, with the starter's settings: events not
-published reliably and the guard off, so no table. `DISTRIBUTABLE_EVENTS_RELIABLE_PUBLISH=true`
-adds 2 (`event_publications` and its `version` column), and removing `DISTRIBUTABLE_STREAM_GUARD=false` adds `event_consumptions`. The copy exists in `analytics` and
-`notifications` because their providers list `UserShadow` in `$shadows`; iam owns the table and
-keeps no copy.
+With the starter's settings the package adds no table: events are not published reliably and the
+guard is off. `DISTRIBUTABLE_EVENTS_RELIABLE_PUBLISH=true` adds two migrations (`event_publications`
+and its `version` column), and removing `DISTRIBUTABLE_STREAM_GUARD=false` adds `event_consumptions`.
+The copy exists in `analytics` and `notifications` because their providers list `UserShadow` in
+`$shadows`; iam owns the table and keeps no copy.
 
 ## Running them
 
@@ -47,12 +62,11 @@ php artisan migrate:status
 `migrate:rollback`, `migrate:reset`, `migrate:refresh` and `migrate:fresh` follow the same rule.
 `--seed` seeds each module database with that module's own seeders.
 
-| Rule | Detail |
-|---|---|
-| The connection | the connection the module's `owner` names, or its `default` without one (see [Its database](./databases#its-connection)) |
-| History | each database keeps its own `migrations` table |
-| `--database` or `--path` | the command is Laravel's own, unchanged |
-| Tests | `RefreshDatabase` follows the same passes |
+- **The connection:** the connection the module's `owner` names, or its `default` without one (see
+  [Its database](./databases#its-connection))
+- **History:** each database keeps its own `migrations` table
+- **`--database` or `--path`:** the command is Laravel's own, unchanged
+- **Tests:** `RefreshDatabase` follows the same passes
 
 ## Writing a migration
 

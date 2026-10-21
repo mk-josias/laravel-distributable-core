@@ -32,7 +32,7 @@ application requires the foundation, the package and the drivers the module uses
 'runs' => env('RUN_MODULES', 'iam'),
 ```
 
-Its `config/` and `routes/` are the application's own, see [A module of its own](./modules#a-module-of-its-own).
+Its `config/` and `routes/` are the application's own, see [Where a module's code lives](./applications#where-a-module-s-code-lives).
 
 ## What the others change
 

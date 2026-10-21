@@ -22,30 +22,25 @@ enum IamEvent: string
 }
 ```
 
-The event class lives in iam:
+The event class lives in iam, and says what it is with `#[Emits]`, as a message does with `#[Rpc]`:
 
 ```php
 // apps/Iam/app/Events/UserRegistered.php
+#[Emits(IamEvent::UserRegistered)]
 final class UserRegistered extends Event
 {
     public function __construct(private readonly UserRegisteredPayload $user) {}
-
-    public function name(): string
-    {
-        return IamEvent::UserRegistered->value;
-    }
 
     public function payload(): array
     {
         return $this->user->toArray();
     }
-
-    public function version(): int
-    {
-        return UserRegisteredPayload::version();
-    }
 }
 ```
+
+`#[Emits]` takes the event's name (the enum case, or a string), and two optional values: `module:`, the module that emits it
+(the module the class belongs to when left out; set it for an event class that lives in the
+foundation), and `stream:`, the stream it travels on.
 
 ```php
 // anywhere in iam
@@ -75,7 +70,7 @@ and is listed in the module's provider:
 
 ```php
 // apps/Analytics/app/Providers/AnalyticsServiceProvider.php
-protected array $handlers = [
+protected array $streamHandlers = [
     IamEvent::UserRegistered->value => [
         RecordSignup::class,
     ],
@@ -108,7 +103,7 @@ DISTRIBUTABLE_STREAM_DRIVER=redis
 ```
 
 `array` keeps events in memory, for tests; `null` drops them. A stream of its own is an entry in
-`distributable.events.streams`, and an event picks it in `stream()`. Order is kept only within one
+`distributable.events.streams`, and an event picks it with `#[Emits(..., stream: 'audit')]`. Order is kept only within one
 stream. For another broker, see [Writing a driver](./extending).
 
 ## Don't lose an event
@@ -135,20 +130,19 @@ consuming module's `event_consumptions` table; the starter turns it off with
 ## Change the shape of a payload
 
 Adding an optional field keeps the version. Renaming or removing one raises it. The payload class
-sits in iam's foundation, implements `Versioned`, and its `upcast()` lifts an older payload one
-version at a time, so a handler only ever receives the current shape:
+sits in iam's foundation. `#[Payload]` names its event and its version, and `upcast()` lifts an
+older payload one version at a time, so a handler only ever receives the current shape:
 
 ```php
 // foundation/Iam/Events/UserRegisteredPayload.php
-public static function version(): int
+#[Payload(IamEvent::UserRegistered, version: 2)]
+final class UserRegisteredPayload extends Dto implements Versioned
 {
-    return 2;
-}
-
-public static function upcast(int $from, array $payload): array
-{
-    // version 1 called it `username`
-    return $from === 1 ? ['id' => $payload['id'], 'name' => $payload['username']] : $payload;
+    public static function upcast(int $from, array $payload): array
+    {
+        // version 1 called it `name`
+        return $from === 1 ? ['id' => $payload['id'], 'full_name' => $payload['name']] : $payload;
+    }
 }
 ```
 

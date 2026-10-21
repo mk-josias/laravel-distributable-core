@@ -2,7 +2,7 @@
 
 `--module=<name>` is on every Artisan command, and always names one module: a generator writes in
 it, any other command runs in its context. See
-[Running a command in a module](./modules#running-a-command-in-a-module).
+[Running a command in a module](./modules#running-a-command-in-it).
 
 ## Modules
 
@@ -12,13 +12,13 @@ it, any other command runs in its context. See
   as it is.
 - `modules:list`: lists the modules and where each one runs.
 - `modules:doctor`: checks that every module can run: declaration, provider, connections, remote
-  hosts, boundaries. See [Checking the application](./modules#checking-the-application).
+  hosts, boundaries. See [Checking the boundaries](./checking).
 - `modules:cache` and `modules:clear`: cache, or remove, what the module folders tell: namespaces,
   databases and copy sources.
 - `modules:purge [--force]`: deletes the folder of every module this process doesn't run. See
   [One image per module](./deploying#one-image-per-module).
 - `modules:unused-packages`: lists the Composer packages only those modules require. See
-  [The dependencies of a module](./modules#the-dependencies-of-a-module).
+  [The dependencies of a module](./deploying#the-libraries-of-a-module).
 
 ## Events
 
@@ -43,5 +43,5 @@ it, any other command runs in its context. See
 ## Laravel's own commands
 
 `make:*`, `migrate` and the rest of Laravel's commands are the same ones, made aware of modules:
-see [Generating code in a module](./modules#generating-code-in-a-module) and
+see [Generating code in a module](./modules#generating-code-in-it) and
 [Migrations](./migrations).

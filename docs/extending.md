@@ -74,3 +74,14 @@ The commands that need more ask for it through an interface of `Distributable\Co
 - `SkipsEntries`, for `stream:skip`.
 
 Without the interface, the command says the transport can't do it.
+
+## An archive store
+
+`stream:export` and `stream:import` write to a store: `file` ships, and `distributable.events.archive`
+names the default. Another store implements `Contracts\Stream\ArchiveStore`
+(`write($target, $rows)`, `read($source)`) and is registered by name:
+
+```php
+app(\Distributable\Services\Stream\ArchiveStores::class)
+    ->extend('s3', fn ($app) => new S3ArchiveStore($app->make('filesystem')->disk('s3')));
+```

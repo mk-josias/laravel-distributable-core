@@ -7,7 +7,7 @@ services, and the previous module's come back afterwards.
 
 ![analytics calls iam through its client: the same DB::transaction() lands in iam's database, then analytics' settings come back; outside any module any query throws](./images/module-context.png)
 
-Outside any module there is no database: any query throws a `ModuleException`. Every database
+Outside any module there is no default connection: any query throws a `ModuleException`. Every connection
 belongs to a module.
 
 ## Settings, database, services

@@ -1,4 +1,4 @@
-# Adding it to a Laravel application
+# Adding it to an existing application
 
 `app/` is still your Laravel application. Each module lives in `apps/`. If you would rather start
 from a working application, use the
@@ -9,7 +9,7 @@ config/distributable.php                   declares the modules: 'declared' => [
 
 apps/Iam/
 ├── app/                              Apps\Iam\, laid out like a Laravel app
-│   ├── Providers/IamServiceProvider.php   the events it listens to, in $handlers
+│   ├── Providers/IamServiceProvider.php   the events it listens to, in $streamHandlers
 │   ├── Models/User.php
 │   └── Events/UserRegistered.php
 ├── config/
@@ -74,24 +74,14 @@ php artisan migrate
 ## Emit an event from one module and handle it in another
 
 ```php
+#[\Distributable\Attributes\Emits('iam.user.registered')]
 final class UserRegistered extends \Distributable\Events\Event
 {
     public function __construct(private readonly int $id) {}
 
-    public function name(): string
-    {
-        return 'iam.user.registered';
-    }
-
     public function payload(): array
     {
         return ['id' => $this->id];
-    }
-
-    // raised when the shape of the payload changes
-    public function version(): int
-    {
-        return 1;
     }
 }
 ```
@@ -113,7 +103,7 @@ final class RecordSignup implements \Distributable\Contracts\Stream\Handler
 
 ```php
 // apps/Analytics/app/Providers/AnalyticsServiceProvider.php
-protected array $handlers = [
+protected array $streamHandlers = [
     'iam.user.registered' => [
         RecordSignup::class,
     ],
@@ -124,8 +114,8 @@ protected array $handlers = [
 php artisan stream:consume
 ```
 
-This event is version 1. When the shape of a payload changes, the event declares a new version and
-how to read the old ones, so events already in the stream stay readable: see
+This event is version 1. When the shape of a payload changes, its payload class declares a new
+version and how to read the old ones, so events already in the stream stay readable: see
 [Change the shape of a payload](./events#change-the-shape-of-a-payload).
 
 ## Check that every module could run apart
@@ -141,4 +131,4 @@ Boundary crossed: apps/Analytics/app/Models/Report.php: Apps\Iam\Models\User
 
 It reports a module that imports another module's class or names its tables, an undeclared module,
 a missing connection, a missing host or RPC secret, and exits with a non-zero code if it finds
-anything. The full list is in [Checking the application](./modules#checking-the-application).
+anything. The full list is in [Checking the boundaries](./checking).
