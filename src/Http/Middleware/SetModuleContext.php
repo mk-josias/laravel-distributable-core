@@ -10,7 +10,7 @@ use Distributable\Services\ModuleRegistry;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/** Put on every route a module loads: the request runs in that module's context. */
+/** Gives a module to routes whose code is no module's, a package's admin panel: the request runs in that module's context. */
 final readonly class SetModuleContext
 {
     public function __construct(

@@ -51,6 +51,9 @@ final class ModuleContext
 
     public function switchTo(?Module $module): void
     {
+        // A process that loads one module runs everything in it, as a process of several runs a module's code in that module.
+        $module ??= $this->registry->sole();
+
         // The running application, not the one this singleton was built in: Octane serves each
         // request from its own copy, with its own config.
         $config = Container::getInstance()->make(Repository::class);

@@ -7,6 +7,9 @@ use Distributable\Services\ModuleRegistry;
 use Distributable\Tests\TestCase;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Testing\WithConsoleEvents;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Payments\PaymentsServiceProvider;
 
@@ -21,7 +24,8 @@ abstract class ModuleOfItsOwnTestCase extends TestCase
     }
 }
 
-uses(ModuleOfItsOwnTestCase::class);
+// As a real `php artisan` run does, so CommandStarting fires.
+uses(ModuleOfItsOwnTestCase::class, WithConsoleEvents::class);
 
 it('is the project, and keeps the application\'s config as it is: nothing set aside as its own', function () {
     require_once dirname(__DIR__, 2).'/Fixtures/payments-app/PaymentsServiceProvider.php';
@@ -46,6 +50,27 @@ it('leaves the application\'s routes/ to bootstrap/app.php: none is loaded again
         unlink("{$routes}/web.php");
         $created && rmdir($routes);
     }
+});
+
+it('runs the application\'s routes/web.php in the module, a closure route included', function () {
+    $routes = base_path('routes');
+    $created = ! is_dir($routes) && mkdir($routes);
+    file_put_contents("{$routes}/web.php", "<?php\n\nIlluminate\\Support\\Facades\\Route::get('connection', fn () => Illuminate\\Support\\Facades\\DB::getDefaultConnection());\n");
+
+    try {
+        Route::group([], "{$routes}/web.php");
+
+        $this->get('connection')->assertOk()->assertContent((string) app(ModuleRegistry::class)->get('payments')->defaultConnection());
+    } finally {
+        unlink("{$routes}/web.php");
+        $created && rmdir($routes);
+    }
+});
+
+it('runs a command no module owns in the module, with no --module', function () {
+    Artisan::command('connection', fn () => $this->line(DB::getDefaultConnection()));
+
+    $this->artisan('connection')->expectsOutput((string) app(ModuleRegistry::class)->get('payments')->defaultConnection());
 });
 
 it('is never deleted: its folder is the application\'s', function () {

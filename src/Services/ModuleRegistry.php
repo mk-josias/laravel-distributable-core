@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Distributable\Services;
 
+use Closure;
 use Distributable\Data\Module;
 use Distributable\Exceptions\ModuleException;
+use Illuminate\Routing\Route;
+use ReflectionFunction;
 
 /**
  * The process-level view of the modules: every module distributable.declared lists, and the ones
@@ -87,6 +90,48 @@ final class ModuleRegistry
         }
 
         return $best;
+    }
+
+    /** The module whose folder holds $file, the deepest one; null outside the modules this process loads. */
+    public function forFile(string $file): ?Module
+    {
+        $file = realpath($file) ?: $file;
+        $best = null;
+        $depth = 0;
+
+        foreach ($this->local() as $module) {
+            $folder = rtrim(realpath($module->path()) ?: $module->path(), '/').'/';
+
+            if (str_starts_with($file, $folder) && strlen($folder) > $depth) {
+                [$best, $depth] = [$module, strlen($folder)];
+            }
+        }
+
+        return $best;
+    }
+
+    /** The module owning a route's code: its controller's class, or the file its closure is written in. */
+    public function forRoute(Route $route): ?Module
+    {
+        if (is_string($name = $route->getAction('module'))) {
+            return $this->find($name);
+        }
+
+        if (($uses = $route->getAction('uses')) instanceof Closure) {
+            $file = (new ReflectionFunction($uses))->getFileName();
+
+            return is_string($file) ? $this->forFile($file) : null;
+        }
+
+        return $this->forClass((string) $route->getControllerClass());
+    }
+
+    /** The one module this process loads, which code outside every module runs in; null when it loads several. */
+    public function sole(): ?Module
+    {
+        $local = $this->local();
+
+        return count($local) === 1 ? $local[0] : null;
     }
 
     /** @return list<string> the names of the modules this process loads */

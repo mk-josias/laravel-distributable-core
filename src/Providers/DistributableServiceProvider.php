@@ -206,14 +206,25 @@ final class DistributableServiceProvider extends BaseServiceProvider
             : $repository);
     }
 
-    /** A controller, job or command runs in the context of the module owning its class, batch counters included. */
+    /** A route, job or command runs in the context of the module owning its code, batch counters included. */
     private function switchContextOnJobsAndCommands(): void
     {
+        // Written on each route once every route is in, while a closure still knows its file: route:cache keeps it.
+        $this->app->booted(function (): void {
+            $registry = $this->app->make(ModuleRegistry::class);
+
+            foreach ($this->app->make('router')->getRoutes()->getRoutes() as $route) {
+                if (($module = $registry->forRoute($route)) !== null) {
+                    $route->setAction([...$route->getAction(), 'module' => $module->name]);
+                }
+            }
+        });
+
         // Wherever the route is declared: a module's own file, routes/web.php or another package.
         Event::listen(RouteMatched::class, static function (RouteMatched $event): void {
             $app = Container::getInstance();
             $context = $app->make(ModuleContext::class);
-            $context->enter($app->make(ModuleRegistry::class)->forClass((string) $event->route->getControllerClass()) ?? $context->current());
+            $context->enter($app->make(ModuleRegistry::class)->forRoute($event->route) ?? $context->current());
         });
 
         // A request or a command run inside another (a test, Octane, Artisan::call) gives its module back.

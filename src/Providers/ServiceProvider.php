@@ -11,7 +11,6 @@ use Distributable\Context\ModuleSeeders;
 use Distributable\Context\ScheduledTasks;
 use Distributable\Contracts\Rpc\Handler;
 use Distributable\Contracts\Rpc\Message;
-use Distributable\Http\Middleware\SetModuleContext;
 use Distributable\Models\ShadowModel;
 use Distributable\Services\Discovery\ClassDiscovery;
 use Distributable\Services\Rpc\MessageRegistry;
@@ -230,13 +229,12 @@ abstract class ServiceProvider extends BaseServiceProvider
         $config = $this->app->make(Modules::class);
 
         // routes/{name}.php → distributable.routes.prefix ({module}/{name}/… by default), wrapped in the
-        // `{name}` middleware group when the application defines one, which runs in the module.
+        // `{name}` middleware group when the application defines one.
         foreach (glob($module->path().'/routes/*.php') ?: [] as $routeFile) {
             $name = basename($routeFile, '.php');
-            $middleware = $router->hasMiddlewareGroup($name) ? [$name] : [];
 
             Route::prefix($config->getRoutePrefix($module->name, $name))
-                ->middleware([SetModuleContext::class.':'.$module->name, ...$middleware])
+                ->middleware($router->hasMiddlewareGroup($name) ? [$name] : [])
                 ->group($routeFile);
         }
     }

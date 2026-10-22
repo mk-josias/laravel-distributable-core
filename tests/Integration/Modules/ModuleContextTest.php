@@ -9,6 +9,7 @@ use Apps\Iam\Jobs\RecordConnection;
 use Apps\Iam\Listeners\RecordEventConnection;
 use Distributable\Context\ModuleContext;
 use Distributable\Exceptions\ModuleException;
+use Distributable\Services\ModuleRegistry;
 use Distributable\Tests\ModuleAppTestCase;
 use Illuminate\Foundation\Testing\WithConsoleEvents;
 use Illuminate\Http\Request;
@@ -21,6 +22,14 @@ uses(ModuleAppTestCase::class, WithConsoleEvents::class);
 
 it('runs a module route on the module connection', function () {
     $this->get('/iam/api/v1/connection')->assertOk()->assertSee('iam');
+});
+
+it('keeps the module of a closure route through route:cache, which loses the file the closure was written in', function () {
+    $route = Route::getRoutes()->match(Request::create('/iam/api/v1/connection'));
+    $route->prepareForSerialization();
+
+    expect($route->getAction('uses'))->toBeString()
+        ->and(app(ModuleRegistry::class)->forRoute($route)?->name)->toBe('iam');
 });
 
 it('runs the middleware group of a module route file in the module, a closure route included', function () {
